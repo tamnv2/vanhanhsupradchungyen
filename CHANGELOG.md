@@ -88,3 +88,14 @@ Lịch sử này là append-only.
 - `beta-lan.supra.cc.cd`/`lan.supra.cc.cd` tiếp tục internal-only, không public DNS.
 - `PROJECT_SCOPE.md`, `DECISIONS.md`, `DECISIONS_INDEX.md`, `NEXT_ACTIONS.md`, `TASK_LEDGER.md`, `CURRENT_STATE.md`, `SESSION_CHECKPOINT.md` đã được cập nhật để LAN gate không bị mất qua phiên chat.
 - Chi tiết: `docs/changelog/2026-09-11-lan-pilot-0.6.0.md` và `docs/lan/LAN_PILOT_001.md`.
+
+## 2026-09-11 — lan-pilot-0.6.1
+
+- Phát hành LAN Pilot BETA `v0.1.12` sau khi cả Windows Agent, Android APK và prerelease job PASS trong run `34516199267`.
+- Agent tray hiển thị nhanh CPU/RAM/Disk/Network; dashboard bổ sung CPU/RAM riêng của Agent và chú thích tác dụng của từng thông số.
+- Agent có rotating diagnostic log và một-click export ZIP từ tray hoặc local dashboard; export không chứa `pilot.db`.
+- Android giữ nguyên transport implementation hiện có, thêm diagnostic snapshot history và nút `Xuất log chẩn đoán` tạo TXT bằng Android document picker.
+- Android UI thêm diễn giải Transport state, endpoint, hysteresis, latency, durable event, manual endpoint, queue và update flow.
+- Không thêm quyền Admin, không yêu cầu router/DNS/firewall, không thêm public diagnostic upload endpoint.
+- Ghi nhận build trung gian `34516009029`: Android PASS, Windows compile FAIL do overload `StopAsync`; đã sửa ở commit `bc3736237c70de4a0f0b236b0f12a607bad00676` và final build PASS.
+- Chi tiết: `docs/changelog/2026-09-11-lan-pilot-0.6.1.md`.
