@@ -1,0 +1,30 @@
+{
+  "environment": "beta",
+  "registrations": [
+    {
+      "cluster_id": "PICK_PACK_1291",
+      "quarter_key": "2026_Q3",
+      "spreadsheet_id": "14gHSgWXP2QvtPmBD3CzFt3vQ6AED2hPSm_LxMGpXAKg",
+      "schema_version": "PP1291_SHEETS_BETA_V1",
+      "tab_map": {
+        "control": "00_CONTROL",
+        "catalog": "Danh mục",
+        "pda": "DANH SÁCH PDA",
+        "user_pick": "DANH SÁCH USER PICK",
+        "ban_pack": "DANH SÁCH BÀN PACK",
+        "user_pack": "DANH SÁCH USER PACK",
+        "employees": "DANH SÁCH NHÂN SỰ",
+        "accounts": "DANH SÁCH TÀI KHOẢN",
+        "business_events": "LỊCH SỬ NGHIỆP VỤ",
+        "shift_entry_exit": "RA - VÀO TRONG CA",
+        "employee_user": "THÔNG TIN USER CỦA NLĐ",
+        "labor": "CÔNG NHẬT",
+        "locations": "Vị trí",
+        "dropped_goods": "Nhận hàng rớt",
+        "documents": "TÀI LIỆU",
+        "conflict_correction": "CONFLICT CORRECTION",
+        "import_audit": "IMPORT AUDIT"
+      }
+    }
+  ]
+}
