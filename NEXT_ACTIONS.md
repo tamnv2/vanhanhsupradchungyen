@@ -1,42 +1,74 @@
 # NEXT ACTIONS
 
-Checkpoint: GOV-20260910-01
+Checkpoint: `RECONCILE-20260910-02`
 
 ## Mục tiêu kế tiếp
 
-`RECONCILE-001 — Reconcile business core with VHDCHY scope before further expansion.`
+`PARALLEL-BUILD-001 — chuyển từ reconciled baseline sang core/auth/projection/Android foundation có thể tích hợp.`
 
-## Work items
+## Work streams độc lập có thể khởi động song song
 
-### A — Core audit [independent]
+### A — CORE-REFINE-001 [independent]
 
-Rà D1 migrations, Worker contracts, event/idempotency/projection logic hiện có. Phân loại từng phần:
+Thiết kế additive migration `0002+` để:
 
-- `GENERIC_DC` — dùng cho nền tảng toàn DC;
-- `CLUSTER_1291` — chỉ thuộc cluster Pick Pack 1291;
-- `REFERENCE_PATTERN` — mới là tham khảo, chưa adopted;
-- `REMOVE_OR_REWORK` — đang lệch scope/spec.
+- đưa resource taxonomy về generic/configurable DC model;
+- đăng ký resource types của `PICK_PACK_1291` theo module thay vì global hard-code;
+- bổ sung/chuẩn hóa catalog cần cho labor/position/module semantics;
+- giữ migration 0001 bất biến và bảo toàn BETA data/schema compatibility.
 
-### B — Reference digest [independent]
+Gate: local migration validation + invariants + no destructive rewrite.
 
-Dựa trên `BACKUP PICK PACK 1291` read-only, hoàn thiện digest/index theo chủ đề cần thiết cho cluster 1291. Không bê nguyên schema/logic sang VHDCHY.
+### B — SHEETS-001 [independent until projection integration]
 
-### C — VHDCHY module map [independent]
+Workbook BETA đã tạo. Tiếp theo:
 
-Xác định boundary nền tảng chung vs cluster/module; tránh đặt entity đặc thù Pick/Pack vào core toàn DC nếu không cần.
+- chuẩn hóa tab map contract cho schema `PP1291_SHEETS_BETA_V1`;
+- đăng ký `PICK_PACK_1291 + 2026_Q3` vào projection catalog bằng additive/config-safe path;
+- thiết kế batch projection payload/idempotency/ACK/checkpoint;
+- chọn và test transport machine-to-machine an toàn trước khi bật dữ liệu thật;
+- không để Google availability chặn canonical D1 mutation.
 
-### D — Reconciliation decision [depends on A+B+C]
+### C — AUTH-001 [independent]
 
-Ghi rõ phần business core hiện tại: KEEP / ADAPT / REWORK / RETIRE. Chỉ sau đó mới mở rộng auth/business API.
+Xây generic schema/contracts cho:
 
-### E — Parallel build plan [depends on D]
+- users;
+- roles;
+- permissions;
+- grants/effective permissions;
+- sessions/tokens;
+- device registry;
+- auth/audit events.
 
-Tạo dependency graph để có thể triển khai song song các nhánh thích hợp: D1/core, Google Sheets/projection, API, Android/PDA, docs/tests. LAN/DO/DR chỉ vào plan khi có gate/use case.
+Không mở privileged ROOT/SUPERADMIN credential acceptance cho tới khi current VHDCHY Master Spec xác nhận chính xác semantics. Không copy thuật toán auth cũ từ backup làm mặc định.
+
+### D — ANDROID-FOUNDATION-001 [independent]
+
+Có thể bắt đầu:
+
+- BETA/STABLE environment contract;
+- API client foundation;
+- device identity;
+- local durable state/outbox;
+- replay/idempotency envelope;
+- update/release skeleton.
+
+Privileged login UI/acceptance logic để adapter pending, không invent.
+
+## Integration gates
+
+1. `CORE-REFINE-001` + `AUTH-001` schema/contracts PASS trước khi mở protected mutation.
+2. `SHEETS-001` transport/projection PASS với synthetic data trước dữ liệu thật.
+3. Android chỉ bind vào API contract đã versioned/verified.
+4. Durable Objects, LAN Agent, emergency fallback và R2 vẫn ngoài tranche cho tới khi có use case/measurement gate.
 
 ## Owner action
 
-`NONE` cho RECONCILE-001 trừ khi phát hiện business conflict thực sự cần Owner chốt.
+`NONE` ở đầu tranche. Chỉ hỏi Owner nếu current Master Spec không thể được truy hồi và exact privileged-login semantics trở thành blocker thực tế.
 
 ## Release safety
 
-Không move/promote `stable`. Không move `beta` nếu tranche chỉ là governance/reconciliation và chưa có tested runtime candidate.
+- Không move `stable`.
+- Không move `beta` chỉ vì source trên `main` tiến lên.
+- Chỉ move `beta` tới candidate mới sau validation/migration/integration gate phù hợp.
