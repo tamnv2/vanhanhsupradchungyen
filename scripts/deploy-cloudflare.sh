@@ -50,20 +50,47 @@ jq -n \
     workers_dev:false,
     vars:{APP_ENV:$app_env,GAS_EXEC_URL:$gas_exec,BUILD_SHA:$build_sha},
     routes:[{pattern:$host,custom_domain:true}],
-    d1_databases:[{binding:"DB",database_name:$db_name,database_id:$db_id}]
+    d1_databases:[{
+      binding:"DB",
+      database_name:$db_name,
+      database_id:$db_id,
+      migrations_dir:"worker/migrations"
+    }]
   }' > "$config"
 
-CLOUDFLARE_API_TOKEN="$CLOUDFLARE_API_TOKEN" npx --yes wrangler@4 deploy --config "$config"
+CLOUDFLARE_API_TOKEN="$CLOUDFLARE_API_TOKEN" \
+  npx --yes wrangler@4 d1 migrations apply "$db_name" --remote --config "$config"
 
+CLOUDFLARE_API_TOKEN="$CLOUDFLARE_API_TOKEN" \
+  npx --yes wrangler@4 deploy --config "$config"
+
+last_payload=""
 for i in $(seq 1 24); do
-  payload=$(curl -fsS "https://$PUBLIC_HOST/health/deep" 2>/dev/null || true)
-  if [[ -n "$payload" ]] && jq -e --arg env "$APP_ENV" '.ok == true and .service == "VHDCHY_WORKER" and .environment == $env and .d1.ok == true and .googleGateway.ok == true' <<<"$payload" >/dev/null 2>&1; then
-    echo "Cloudflare deep health PASS: $PUBLIC_HOST"
-    echo "D1 database id: $db_id"
-    exit 0
+  payload=$(curl -sS --max-time 20 "https://$PUBLIC_HOST/health/deep" 2>/dev/null || true)
+  last_payload="$payload"
+  if [[ -n "$payload" ]] && jq -e --arg env "$APP_ENV" '.ok == true and .service == "VHDCHY_WORKER" and .environment == $env and .d1.ok == true and .d1.schemaVersion == "business_core_v1"' <<<"$payload" >/dev/null 2>&1; then
+    meta=$(curl -sS --max-time 20 "https://$PUBLIC_HOST/api/v1/meta" 2>/dev/null || true)
+    if [[ -n "$meta" ]] && jq -e --arg env "$APP_ENV" '.ok == true and .environment == $env and .schemaVersion == "business_core_v1" and .runtimeState == "BUSINESS_CORE_V1"' <<<"$meta" >/dev/null 2>&1; then
+      echo "Cloudflare core health PASS: $PUBLIC_HOST"
+      echo "D1 business core schema PASS: business_core_v1"
+      echo "Worker meta PASS: BUSINESS_CORE_V1"
+      if jq -e '.degraded == true' <<<"$payload" >/dev/null 2>&1; then
+        echo "Integration advisory: Google Gateway is degraded/non-blocking; projection outbox remains authoritative for retry."
+      else
+        echo "Integration advisory: Google Gateway probe PASS."
+      fi
+      echo "D1 database id: $db_id"
+      exit 0
+    fi
   fi
   sleep 10
 done
 
-echo "Deep health check failed after deploy: $PUBLIC_HOST" >&2
+echo "Core health check failed after deploy: $PUBLIC_HOST" >&2
+if [[ -n "$last_payload" ]]; then
+  echo "Last core health payload:" >&2
+  jq -c . <<<"$last_payload" >&2 2>/dev/null || printf '%s\n' "$last_payload" >&2
+else
+  echo "Last core health payload: <empty/unreachable>" >&2
+fi
 exit 4
