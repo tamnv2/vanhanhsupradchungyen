@@ -77,12 +77,34 @@ Mandatory pilot behavior:
 
 Detailed contract: `docs/lan/LAN_PILOT_001.md`.
 
+## LAN Pilot BETA artifact — ready for physical test
+
+Latest validated diagnostics/usability build:
+
+- release: `lan-pilot-beta-v0.1.12`;
+- source commit used by final build: `bc3736237c70de4a0f0b236b0f12a607bad00676`;
+- build run: `34516199267`;
+- Windows Agent job: SUCCESS;
+- Android APK job: SUCCESS;
+- prerelease job: SUCCESS.
+
+New verified-at-build features:
+
+- Agent tray basic telemetry: CPU/RAM/Disk/Network;
+- Agent dashboard adds plain-language explanations plus Agent CPU/RAM footprint;
+- Agent rotating diagnostic log and one-click ZIP export from tray/local dashboard;
+- Android diagnostic history and one-click TXT export using document picker;
+- Android UI explanations for transport states, endpoint, hysteresis, latency, durable event, queue and update behavior;
+- diagnostic export remains local/user-controlled; no public upload endpoint and no Admin/router/DNS/firewall requirement.
+
+Physical LAN behavior on the corporate laptop/Wi-Fi/MT90 is still `NOT YET VERIFIED`. CI success only proves build/sign/package/release integrity.
+
 ## Branch/live refs
 
-- `main`: source/integration/authority; LAN pilot decisions/spec now live here.
-- `beta`: `947a4feb48bc5c99867f1975b56edbb9a7309925` known-good live BETA pointer; not moved by planning/governance work.
+- `main`: source/integration/authority; latest LAN pilot source + diagnostics UX recorded here.
+- `beta`: `947a4feb48bc5c99867f1975b56edbb9a7309925` known-good live Worker BETA pointer; not moved by LAN Pilot packaging work.
 - `stable`: `5b7132071f032ab46f133d4416f80791505f080d`; runtime not promoted.
 
 ## Next
 
-Execute `LAN-PILOT-001` from `NEXT_ACTIONS.md`: LAN contract + Windows LAN Agent + Android LAN test app + LAN Web + physical/synthetic test harness. Existing core/auth/sheets source work remains checkpointed and may proceed only where independent/supportive; it no longer outranks the LAN feasibility gate.
+Run physical `LAN-PILOT-001` with release `v0.1.12`: laptop Agent + 1 PDA first, then 2/3 PDA and synthetic load if connectivity works. After testing, export Agent ZIP plus TXT from each PDA and upload them into the VHDCHY project chat for evidence-based diagnosis. No Stable promotion.
