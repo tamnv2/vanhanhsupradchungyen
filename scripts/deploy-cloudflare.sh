@@ -31,7 +31,10 @@ fi
 
 [[ -n "$db_id" ]] || { echo "Unable to resolve/create D1 database" >&2; exit 3; }
 
-config="${RUNNER_TEMP:-/tmp}/wrangler.generated.json"
+# Wrangler resolves relative paths from the config file location. Keep the generated
+# config in the repository root so main=worker/src/index.js resolves correctly.
+config="$PWD/wrangler.generated.json"
+trap 'rm -f "$config"' EXIT
 jq -n \
   --arg name "$worker_name" \
   --arg account "$CF_ACCOUNT_ID" \

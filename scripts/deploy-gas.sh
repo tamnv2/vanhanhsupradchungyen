@@ -29,18 +29,63 @@ token_json=$(curl -fsS https://oauth2.googleapis.com/token \
 access_token=$(jq -r '.access_token // empty' <<<"$token_json")
 [[ -n "$access_token" ]] || { echo "OAuth refresh failed" >&2; exit 3; }
 
+deploy_url="https://script.googleapis.com/v1/projects/$GAS_SCRIPT_ID/deployments/$GAS_DEPLOYMENT_ID"
+expected_env="${APP_ENV^^}"
+
+endpoint_ok() {
+  local payload
+  payload=$(curl -fsSL "$GAS_EXEC_URL" 2>/dev/null || true)
+  [[ -n "$payload" ]] && jq -e --arg env "$expected_env" --arg sid "$GAS_SCRIPT_ID" \
+    '.ok == true and .environment == $env and .scriptId == $sid' <<<"$payload" >/dev/null 2>&1
+}
+
+wait_endpoint() {
+  local attempts="${1:-18}"
+  for _ in $(seq 1 "$attempts"); do
+    if endpoint_ok; then return 0; fi
+    sleep 5
+  done
+  return 1
+}
+
+set_deployment_version() {
+  local version="$1" desc="$2"
+  jq -n \
+    --arg scriptId "$GAS_SCRIPT_ID" \
+    --arg desc "$desc" \
+    --argjson versionNumber "$version" \
+    '{deploymentConfig:{scriptId:$scriptId,versionNumber:$versionNumber,manifestFileName:"appsscript",description:$desc}}' \
+    > "$work/deployment.json"
+
+  curl -fsS -X PUT \
+    -H "Authorization: Bearer $access_token" \
+    -H 'Content-Type: application/json' \
+    --data-binary @"$work/deployment.json" \
+    "$deploy_url"
+}
+
+# Version 1 was the Owner-created web-app deployment and was verified healthy before
+# the first CI mutation. If the current BETA endpoint is unhealthy, restore that known
+# good version first so CI never compounds a broken deployment.
+if ! endpoint_ok; then
+  echo "Current GAS endpoint unhealthy; restoring known-good version 1 before retry"
+  rollback_response=$(set_deployment_version 1 "CI recovery to verified version 1")
+  jq -e --arg id "$GAS_DEPLOYMENT_ID" '.deploymentId == $id' <<<"$rollback_response" >/dev/null
+  wait_endpoint 18 || { echo "Unable to restore GAS endpoint to verified version 1" >&2; exit 4; }
+  echo "GAS rollback PASS: version=1"
+fi
+
 jq -n \
   --rawfile code "$work/Code.gs" \
   --rawfile manifest "$work/appsscript.json" \
   '{files:[{name:"Code",type:"SERVER_JS",source:$code},{name:"appsscript",type:"JSON",source:$manifest}]}' \
   > "$work/content.json"
 
-content_response=$(curl -fsS -X PUT \
+curl -fsS -X PUT \
   -H "Authorization: Bearer $access_token" \
   -H 'Content-Type: application/json' \
   --data-binary @"$work/content.json" \
-  "https://script.googleapis.com/v1/projects/$GAS_SCRIPT_ID/content")
-[[ -n "$content_response" ]] || { echo "GAS content update returned empty response" >&2; exit 4; }
+  "https://script.googleapis.com/v1/projects/$GAS_SCRIPT_ID/content" >/dev/null
 
 version_json=$(curl -fsS -X POST \
   -H "Authorization: Bearer $access_token" \
@@ -50,31 +95,22 @@ version_json=$(curl -fsS -X POST \
 version_number=$(jq -r '.versionNumber // empty' <<<"$version_json")
 [[ -n "$version_number" ]] || { echo "Create GAS version failed" >&2; exit 5; }
 
-jq -n \
-  --arg scriptId "$GAS_SCRIPT_ID" \
-  --arg desc "CI ${APP_ENV} ${GITHUB_SHA:-manual}" \
-  --argjson versionNumber "$version_number" \
-  '{deploymentConfig:{scriptId:$scriptId,versionNumber:$versionNumber,manifestFileName:"appsscript",description:$desc}}' \
-  > "$work/deployment.json"
-
-deploy_response=$(curl -fsS -X PUT \
-  -H "Authorization: Bearer $access_token" \
-  -H 'Content-Type: application/json' \
-  --data-binary @"$work/deployment.json" \
-  "https://script.googleapis.com/v1/projects/$GAS_SCRIPT_ID/deployments/$GAS_DEPLOYMENT_ID")
+deploy_response=$(set_deployment_version "$version_number" "CI ${APP_ENV} ${GITHUB_SHA:-manual}")
 jq -e --arg id "$GAS_DEPLOYMENT_ID" '.deploymentId == $id' <<<"$deploy_response" >/dev/null
 
 echo "GAS deployment updated: env=$APP_ENV version=$version_number"
 
-expected_env="${APP_ENV^^}"
-for i in $(seq 1 18); do
-  payload=$(curl -fsSL "$GAS_EXEC_URL" 2>/dev/null || true)
-  if [[ -n "$payload" ]] && jq -e --arg env "$expected_env" --arg sid "$GAS_SCRIPT_ID" '.ok == true and .environment == $env and .scriptId == $sid' <<<"$payload" >/dev/null 2>&1; then
-    echo "GAS endpoint PASS: $APP_ENV"
-    exit 0
-  fi
-  sleep 5
-done
+if wait_endpoint 24; then
+  echo "GAS endpoint PASS: $APP_ENV"
+  exit 0
+fi
 
-echo "GAS endpoint validation failed after deployment" >&2
+echo "New GAS deployment endpoint failed; rolling back to verified version 1" >&2
+rollback_response=$(set_deployment_version 1 "Automatic rollback after failed CI deployment")
+jq -e --arg id "$GAS_DEPLOYMENT_ID" '.deploymentId == $id' <<<"$rollback_response" >/dev/null
+if wait_endpoint 18; then
+  echo "GAS rollback PASS: version=1" >&2
+else
+  echo "GAS rollback FAILED: manual recovery required" >&2
+fi
 exit 6

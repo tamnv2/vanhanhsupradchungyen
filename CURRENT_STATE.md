@@ -19,18 +19,18 @@ Cập nhật: 2026-09-10
 
 ## Đang triển khai
 
-- Chuẩn bị BETA foundation deploy thật: Google Gateway source/version + D1 + Worker + custom domain + health validation.
-- BETA deploy tự động khi branch `beta` được cập nhật.
-- STABLE deploy tự động khi branch `stable` được promote nhưng vẫn bị chặn bởi Owner approval của Environment `stable`.
+- BETA D1 `vhdchy-data-beta` đã được tạo ở APAC trong lần deploy đầu.
+- Lần deploy BETA đầu phát hiện 2 lỗi pipeline: Wrangler resolve entrypoint theo vị trí config tạm và GAS deployment API cần web-app manifest rõ ràng/recovery guard.
+- Hai lỗi đã được sửa trong pipeline; BETA đang retry tự động.
+- STABLE chưa promote.
 
 ## Chưa triển khai business runtime
 
 - Worker hiện chỉ có health skeleton.
-- D1 sẽ được tự tạo ở lần deploy đầu tiên với location hint `apac`.
 - Durable Objects chỉ tạo khi business runtime bắt đầu dùng lock/rate-limit/concurrency.
 - R2 giữ OFF cho tới khi có nhu cầu rõ ràng.
 - Android app business code chưa được bootstrap trong repo.
 
 ## Next checkpoint
 
-Deploy BETA foundation và xác minh public endpoint `https://beta.supra.cc.cd/health` cùng Google Gateway BETA trước khi phát triển business runtime.
+BETA foundation retry phải PASS cả Google Gateway endpoint và `https://beta.supra.cc.cd/health`; sau đó mới đánh dấu SETUP-009 DONE.
