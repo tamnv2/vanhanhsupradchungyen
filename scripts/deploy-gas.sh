@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-required=(APP_ENV OWNER_EMAIL GOOGLE_DRIVE_ENV_ROOT_ID GAS_SCRIPT_ID GAS_DEPLOYMENT_ID GOOGLE_OAUTH_CLIENT_ID GOOGLE_OAUTH_CLIENT_SECRET GOOGLE_OAUTH_REFRESH_TOKEN)
+required=(APP_ENV OWNER_EMAIL GOOGLE_DRIVE_ENV_ROOT_ID GAS_SCRIPT_ID GAS_DEPLOYMENT_ID GAS_EXEC_URL GOOGLE_OAUTH_CLIENT_ID GOOGLE_OAUTH_CLIENT_SECRET GOOGLE_OAUTH_REFRESH_TOKEN)
 for v in "${required[@]}"; do
   [[ -n "${!v:-}" ]] || { echo "Missing $v" >&2; exit 2; }
 done
@@ -35,11 +35,12 @@ jq -n \
   '{files:[{name:"Code",type:"SERVER_JS",source:$code},{name:"appsscript",type:"JSON",source:$manifest}]}' \
   > "$work/content.json"
 
-curl -fsS -X PUT \
+content_response=$(curl -fsS -X PUT \
   -H "Authorization: Bearer $access_token" \
   -H 'Content-Type: application/json' \
   --data-binary @"$work/content.json" \
-  "https://script.googleapis.com/v1/projects/$GAS_SCRIPT_ID/content" >/dev/null
+  "https://script.googleapis.com/v1/projects/$GAS_SCRIPT_ID/content")
+[[ -n "$content_response" ]] || { echo "GAS content update returned empty response" >&2; exit 4; }
 
 version_json=$(curl -fsS -X POST \
   -H "Authorization: Bearer $access_token" \
@@ -47,7 +48,7 @@ version_json=$(curl -fsS -X POST \
   -d "{\"description\":\"CI ${APP_ENV} ${GITHUB_SHA:-manual}\"}" \
   "https://script.googleapis.com/v1/projects/$GAS_SCRIPT_ID/versions")
 version_number=$(jq -r '.versionNumber // empty' <<<"$version_json")
-[[ -n "$version_number" ]] || { echo "Create GAS version failed" >&2; exit 4; }
+[[ -n "$version_number" ]] || { echo "Create GAS version failed" >&2; exit 5; }
 
 jq -n \
   --arg scriptId "$GAS_SCRIPT_ID" \
@@ -56,10 +57,24 @@ jq -n \
   '{deploymentConfig:{scriptId:$scriptId,versionNumber:$versionNumber,manifestFileName:"appsscript",description:$desc}}' \
   > "$work/deployment.json"
 
-curl -fsS -X PUT \
+deploy_response=$(curl -fsS -X PUT \
   -H "Authorization: Bearer $access_token" \
   -H 'Content-Type: application/json' \
   --data-binary @"$work/deployment.json" \
-  "https://script.googleapis.com/v1/projects/$GAS_SCRIPT_ID/deployments/$GAS_DEPLOYMENT_ID" >/dev/null
+  "https://script.googleapis.com/v1/projects/$GAS_SCRIPT_ID/deployments/$GAS_DEPLOYMENT_ID")
+jq -e --arg id "$GAS_DEPLOYMENT_ID" '.deploymentId == $id' <<<"$deploy_response" >/dev/null
 
 echo "GAS deployment updated: env=$APP_ENV version=$version_number"
+
+expected_env="${APP_ENV^^}"
+for i in $(seq 1 18); do
+  payload=$(curl -fsSL "$GAS_EXEC_URL" 2>/dev/null || true)
+  if [[ -n "$payload" ]] && jq -e --arg env "$expected_env" --arg sid "$GAS_SCRIPT_ID" '.ok == true and .environment == $env and .scriptId == $sid' <<<"$payload" >/dev/null 2>&1; then
+    echo "GAS endpoint PASS: $APP_ENV"
+    exit 0
+  fi
+  sleep 5
+done
+
+echo "GAS endpoint validation failed after deployment" >&2
+exit 6
