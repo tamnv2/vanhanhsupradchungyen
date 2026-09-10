@@ -1,6 +1,6 @@
 # PROJECT SCOPE — VẬN HÀNH DC HƯNG YÊN
 
-Status: ACTIVE / OWNER-APPROVED 2026-09-10
+Status: ACTIVE / OWNER-APPROVED 2026-09-11
 
 ## 1. Dự án chính
 
@@ -48,15 +48,18 @@ Không dùng nguồn cấp thấp để ghi đè nguồn cấp cao hơn.
 - Google Drive chứa runtime data, archive/media/export/backup theo thiết kế hiện hành.
 - Google Sheets là thành phần dữ liệu/projection/human-readable/DR theo module; không mặc định là authority nếu spec không nói vậy.
 - Android/PDA là client native chính cho nghiệp vụ phù hợp.
-- LAN Agent/Windows service chỉ triển khai khi module hoặc measurement gate yêu cầu.
-- LAN hostname không public DNS.
+- Windows LAN Agent + LAN Web là deliverable chính thức của VHDCHY. Trước business build sâu, BETA phải chạy `LAN-PILOT-001` để kiểm chứng auto-LAN trên PDA, kết nối/ổn định/độ trễ/chịu tải/reconnect, update flow và footprint Windows thực tế.
+- Điều kiện test vật lý hiện có: tối đa khoảng 3 PDA đồng thời + 1 laptop; synthetic load trên laptop được dùng để đo service capacity nhưng không thay thế bằng chứng Wi-Fi/RF của PDA thật.
+- LAN Agent phải có background service nhẹ và tray/settings console cho vận hành; không được chỉ là EXE ẩn. Android và LAN Agent đều phải có automatic update discovery/notification và manual update fallback.
+- LAN hostname không public DNS. `beta-lan.supra.cc.cd`/`lan.supra.cc.cd` chỉ được resolve/route trong mạng nội bộ theo environment tương ứng.
+- LAN HA/Master-Backup/fencing nâng cao chỉ áp dụng sau single-node LAN pilot nếu measurement/use case chứng minh cần.
 - Durable Objects/R2/dịch vụ bổ sung chỉ bật khi có use case rõ ràng.
 
 ## 6. Môi trường
 
 ### BETA
 
-AI được phép phát triển, test, migrate, deploy và sửa tự động tối đa trong phạm vi Owner đã cấp. BETA phải luôn trỏ tới known-good live commit gần nhất.
+AI được phép phát triển, test, migrate, deploy và sửa tự động tối đa trong phạm vi Owner đã cấp. BETA phải luôn trỏ tới known-good live commit gần nhất. `LAN-PILOT-001` là priority feasibility gate trước khi đầu tư sâu vào business implementation.
 
 ### STABLE
 
