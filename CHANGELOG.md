@@ -76,3 +76,15 @@ Lịch sử này là append-only.
 - Chốt generic resource taxonomy và module ownership cho `dropped_goods` qua decision D-024; sửa schema tương lai bằng migration additive.
 - Main CI giờ kiểm tra đồng thời governance continuity và D1 migrations; run `34506547071` PASS.
 - Chi tiết: `docs/changelog/2026-09-10-reconcile-sheets-0.5.0.md`.
+
+## 2026-09-11 — lan-pilot-0.6.0
+
+- Owner chuyển LAN thành priority feasibility gate trước business build sâu.
+- Khóa `LAN-PILOT-001`: build reusable Android/PDA BETA test app + Windows LAN Agent BETA + internal LAN Web BETA.
+- PDA phải tự phát hiện LAN BETA hợp lệ và tự chuyển LAN mode; fallback/reconnect phải deterministic, có trạng thái rõ và không flapping.
+- Điều kiện test vật lý được chốt: tối đa khoảng 3 PDA + 1 laptop; test capacity lớn hơn dùng synthetic logical clients và không được đánh đồng với Wi-Fi/RF evidence.
+- Android và LAN Agent đều phải có automatic update discovery/notification cùng manual update fallback.
+- LAN Agent phải tối ưu nhẹ nhưng có tray/settings console: trạng thái, metrics, update, local data directory, logs/diagnostics, start/stop/restart.
+- `beta-lan.supra.cc.cd`/`lan.supra.cc.cd` tiếp tục internal-only, không public DNS.
+- `PROJECT_SCOPE.md`, `DECISIONS.md`, `DECISIONS_INDEX.md`, `NEXT_ACTIONS.md`, `TASK_LEDGER.md`, `CURRENT_STATE.md`, `SESSION_CHECKPOINT.md` đã được cập nhật để LAN gate không bị mất qua phiên chat.
+- Chi tiết: `docs/changelog/2026-09-11-lan-pilot-0.6.0.md` và `docs/lan/LAN_PILOT_001.md`.
