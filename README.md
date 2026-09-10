@@ -1,6 +1,6 @@
 # VẬN HÀNH DC HƯNG YÊN
 
-Repository vận hành và phát triển hệ thống DC Hưng Yên.
+Repository authority cho phát triển và vận hành nền tảng DC Hưng Yên.
 
 ## Môi trường
 
@@ -8,20 +8,31 @@ Repository vận hành và phát triển hệ thống DC Hưng Yên.
 - `STABLE` → `supra.cc.cd`
 - LAN hostname chỉ dùng trong mạng nội bộ, **không tạo public DNS**.
 
+## Bootstrap cho AI
+
+Mỗi phiên mới bắt đầu tại `AI_BOOTSTRAP.md`.
+
+Bootstrap tối thiểu được thiết kế để đọc nhanh và vẫn giữ continuity qua nhiều phiên:
+
+1. `PROJECT_SCOPE.md`
+2. `CURRENT_STATE.md`
+3. `NEXT_ACTIONS.md`
+4. `DECISIONS_INDEX.md`
+
+Chi tiết cách AI làm việc dài hạn: `AI_OPERATING_CONTRACT.md`.
+Hướng dẫn Owner: `docs/AI_USAGE_GUIDE.md`.
+
 ## Authority
 
-Mỗi phiên AI phải đọc theo thứ tự:
+GitHub là authority cho code/config/trạng thái kỹ thuật. Secret chỉ được đặt trong GitHub Environments hoặc provider secret store, không commit vào repository public.
 
-1. `AI_BOOTSTRAP.md`
-2. `CURRENT_STATE.md`
-3. `DECISIONS.md`
-4. `TASK_LEDGER.md`
-5. `CHANGELOG.md`
+## Reference
 
-GitHub là authority cho code/config/trạng thái kỹ thuật. Secret chỉ được đặt trong GitHub Environments hoặc secret store của provider, không commit vào repository public.
+Pick Pack 1291 cũ chỉ là read-only evidence/reference cho cluster/module tương ứng và các pattern cần thiết. Không clone 100% và không dùng dự án cũ làm runtime/fallback/authority của VHDCHY.
 
-## Nguyên tắc release
+## Release
 
-- BETA ưu tiên tự động hóa tối đa.
-- STABLE chỉ promote khi Owner chốt.
-- Changelog là append-only, không xóa lịch sử version.
+- `main`: source authority/integration/checkpoint.
+- `beta`: known-good live BETA ref.
+- `stable`: known-good STABLE ref; chỉ promote khi Owner duyệt.
+- Changelog append-only; thay đổi đáng kể có detailed record trong `docs/changelog/`.
