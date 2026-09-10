@@ -15,22 +15,25 @@ Cập nhật: 2026-09-10
 - Android signing key BETA/STABLE đã được tạo; fingerprint đã được ghi vào Resource Registry.
 - Repo `tamnv2/vanhanhdchungyen` đã được khởi tạo và giữ PUBLIC có chủ đích.
 - GitHub Environments `beta` và `stable` đã được Owner cấu hình đủ Variables/Secrets.
-- Full credential/environment verification đã PASS cho cả BETA và STABLE, gồm Cloudflare, Google OAuth/API, GAS endpoint, Drive và Android signing.
+- Full credential/environment verification PASS cho cả BETA và STABLE.
+- BETA foundation deploy PASS sau automatic repair/retry.
+- BETA D1 `vhdchy-data-beta` tồn tại tại APAC; ID `37eb7d59-05c0-4ba2-8162-cb6a9fe5d492`.
+- BETA Worker `vhdchy-beta` đã deploy với custom domain `beta.supra.cc.cd`; `/health` PASS và D1 binding PASS.
+- BETA Google Gateway đã được CI cập nhật tới version 3; endpoint PASS.
 
-## Đang triển khai
+## Trạng thái môi trường
 
-- BETA D1 `vhdchy-data-beta` đã được tạo ở APAC trong lần deploy đầu.
-- Lần deploy BETA đầu phát hiện 2 lỗi pipeline: Wrangler resolve entrypoint theo vị trí config tạm và GAS deployment API cần web-app manifest rõ ràng/recovery guard.
-- Hai lỗi đã được sửa trong pipeline; BETA đang retry tự động.
-- STABLE chưa promote.
+- BETA: LIVE FOUNDATION / HEALTHY.
+- STABLE: credentials VERIFIED nhưng runtime chưa promote/deploy; vẫn yêu cầu Owner approval.
+- LAN hostnames vẫn private/reserved, không public DNS.
+- R2 vẫn OFF.
+- Durable Objects chưa tạo cho tới khi business runtime cần lock/rate-limit/concurrency.
 
-## Chưa triển khai business runtime
+## Đang tiếp tục
 
-- Worker hiện chỉ có health skeleton.
-- Durable Objects chỉ tạo khi business runtime bắt đầu dùng lock/rate-limit/concurrency.
-- R2 giữ OFF cho tới khi có nhu cầu rõ ràng.
-- Android app business code chưa được bootstrap trong repo.
+- Chuyển từ infrastructure foundation sang BETA business-runtime foundation theo Master Spec.
+- Mọi thay đổi runtime mới phải vào BETA trước; STABLE chỉ promote sau gate và Owner acceptance.
 
 ## Next checkpoint
 
-BETA foundation retry phải PASS cả Google Gateway endpoint và `https://beta.supra.cc.cd/health`; sau đó mới đánh dấu SETUP-009 DONE.
+Xây dựng schema/API/business-runtime BETA và client foundation; giữ STABLE nguyên trạng cho tới khi có quyết định promote.

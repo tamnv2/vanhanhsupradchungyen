@@ -11,7 +11,8 @@
 | SETUP-007 | Repo authority/bootstrap | DONE | Foundation commit 2026-09-10 |
 | SETUP-008 | GitHub Environments + secrets | DONE | Owner nhập đủ BETA/STABLE |
 | SETUP-008A | Full environment credential verification | DONE | BETA + STABLE PASS toàn bộ |
-| SETUP-009 | BETA infra deploy test | RETRYING | D1 đã tạo APAC; sửa Worker config path + GAS webapp/recovery |
-| SETUP-010 | STABLE infra deploy test | PENDING | Chỉ sau BETA pass và Owner chốt promote |
-| BUILD-001 | Business runtime Worker/Gateway | PENDING | Không triển khai logic giả |
-| BUILD-002 | Android app | PENDING | Chưa chốt bootstrap code |
+| SETUP-009 | BETA infra deploy test | DONE | D1 + Worker + custom domain + GAS endpoint đều PASS |
+| SETUP-010 | STABLE infra deploy test | BLOCKED_BY_GATE | Chỉ promote sau BETA gate và Owner acceptance |
+| BUILD-001 | Business runtime Worker/Gateway | IN_PROGRESS | Bắt đầu sau foundation PASS |
+| BUILD-002 | Android app | PENDING | Thực hiện theo business-runtime contract |
+| BUILD-003 | LAN Agent | PENDING | Triển khai sau API/client contract và LAN measurement gate |

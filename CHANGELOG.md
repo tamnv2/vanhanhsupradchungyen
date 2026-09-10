@@ -28,3 +28,12 @@ Lịch sử này là append-only.
 - Thêm explicit Apps Script web-app manifest `ANYONE_ANONYMOUS` + `USER_DEPLOYING` cho API-managed deployment.
 - Thêm GAS known-good recovery/rollback guard về version 1 nếu endpoint bị lỗi trước hoặc sau CI update.
 - Giới hạn auto-deploy theo paths để thay đổi tài liệu/trạng thái không làm tốn Actions/deploy provider không cần thiết.
+
+## 2026-09-10 — foundation-0.3.0
+
+- Automatic recovery đã restore Google Gateway BETA về version 1 trước khi retry, sau đó CI deploy version 3 thành công.
+- BETA Google Gateway endpoint PASS.
+- BETA Worker `vhdchy-beta` deploy thành công lên custom domain `beta.supra.cc.cd`.
+- BETA D1 binding PASS; D1 ID `37eb7d59-05c0-4ba2-8162-cb6a9fe5d492`.
+- BETA `/health` PASS và toàn bộ environment deploy kết thúc SUCCESS.
+- SETUP-009 được đánh dấu DONE; chuyển sang business-runtime foundation.
