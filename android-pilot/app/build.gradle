@@ -1,0 +1,50 @@
+plugins {
+    id 'com.android.application'
+}
+
+def runNumber = System.getenv('GITHUB_RUN_NUMBER') ?: '1'
+def signingFile = System.getenv('ANDROID_SIGNING_STORE_FILE')
+
+android {
+    namespace 'vn.vhdchy.lanpilot'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'vn.vhdchy.lanpilot.beta'
+        minSdk 21
+        targetSdk 35
+        versionCode Integer.parseInt(runNumber)
+        versionName "0.1.${runNumber}"
+    }
+
+    signingConfigs {
+        beta {
+            if (signingFile) {
+                storeFile file(signingFile)
+                storePassword System.getenv('ANDROID_SIGNING_STORE_PASSWORD')
+                keyAlias System.getenv('ANDROID_SIGNING_ALIAS')
+                keyPassword System.getenv('ANDROID_SIGNING_KEY_PASSWORD')
+            }
+        }
+    }
+
+    buildTypes {
+        debug {
+            applicationIdSuffix '.debug'
+            versionNameSuffix '-debug'
+        }
+        release {
+            minifyEnabled false
+            if (signingFile) signingConfig signingConfigs.beta
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    packaging {
+        resources.excludes += ['META-INF/DEPENDENCIES', 'META-INF/LICENSE*', 'META-INF/NOTICE*']
+    }
+}
