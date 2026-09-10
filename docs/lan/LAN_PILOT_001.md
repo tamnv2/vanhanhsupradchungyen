@@ -2,22 +2,41 @@
 
 Status: `OWNER-APPROVED / PRIORITY GATE`
 Approved: 2026-09-11 Asia/Ho_Chi_Minh
+Protocol: `docs/lan/LAN_PROTOCOL_V1.md`
 
 ## Mục tiêu
 
-Kiểm chứng sớm khả năng vận hành LAN thực tế trước khi đầu tư sâu vào business build. Pilot phải tạo ra ba artifact có thể tiếp tục nâng cấp, không phải prototype bỏ đi:
+Kiểm chứng LAN trong đúng điều kiện Owner thực sự có trước khi đầu tư sâu vào business build. Ba artifact pilot phải được giữ làm lineage chính thức, không phải prototype bỏ đi:
 
-1. Android/PDA BETA test app.
-2. Windows LAN Agent BETA + tray/settings console.
-3. Website nội bộ BETA tại `beta-lan.supra.cc.cd` khi internal DNS/routing được cấu hình.
+1. Android/PDA BETA test app — mục tiêu vật lý đầu tiên Newland MT90.
+2. Windows LAN Agent BETA — portable user-mode + tray/settings, không yêu cầu Administrator.
+3. LAN diagnostics Web — phục vụ trực tiếp từ Agent bằng IP/port trong pilot; `beta-lan.supra.cc.cd` chỉ dùng sau này nếu internal DNS có sẵn.
 
-Nếu pilot PASS, chính các artifact này được mở rộng dần thành Android app, LAN Agent và LAN Web chính thức.
+Nếu pilot PASS, ba artifact này được nâng dần thành Android app, LAN Agent và LAN Web nghiệp vụ.
 
-## Phạm vi test bắt buộc
+## Điều kiện thực tế bắt buộc phải giả định
 
-### Kết nối và chuyển mode tự động
+### Laptop công ty
 
-PDA phải tự nhận biết LAN BETA khả dụng và tự chuyển sang LAN mode mà không cần thao tác người dùng thường xuyên.
+- CPU cũ tiết kiệm điện khoảng 2 core / 4 thread.
+- RAM 8 GB.
+- User thường, không có quyền Administrator.
+- Quyền hệ thống bị hạn chế; Owner không có quyền xem/sửa router, route Wi-Fi, AP hoặc DNS nội bộ.
+- Không giả định được phép tạo firewall rule, cài Windows Service, driver, certificate hay thay network policy.
+- Không yêu cầu Owner bypass security policy để làm pilot PASS.
+
+Nếu executable, inbound TCP/UDP, broadcast discovery hoặc auto-start bị corporate policy chặn thì phải ghi đúng là evidence feasibility, không che bằng workaround cần quyền admin.
+
+### PDA
+
+- Có tối đa khoảng 3 PDA Newland MT90 dùng đồng thời với laptop.
+- Chưa khóa scanner SDK trong pilot; test dùng Android API phổ thông để giảm phụ thuộc exact MT90 hardware/OS revision.
+- Physical test 1/2/3 PDA là evidence Wi-Fi/LAN thật.
+- Synthetic logical clients trên laptop dùng để test service capacity 10/25/50/100+, không được coi là evidence RF/Wi-Fi cho số PDA tương ứng.
+
+## Kết nối và tự bật LAN mode
+
+PDA phải tự phát hiện LAN BETA hợp lệ và tự chuyển LAN mode mà không cần thao tác thường xuyên.
 
 State tối thiểu:
 
@@ -28,150 +47,160 @@ State tối thiểu:
 - `RECONNECTING`
 - `LOCAL_QUEUE_ONLY`
 
-LAN discovery/health phải kiểm chứng đúng service identity + environment BETA, không chỉ kiểm tra host có trả HTTP hay không. Có hysteresis/backoff để tránh flapping khi Wi-Fi chập chờn. UI phải hiển thị rõ transport hiện tại và lý do fallback.
+Discovery không phụ thuộc quyền router/DNS. Thứ tự pilot:
+
+1. thử cached LAN endpoint;
+2. UDP broadcast discovery;
+3. manual endpoint/IP làm recovery/diagnostic path;
+4. hostname `beta-lan.supra.cc.cd` chỉ khi internal DNS thật sự khả dụng sau này.
+
+PDA bắt buộc gọi `/health` và xác minh `service + environment + protocol`; không tự chuyển LAN chỉ vì có host trả HTTP. Có hysteresis/backoff để tránh flapping.
 
 Pilot phải test:
 
-- app start trong LAN;
+- app start khi đang cùng LAN với laptop;
 - app start ngoài LAN;
-- vào LAN sau khi app đã chạy;
-- rời LAN khi app đang chạy;
+- vào/rời LAN khi app đang chạy;
 - Internet mất nhưng LAN còn;
 - LAN mất nhưng Internet còn;
 - cả LAN và Internet mất;
 - LAN trở lại;
-- Wi-Fi reconnect/chuyển access point nếu điều kiện thực tế cho phép.
+- Agent restart;
+- laptop restart/user login lại;
+- app/PDA restart;
+- Wi-Fi reconnect/chuyển AP nếu điều kiện thực tế cho phép.
 
-### Điều kiện thiết bị vật lý
+## Windows LAN Agent — low privilege contract
 
-Owner có tối đa khoảng 3 PDA vật lý cùng lúc + 1 laptop.
+Không cài SCM Windows Service trong pilot vì laptop không có quyền admin.
 
-Do đó test được chia thành hai lớp:
+Runtime mặc định:
 
-- **Physical LAN test:** 1, 2 và 3 PDA đồng thời để đo hành vi Wi-Fi/LAN thực tế, reconnect, auto-LAN, ổn định phiên và event loss.
-- **Synthetic service load:** laptop tạo logical clients/request streams để test capacity của LAN Agent ở mức 10/25/50/100+ clients. Synthetic load không được dùng để tuyên bố đã kiểm chứng RF/Wi-Fi với số PDA tương ứng.
+- portable per-user EXE, manifest `asInvoker`;
+- background/tray application sau khi user đăng nhập;
+- không ghi HKLM/Program Files;
+- không tạo firewall rule;
+- optional auto-start chỉ dùng HKCU nếu corporate policy cho phép;
+- default data dưới `%LOCALAPPDATA%`;
+- cho phép chọn data directory khác nếu user có write permission;
+- local API/Web dùng high user-space port, mặc định TCP `17891`;
+- UDP discovery mặc định `17892`;
+- đóng dashboard không dừng Agent; `Thoát Agent` là thao tác riêng.
 
-## Metrics bắt buộc
+Tray/settings tối thiểu:
 
-Ghi và hiển thị tối thiểu:
-
-- connect success rate;
-- request success/error rate;
-- p50/p95/p99 latency;
-- requests/sec;
-- active connections;
-- reconnect time;
-- queue pending/age;
-- queue recovery time;
-- event loss;
-- duplicate/canonical conflict count khi có event contract;
-- LAN Agent CPU/RAM;
-- local DB size/growth;
-- service uptime/restart count;
-- app/service/web versions.
-
-Không được PASS nếu có mất event không giải thích được hoặc retry/reconnect không deterministic.
-
-## Android update contract
-
-Ngay từ pilot phải có cả hai đường cập nhật:
-
-1. **Automatic discovery/notification:** app tự kiểm tra metadata phiên bản và hiển thị có bản mới.
-2. **Manual update:** trong Settings có `Kiểm tra cập nhật`, xem current/latest version, tải/cài bản được chọn khi policy cho phép.
-
-Manual update phải tồn tại độc lập với automatic flow để vẫn cập nhật được nếu automatic notification/check bị lỗi. Mọi package phải verify signer/hash trước khi coi là hợp lệ. Android thường có thể cần người dùng xác nhận bước cài đặt nếu thiết bị không được quản trị Device Owner/MDM.
-
-## Windows LAN Agent UX/runtime contract
-
-LAN Agent không được chỉ là một EXE ẩn không có giao diện quản trị.
-
-Thiết kế ưu tiên tách trách nhiệm:
-
-- **Background service:** chạy khi Windows khởi động, xử lý local API/cache/queue/sync/health; tối ưu idle CPU/RAM.
-- **Tray/settings console:** icon taskbar/system tray cho người vận hành xem trạng thái và chỉnh cấu hình cơ bản. Đóng cửa sổ console không được dừng background service.
-
-Tray/settings tối thiểu có:
-
-- trạng thái Service/LAN/Internet/Cloud;
-- hostname/IP/port đang phục vụ;
-- số PDA/client đang kết nối;
-- latency/error cơ bản;
-- queue pending;
-- CPU/RAM cơ bản;
-- current service version + latest available version;
+- Agent/LAN/Internet/Cloud status;
+- IP/port đang phục vụ;
+- PDA/client count;
+- latency/error/queue;
+- process RAM/CPU khi hoàn thiện metrics;
+- current/latest version;
 - `Kiểm tra cập nhật` thủ công;
 - automatic update notification;
-- install/update action có verify + rollback nếu health fail;
-- chọn/thay đổi thư mục local database/data directory bằng flow an toàn;
-- mở thư mục log;
-- start/stop/restart service có kiểm soát;
-- diagnostics/export log tối thiểu.
+- local database/data directory selection có verify/rollback;
+- mở data/log/diagnostics;
+- restart/exit có kiểm soát.
 
-Không hiển thị hoặc lưu plaintext secret trong UI/config/log.
+## Local database / queue
 
-## Resource budget mục tiêu
+Pilot phải có local durable store nhẹ để kiểm chứng retry/idempotency và event-loss behavior. Baseline dùng SQLite WAL. Chỉ test event không nhạy cảm.
 
-Pilot phải đo trên laptop thật, không chỉ ước lượng. Mục tiêu là footprint nhỏ nhất hợp lý; mọi regression CPU/RAM phải được ghi lại trong test report.
+Đổi data directory phải theo flow:
 
-Ưu tiên:
-
-- idle CPU gần 0, tránh polling dày;
-- event/timer driven khi có thể;
-- bounded logs/cache;
-- SQLite/local DB hoặc lựa chọn tương đương nhẹ;
-- tray refresh ở nhịp thấp và chỉ tăng khi cửa sổ diagnostics đang mở;
-- background service phải tiếp tục hoạt động khi tray UI không mở.
-
-Không khóa trước một framework chỉ vì tiện phát triển; framework/runtime phải được chọn sau khi so sánh footprint, maintainability và khả năng service/tray/update trên Windows.
+`stop listener -> copy -> integrity_check -> switch pointer -> restart -> rollback on failure`.
 
 ## LAN Web BETA
 
-`beta-lan.supra.cc.cd` chỉ resolve/route trong LAN khi internal DNS được setup. Website pilot phục vụ từ LAN Agent/local web host và tối thiểu hiển thị:
+Trong feasibility pilot, Web dùng trực tiếp:
 
-- service health;
-- connected PDA;
-- request/latency/error metrics;
-- queue/backlog;
-- CPU/RAM/local DB;
-- transport/Internet status;
-- version/build information;
-- test controls phù hợp cho BETA.
+`http://<laptop-lan-ip>:17891/`
 
-Web pilot phải được thiết kế để sau này cập nhật thành Web nghiệp vụ mà không thay transport contract.
+Không yêu cầu DNS/hosts/router change.
 
-## Update contract cho LAN Agent
+Dashboard tối thiểu hiển thị:
 
-Ngay từ pilot có automatic update discovery/notification và manual update. Update flow mục tiêu:
+- service health/identity/version;
+- địa chỉ LAN đang có;
+- connected PDA/device count;
+- requests/errors;
+- p50/p95/p99 latency;
+- event count/duplicate count;
+- RAM/local DB size;
+- update check;
+- data directory.
 
-`manifest -> download -> verify -> stage -> stop service -> replace -> start -> health check -> commit | rollback`
+Sau khi LAN được chứng minh và nếu internal DNS khả dụng, mới gắn `beta-lan.supra.cc.cd`; STABLE tương ứng mới dùng `lan.supra.cc.cd`.
 
-Updater không được phá local DB/config/log hoặc để service ở trạng thái half-updated. BETA và STABLE dùng channel/artifact riêng.
+## Android update contract
+
+Ngay từ pilot phải có hai đường độc lập:
+
+1. automatic release discovery/notification;
+2. manual `Kiểm tra cập nhật`/mở package release để recovery.
+
+APK BETA build phải dùng BETA signing key. Trước gate PASS phải kiểm chứng download/install/update thật trên MT90; Android có thể yêu cầu user xác nhận cài package nếu không có Device Owner/MDM.
+
+## LAN Agent update contract
+
+Ngay từ pilot phải có automatic release discovery và manual update fallback. Self-replace/updater hoàn chỉnh phải tuân theo:
+
+`manifest/release -> download -> verify hash/signature -> stage -> stop Agent -> replace -> start -> health -> commit | rollback`.
+
+Không phụ thuộc Administrator. Nếu thư mục app không writable hoặc endpoint security chặn replace, updater phải fail an toàn và manual package vẫn tồn tại. DB/config/log không được ghi đè bởi update.
+
+## Metrics và resource budget
+
+Bắt buộc đo trên laptop thật. Không tuyên bố footprint bằng ước lượng từ máy build.
+
+Theo dõi:
+
+- connect success rate;
+- request success/error rate;
+- p50/p95/p99;
+- requests/sec;
+- active devices;
+- reconnect time;
+- pending queue/queue recovery;
+- event loss/duplicate count;
+- Agent RAM/CPU;
+- DB/log growth;
+- uptime/restart count;
+- app/Agent/Web versions.
+
+Tối ưu:
+
+- idle CPU gần 0, event/timer-driven;
+- tránh polling dày;
+- bounded metrics/logs/cache;
+- UI refresh chậm khi không mở diagnostics;
+- ưu tiên footprint phù hợp laptop 2C/4T + 8 GB RAM.
 
 ## Gate PASS/FAIL
 
 Pilot chỉ PASS khi tối thiểu:
 
-- 3 PDA vật lý có thể đồng thời kết nối và auto-enter LAN mode đúng policy;
-- chuyển LAN/cloud/local queue không làm mất event test;
-- reconnect ổn định qua các kịch bản mất/khôi phục mạng;
-- synthetic load cho thấy LAN Agent còn headroom rõ ràng so với 3 PDA thật;
-- service restart/laptop restart có recovery xác định;
-- updater automatic notification + manual update path đều hoạt động;
-- tray/settings đáp ứng vận hành nhưng background footprint vẫn thấp;
-- LAN Web hiển thị metrics/status nhất quán;
-- toàn bộ test result được lưu làm evidence trước khi mở business build sâu.
+- Agent chạy được bằng user thường trong policy hiện có;
+- 3 PDA vật lý cùng kết nối và tự vào `LAN_ACTIVE` đúng policy;
+- xác định rõ discovery có hoạt động hay không mà không thay router/DNS;
+- LAN/cloud/local queue chuyển trạng thái deterministic và không mất test event;
+- restart/reconnect có recovery xác định;
+- synthetic load cho thấy headroom rõ ràng trên laptop thật;
+- automatic + manual update path có thể sử dụng; self-update Agent phải được test trước PASS;
+- dashboard/tray vận hành được với footprint chấp nhận được;
+- evidence report phân biệt lỗi app, firewall/policy, AP isolation và network instability.
 
-Nếu FAIL, sửa architecture/transport/LAN runtime trước. Không che FAIL bằng cách chuyển toàn bộ nghiệp vụ về Cloud rồi coi LAN đã đạt.
+Nếu corporate policy chặn inbound LAN tới mức PDA không thể kết nối laptop mà không cần quyền admin/network change, `LAN-PILOT` phải kết luận FAIL/NOT-FEASIBLE cho mô hình laptop-as-LAN-Agent trong điều kiện hiện tại, rồi mới đề xuất kiến trúc khác cho Owner.
 
-## Dependency sau PASS
+## Sau PASS
 
-Sau LAN-PILOT PASS, tiếp tục song song:
+Tiếp tục song song:
 
 - CORE/AUTH/API;
 - Sheets/projection;
 - nâng Android pilot thành business APK;
-- nâng LAN Agent pilot thành business LAN service;
-- nâng LAN Web pilot thành operational/admin Web;
-- test E2E/soak/stress.
+- nâng user-mode LAN Agent thành business LAN runtime;
+- nâng LAN Web thành operational/admin Web;
+- E2E/stress/soak;
+- chỉ đánh giá Windows Service thật/LAN HA nếu sau này có quyền hoặc use case chứng minh cần.
 
 STABLE vẫn cần BETA gate + Owner approval.
