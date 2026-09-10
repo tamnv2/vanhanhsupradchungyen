@@ -37,3 +37,12 @@ Lịch sử này là append-only.
 - BETA D1 binding PASS; D1 ID `37eb7d59-05c0-4ba2-8162-cb6a9fe5d492`.
 - BETA `/health` PASS và toàn bộ environment deploy kết thúc SUCCESS.
 - SETUP-009 được đánh dấu DONE; chuyển sang business-runtime foundation.
+
+## 2026-09-10 — foundation-0.3.1
+
+- Thêm `/health/deep` để kiểm tra end-to-end Worker + D1 + Google Gateway.
+- Thêm `/api/v1/meta` làm endpoint contract/version/build an toàn trước khi mở API nghiệp vụ.
+- BETA deep health PASS sau deploy; Worker version `1e479ad6-528b-4375-83c0-65f6c3d362fc`.
+- Google Gateway BETA version 4 PASS.
+- CI chọn component thay đổi để những commit sau không tạo GAS version hoặc deploy Worker không cần thiết.
+- Repository validation tiếp tục PASS.
