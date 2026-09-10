@@ -18,3 +18,15 @@
 | D-012 | ACTIVE | Tranche khoảng 20 phút với soft stop + mandatory checkpoint |
 | D-013 | ACTIVE | Dependency graph + parallel execution là mặc định |
 | D-014 | ACTIVE | Detailed changelog record cho mọi thay đổi đáng kể |
+| D-015 | ACTIVE | DC Core generic + cluster rollout; Pick Pack 1291 là cluster đầu tiên |
+| D-016 | ACTIVE | Backup Pick Pack reuse có chọn lọc; không migrate/runtime dependency |
+| D-017 | ACTIVE | Immutable event/idempotency/version/device sequence + correction as new event |
+| D-018 | ACTIVE | D1 authority; Sheets projection/đối soát/DR qua outbox one-writer |
+| D-019 | ACTIVE | Free-first; capacity quyết định bằng measurement/stress/soak |
+| D-020 | ACTIVE | BETA/STABLE runtime isolation đầy đủ |
+| D-021 | ACTIVE | Business data/mutation không anonymous trước auth |
+| D-022 | ACTIVE | Google projection availability không chặn canonical D1 core |
+| D-023 | ACTIVE | Pick Pack 1291 Sheet baseline ADAPTED; không old data/password verifier |
+| D-024 | ACTIVE | Generic resource taxonomy; dropped-goods là module Pick Pack 1291 |
+
+Lưu ý: các ID D-010..D-017 từng xuất hiện trên nhánh BETA lịch sử trước governance không còn là decision namespace authority; nội dung hợp lệ đã được re-issued thành D-015..D-022.
