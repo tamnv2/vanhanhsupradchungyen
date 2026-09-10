@@ -65,3 +65,14 @@ Lịch sử này là append-only.
 - Gắn governance continuity validation vào workflow `Validate public repo`.
 - Cơ chế continuity từ nay không chỉ là tài liệu hướng dẫn mà có CI guard chống vô tình xóa/hỏng bootstrap/checkpoint.
 - Chi tiết: `docs/changelog/2026-09-10-governance-0.4.1.md`.
+
+## 2026-09-10 — reconcile-sheets-0.5.0
+
+- Hoàn tất `RECONCILE-001`: phân tách generic DC core và cluster-specific Pick Pack 1291.
+- Đồng bộ source của Business Core V1 đang live BETA vào `main` authority mà không move BETA/STABLE.
+- Xác minh lại BETA deploy `947a4...`: Worker version `f8ddf638-0829-4249-9ea0-8f2d38b03f05`, D1 `business_core_v1`, Worker meta và Google Gateway advisory đều PASS.
+- Tạo BETA cluster folder `PICK_PACK_1291` và workbook `VHDCHY BETA - PICK PACK 1291 - 2026 Q3` schema `PP1291_SHEETS_BETA_V1`.
+- Adapt tab/header/danh mục hữu ích từ backup Pick Pack 1291; không migrate dữ liệu cũ, không copy password verifier, không tự tạo lại LAN/emergency fallback tabs.
+- Chốt generic resource taxonomy và module ownership cho `dropped_goods` qua decision D-024; sửa schema tương lai bằng migration additive.
+- Main CI giờ kiểm tra đồng thời governance continuity và D1 migrations; run `34506547071` PASS.
+- Chi tiết: `docs/changelog/2026-09-10-reconcile-sheets-0.5.0.md`.
