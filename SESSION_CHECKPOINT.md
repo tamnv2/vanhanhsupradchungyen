@@ -1,11 +1,11 @@
 # SESSION CHECKPOINT
 
-Checkpoint ID: `RECONCILE-20260910-02`
-Timestamp: `2026-09-10 Asia/Ho_Chi_Minh`
+Checkpoint ID: `LAN-PILOT-20260911-01`
+Timestamp: `2026-09-11 Asia/Ho_Chi_Minh`
 
 ## Authority/source basis
 
-- MAIN reconciliation implementation range: `314006fc3ee02817b621c231d235369c9162e7d2` through `7994c5b783d8b3bd94bbba97a1b05e32978f05c0`; checkpoint/changelog-only commits may sit on top.
+- MAIN contains reconciled DC core/Sheet baseline plus new Owner-approved LAN pilot priority decisions/spec.
 - BETA live/source ref: `947a4feb48bc5c99867f1975b56edbb9a7309925`.
 - STABLE ref: `5b7132071f032ab46f133d4416f80791505f080d`.
 
@@ -19,31 +19,36 @@ Timestamp: `2026-09-10 Asia/Ho_Chi_Minh`
 - Google Gateway advisory probe on latest deploy: PASS.
 - STABLE promotion: NOT DONE / gated.
 
-## Done this tranche
+## Done before this checkpoint
 
-- `RECONCILE-001` completed: generic DC vs cluster-specific responsibilities classified.
-- `docs/architecture/MODULE_MAP.md` created.
-- Current deployed BETA business-core migration/Worker/deploy contract synchronized into `main` authority without moving `beta`.
-- Main CI now validates both governance continuity and local D1 migrations.
-- Created BETA Drive cluster folder `PICK_PACK_1291` ID `1toB5gBne5-v15clBkdbL6O5CrxzPBmEs`.
-- Created native Google Sheet `VHDCHY BETA - PICK PACK 1291 - 2026 Q3`, ID `14gHSgWXP2QvtPmBD3CzFt3vQ6AED2hPSm_LxMGpXAKg`.
-- Sheet schema `PP1291_SHEETS_BETA_V1` populated with adapted old headers/catalogs plus VHDCHY control/document/conflict/import tabs; no old data migrated.
-- Old Admin password verifier was excluded; old LAN/emergency tabs were not recreated.
-- Resource Registry Drive document updated with latest BETA Worker/schema and new workbook IDs.
-- New decisions D-015..D-024 re-issued/adopted under unique main authority IDs; historical beta-only conflicting decision IDs are not authority.
+- `RECONCILE-001` completed and BETA Pick Pack 1291 quarterly workbook created.
+- Generic DC vs cluster-specific boundaries recorded.
+- Current Business Core V1 BETA known-good state recorded.
 
-## Known rework
+## Owner decisions added 2026-09-11
 
-- `resources.resource_type` in applied migration 0001 is too Pick Pack-specific for DC core; fix only through additive migration.
-- `dropped_goods` is a Pick Pack 1291 module domain, not a universal DC domain.
-- Projection workbook exists, but actual D1 outbox → Google transport is not yet activated for business data.
-- Generic auth/session/permission layer is not yet active; protected routes remain closed.
-- Exact current VHDCHY privileged ROOT/SUPERADMIN credential semantics must not be inferred from the retired Pick Pack implementation.
+- `LAN-PILOT-001` is the priority feasibility gate before deep business build.
+- PDA must automatically detect valid BETA LAN and enter LAN mode; fallback/reconnect must be deterministic.
+- Available physical test capacity: about 3 PDA simultaneously + 1 laptop.
+- Larger load testing uses synthetic logical clients on laptop; this is service-capacity evidence, not equivalent RF/Wi-Fi evidence.
+- Android and LAN Agent require both automatic update discovery/notification and a manual update fallback path.
+- LAN Agent must be lightweight but operationally visible: background Windows service + tray/settings console with status, update, local data-directory selection, logs/diagnostics and basic metrics.
+- `beta-lan.supra.cc.cd` remains internal-only; no public DNS.
+
+Detailed contract: `docs/lan/LAN_PILOT_001.md`.
 
 ## Exact next action
 
-Execute `PARALLEL-BUILD-001` from `NEXT_ACTIONS.md`, starting `CORE-REFINE-001`, `SHEETS-001`, `AUTH-001`, and `ANDROID-FOUNDATION-001` in parallel where tool/dependency boundaries permit.
+Execute `LAN-PILOT-001` from `NEXT_ACTIONS.md` in parallel streams:
+
+1. LAN discovery/auto-LAN/fallback contract.
+2. Windows LAN Agent BETA skeleton + tray/settings/updater.
+3. Android signed BETA LAN test app skeleton + auto-LAN/update/manual-update controls.
+4. LAN Web diagnostics foundation.
+5. Physical 1/2/3-PDA + synthetic load test harness and runbook.
+
+Do not spend a tranche extending deep Pick Pack business features before this gate passes. Existing core/auth/sheets source remains checkpointed and may proceed only if independent/supportive.
 
 ## Owner action required
 
-NO at tranche start.
+NO at tranche start. Once installable artifacts are ready, Owner will need to run them on the test laptop/PDA and apply local DNS/hosts/router configuration from the test runbook where needed.
