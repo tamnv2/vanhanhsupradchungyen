@@ -58,3 +58,10 @@ Lịch sử này là append-only.
 - Thiết lập detailed append-only changelog record trong `docs/changelog/`.
 - Dừng mở rộng business schema cho tới khi `RECONCILE-001` phân loại core chung DC và cluster-specific.
 - Chi tiết: `docs/changelog/2026-09-10-governance-0.4.0.md`.
+
+## 2026-09-10 — governance-0.4.1
+
+- Thêm `scripts/validate-governance.sh` để CI kiểm tra bắt buộc các authority/checkpoint/index file và marker cốt lõi.
+- Gắn governance continuity validation vào workflow `Validate public repo`.
+- Cơ chế continuity từ nay không chỉ là tài liệu hướng dẫn mà có CI guard chống vô tình xóa/hỏng bootstrap/checkpoint.
+- Chi tiết: `docs/changelog/2026-09-10-governance-0.4.1.md`.
