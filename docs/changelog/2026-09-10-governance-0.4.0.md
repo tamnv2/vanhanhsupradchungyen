@@ -4,6 +4,8 @@ Change ID: `GOV-20260910-01`
 Time: 2026-09-10 Asia/Ho_Chi_Minh
 Module: governance / continuity / project scope
 Environment: repository authority only; no provider runtime deploy intended
+Primary governance commit: `c2b118b451be5ed0f1d08a23889da1956d7535ff`
+Repository entrypoint commit: `a7aa804d7a386c03e7376395f4ba765ebc8f6ebe`
 
 ## Reason
 
@@ -19,6 +21,7 @@ Owner yêu cầu dự án dài hạn phải kế thừa nhất quán qua nhiều
 - Appended D-010..D-014 in `DECISIONS.md`.
 - Added governance/reference tasks to `TASK_LEDGER.md`.
 - Added Pick Pack 1291 digest index under `docs/reference/pick-pack-1291/`.
+- Added `docs/AI_USAGE_GUIDE.md` for Owner operation across chats/checkpoints/promotions.
 - Changed future changelog model to root append-only index + immutable detailed records.
 
 ## Files/resources affected
@@ -33,11 +36,12 @@ None.
 
 - Pre-change BETA validation run `34495312672`: SUCCESS.
 - Pre-change BETA deploy run `34495312746`: SUCCESS.
-- Governance consistency verification required after commit: files exist, bootstrap pointers resolve, branch refs unchanged except `main` authority commit.
+- Post-change verification: scope/bootstrap/contract/current-state/next-actions/checkpoint/decision index/reference index/usage guide exist on `main`.
+- `beta` and `stable` refs are intentionally not moved by this governance change.
 
 ## Result
 
-Expected: continuation becomes deterministic and reference scope is explicitly fenced.
+Continuation is checkpoint-driven; reference scope is fenced; long execution uses a soft stop instead of relying on session memory or hard-limit termination.
 
 ## Rollback
 
