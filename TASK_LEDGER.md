@@ -13,6 +13,11 @@
 | SETUP-008A | Full environment credential verification | DONE | BETA + STABLE PASS toàn bộ |
 | SETUP-009 | BETA infra deploy test | DONE | D1 + Worker + custom domain + GAS + deep health PASS |
 | SETUP-010 | STABLE infra deploy test | BLOCKED_BY_GATE | Chỉ promote sau BETA gate và Owner acceptance |
-| BUILD-001 | Business runtime Worker/Gateway | IN_PROGRESS | Meta/deep-health foundation live; tiếp tục domain contract/schema |
-| BUILD-002 | Android app | PENDING | Thực hiện theo business-runtime contract |
-| BUILD-003 | LAN Agent | PENDING | Triển khai sau API/client contract và LAN measurement gate |
+| GOV-001 | Project scope authority | DONE | `PROJECT_SCOPE.md`, Owner approved |
+| GOV-002 | AI long-running operating contract | DONE | minimal bootstrap + parallelism + soft stop/checkpoint |
+| GOV-003 | Detailed changelog mechanism | DONE | append-only index + `docs/changelog/` records |
+| GOV-004 | Pick Pack 1291 reference boundary | DONE | reference-only, adoption state required |
+| RECONCILE-001 | Business core vs VHDCHY scope | NEXT | A+B+C parallel, then reconciliation decision/build plan |
+| BUILD-001 | Business runtime Worker/Gateway | IN_PROGRESS | Tạm không mở rộng schema/auth trước RECONCILE-001 |
+| BUILD-002 | Android app | PENDING | Sau contract/module reconciliation |
+| BUILD-003 | LAN Agent | PENDING | Sau API/client contract và LAN measurement gate |

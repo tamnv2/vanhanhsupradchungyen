@@ -46,3 +46,15 @@ Lịch sử này là append-only.
 - Google Gateway BETA version 4 PASS.
 - CI chọn component thay đổi để những commit sau không tạo GAS version hoặc deploy Worker không cần thiết.
 - Repository validation tiếp tục PASS.
+
+## 2026-09-10 — governance-0.4.0
+
+- Owner chốt VHDCHY là dự án chính bao quát DC; Pick Pack 1291 chỉ là cluster/reference có chọn lọc.
+- Thêm authority hierarchy chống reference cũ ghi đè VHDCHY.
+- Thiết lập minimal bootstrap 4-file để tối ưu token/time qua nhiều phiên chat.
+- Thiết lập dependency graph + parallel execution là mặc định.
+- Thiết lập execution tranche khoảng 20 phút, soft stop và mandatory checkpoint trước khi tool/session hard-stop.
+- Thiết lập `NEXT_ACTIONS.md` + `SESSION_CHECKPOINT.md` để continuation deterministic.
+- Thiết lập detailed append-only changelog record trong `docs/changelog/`.
+- Dừng mở rộng business schema cho tới khi `RECONCILE-001` phân loại core chung DC và cluster-specific.
+- Chi tiết: `docs/changelog/2026-09-10-governance-0.4.0.md`.

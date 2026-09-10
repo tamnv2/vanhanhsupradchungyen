@@ -2,43 +2,41 @@
 
 Cập nhật: 2026-09-10
 
-## Hoàn tất
+## Trạng thái tổng quát
 
-- Account Google/Gmail/Drive mới đã kết nối.
-- GitHub connector đã kết nối account mới.
-- Drive runtime BETA/STABLE đã được tạo.
-- Hai Google Cloud project BETA/STABLE đã được tạo và liên kết đúng Apps Script bằng Project Number.
-- OAuth cho Google CI đã được Owner tạo.
-- Apps Script BETA/STABLE đã authorize PASS và có deployment cố định.
-- Cloudflare zone `supra.cc.cd` đã Active.
-- Cloudflare CI token BETA/STABLE đã được Owner tạo.
-- Android signing key BETA/STABLE đã được tạo; fingerprint đã được ghi vào Resource Registry.
-- Repo `tamnv2/vanhanhdchungyen` đã được khởi tạo và giữ PUBLIC có chủ đích.
-- GitHub Environments `beta` và `stable` đã được Owner cấu hình đủ Variables/Secrets.
-- Full credential/environment verification PASS cho cả BETA và STABLE.
-- BETA D1 `vhdchy-data-beta` tồn tại tại APAC; ID `37eb7d59-05c0-4ba2-8162-cb6a9fe5d492`.
-- BETA Worker `vhdchy-beta` LIVE tại `beta.supra.cc.cd`.
-- BETA Google Gateway CI deployment hiện version 4 và endpoint PASS.
-- BETA `/health` PASS với D1.
-- BETA `/health/deep` PASS end-to-end: Worker + D1 + Google Gateway.
-- Repository validation PASS sau runtime-foundation update.
-- CI đã có selective component deploy để tránh cập nhật GAS/Cloudflare không cần thiết ở các commit sau.
+- Dự án chính: `VẬN HÀNH DC HƯNG YÊN` — nền tảng bao quát DC Hưng Yên.
+- Cluster/module đầu tiên: Pick Pack 1291.
+- Pick Pack 1291 cũ: read-only reference, không phải authority/runtime dependency.
+- Governance/continuity contract mới đã được Owner duyệt và áp dụng.
 
-## Trạng thái môi trường
+## Foundation đã xác minh
 
-- BETA: LIVE FOUNDATION / DEEP HEALTHY.
-- STABLE: credentials VERIFIED nhưng runtime chưa promote/deploy; vẫn yêu cầu Owner approval.
-- LAN hostnames vẫn private/reserved, không public DNS.
-- R2 vẫn OFF.
-- Durable Objects chưa tạo cho tới khi business runtime cần lock/rate-limit/concurrency.
+- Google/Gmail/Drive account dự án và GitHub connector đã kết nối.
+- Drive runtime BETA/STABLE đã tạo.
+- GCP/OAuth/GAS BETA/STABLE đã cấu hình; Apps Script authorize/deployment PASS.
+- Cloudflare zone `supra.cc.cd` Active; CI token BETA/STABLE đã cấu hình.
+- Android signing BETA/STABLE đã tạo và credential verification PASS.
+- GitHub Environments `beta`/`stable` đầy đủ Variables/Secrets và verification PASS.
+- BETA D1 `vhdchy-data-beta`: `37eb7d59-05c0-4ba2-8162-cb6a9fe5d492`, APAC.
+- BETA Worker `vhdchy-beta` live tại `beta.supra.cc.cd`.
+- BETA Google Gateway foundation PASS.
+- BETA `/health` và `/health/deep` foundation PASS.
+- R2 OFF; Durable Objects chưa bật; LAN hostnames private/reserved.
 
-## Đang tiếp tục
+## Branch/live refs tại checkpoint governance
 
-- BUILD-001 business-runtime foundation đang IN_PROGRESS.
-- Endpoint `/api/v1/meta` đã có để xác nhận contract/version/build mà chưa mở mutation nghiệp vụ công khai.
-- Schema và các entity nghiệp vụ chỉ triển khai theo authority đã chốt; không tự phát minh trường dữ liệu.
-- Mọi thay đổi runtime mới vào BETA trước; STABLE chỉ promote sau gate và Owner acceptance.
+- `main` trước governance commit: `1ff5fc46365b06458afb93777674f917e07e9543`.
+- `beta` live/source ref: `947a4feb48bc5c99867f1975b56edbb9a7309925`.
+- BETA validation run `34495312672`: SUCCESS.
+- BETA deploy run `34495312746`: SUCCESS.
+- `stable` ref: `5b7132071f032ab46f133d4416f80791505f080d`; chưa promote runtime.
+
+## Business runtime
+
+- Business core work đã bắt đầu trên BETA với D1/event/idempotency/projection concepts.
+- Không rollback phần foundation chỉ vì Pick Pack 1291 có lịch sử kiến trúc khác.
+- Trước khi mở rộng business schema/auth/client tiếp theo, cần reconcile phần đã làm với `PROJECT_SCOPE.md`, Master Spec hiện hành và các pattern Pick Pack 1291 chỉ khi chúng thật sự liên quan cluster 1291.
 
 ## Next checkpoint
 
-Mở rộng business-runtime contract/schema và client foundation theo Master Spec; giữ STABLE nguyên trạng cho tới khi có quyết định promote.
+Thực hiện tranche `RECONCILE-001`: rà business core hiện có, phân loại phần GENERIC-DC vs CLUSTER-1291 vs REFERENCE-ONLY, xác định phần giữ/adapt/sửa; sau đó mới tiếp tục business API/Sheets/Android theo dependency graph.

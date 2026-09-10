@@ -1,29 +1,25 @@
 # AI BOOTSTRAP
 
-## Mục tiêu
+Mục tiêu: tiếp tục VHDCHY qua nhiều phiên mà không phụ thuộc trí nhớ hội thoại.
 
-Đảm bảo AI có thể tiếp tục công việc qua nhiều phiên chat mà không phụ thuộc trí nhớ hội thoại.
+## Mỗi phiên mới — đọc đúng 4 file trước
 
-## Quy trình bắt buộc khi bắt đầu phiên
+1. `PROJECT_SCOPE.md`
+2. `CURRENT_STATE.md`
+3. `NEXT_ACTIONS.md`
+4. `DECISIONS_INDEX.md`
 
-Đọc lần lượt `CURRENT_STATE.md`, `DECISIONS.md`, `TASK_LEDGER.md`, `CHANGELOG.md` trước khi sửa code hoặc hạ tầng.
+Sau đó chỉ mở tài liệu chi tiết liên quan task. Nếu cần quy tắc thực thi, đọc `AI_OPERATING_CONTRACT.md`.
 
-Nếu công việc liên quan kiến trúc, dữ liệu Google Sheets, offline/sync, authority/fallback, LAN hoặc tham chiếu dự án cũ thì bắt buộc đọc thêm `docs/reference/PICK_PACK_1291_REFERENCE.md` trước khi kết luận hoặc thay đổi implementation.
+## Quy tắc cứng
 
-## Quy tắc vận hành
-
-- GitHub là authority cho source, workflow, quyết định kỹ thuật và trạng thái triển khai.
-- Drive Resource Registry giữ ID tài nguyên không nhạy cảm; secret không được ghi vào repo hoặc tài liệu public.
-- Khi yêu cầu mới mâu thuẫn quyết định cũ, không tự suy đoán: nêu mâu thuẫn và yêu cầu Owner chốt nếu ảnh hưởng kiến trúc/dữ liệu/quyền.
-- Luôn phân tích việc nào độc lập để xử lý song song.
-- Không xóa changelog/version history.
-- BETA và STABLE phải tách tài nguyên, secret và release flow.
-- Không tạo DNS public cho hostname LAN.
-- Không dùng `pull_request_target` trong workflow có khả năng tiếp cận secret.
-- Không log token, private key, refresh token, keystore base64 hoặc signing password.
-- Stable deployment phải đi qua GitHub Environment `stable` và Owner approval.
-- Pick Pack 1291 chỉ là nguồn tham khảo read-only. Không được suy diễn kiến trúc cuối từ một file lịch sử đơn lẻ và không được dùng dự án cũ làm runtime/fallback của VHDCHY.
-
-## Public repository hardening
-
-Repository này chủ động để PUBLIC nhằm sử dụng GitHub-hosted Actions mà không phụ thuộc runner cố định. Vì vậy mọi thiết kế phải mặc định source có thể bị xem công khai; security không được phụ thuộc vào việc giấu source hoặc ID tài nguyên.
+- GitHub là authority cho source/config/technical state.
+- Owner decision mới nhất > scope > decisions > current specs > references > historical backup.
+- Pick Pack 1291 chỉ là read-only evidence/reference; không clone 100% và không dùng làm runtime/fallback/authority của VHDCHY.
+- Phân tích dependency và chạy song song việc độc lập.
+- Với tranche dài, soft-stop trước khoảng 20 phút; checkpoint trước khi dừng.
+- `CHANGELOG.md` + `docs/changelog/` phải ghi đầy đủ thay đổi; không xóa lịch sử.
+- BETA/STABLE tách tài nguyên/secrets/release; STABLE cần Owner approval.
+- Không public DNS LAN.
+- Không log/commit token, private key, refresh token, keystore base64 hoặc signing password.
+- Repo PUBLIC có chủ đích; security không được dựa vào giấu source/ID.
