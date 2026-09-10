@@ -8,6 +8,8 @@
 
 Đọc lần lượt `CURRENT_STATE.md`, `DECISIONS.md`, `TASK_LEDGER.md`, `CHANGELOG.md` trước khi sửa code hoặc hạ tầng.
 
+Nếu công việc liên quan kiến trúc, dữ liệu Google Sheets, offline/sync, authority/fallback, LAN hoặc tham chiếu dự án cũ thì bắt buộc đọc thêm `docs/reference/PICK_PACK_1291_REFERENCE.md` trước khi kết luận hoặc thay đổi implementation.
+
 ## Quy tắc vận hành
 
 - GitHub là authority cho source, workflow, quyết định kỹ thuật và trạng thái triển khai.
@@ -20,6 +22,7 @@
 - Không dùng `pull_request_target` trong workflow có khả năng tiếp cận secret.
 - Không log token, private key, refresh token, keystore base64 hoặc signing password.
 - Stable deployment phải đi qua GitHub Environment `stable` và Owner approval.
+- Pick Pack 1291 chỉ là nguồn tham khảo read-only. Không được suy diễn kiến trúc cuối từ một file lịch sử đơn lẻ và không được dùng dự án cũ làm runtime/fallback của VHDCHY.
 
 ## Public repository hardening
 
