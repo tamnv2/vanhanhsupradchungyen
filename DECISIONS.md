@@ -129,3 +129,35 @@ Kết quả RECONCILE-001:
 - Core toàn DC giữ khái niệm generic `resources`, nhưng resource type phải cấu hình/đăng ký theo module; không hard-code toàn hệ thống chỉ có PDA/USER_PICK/BAN_PACK/USER_PACK.
 - `dropped_goods`/Nhận hàng rớt là domain của cluster/module Pick Pack 1291, không được suy diễn thành domain universal của DC.
 - Applied migration `0001_business_core.sql` không sửa; correction đi qua additive migration mới.
+
+## D-025 — LAN-PILOT là priority feasibility gate trước business build sâu
+
+Owner approved 2026-09-11.
+
+- Build sớm ba artifact có thể kế thừa: Android/PDA BETA test app, Windows LAN Agent BETA và LAN Web BETA.
+- Mục tiêu trước mắt là kiểm chứng transport/LAN thực tế: auto-LAN, kết nối, latency, throughput, ổn định, reconnect, queue và service capacity trước khi đầu tư sâu vào business feature.
+- PDA phải tự nhận biết `beta-lan.supra.cc.cd`/LAN service đúng environment và tự chuyển LAN mode theo health/policy; khi LAN mất phải fallback deterministic, không flapping.
+- Điều kiện test vật lý hiện có là tối đa khoảng 3 PDA + 1 laptop. Physical 1/2/3-PDA test là evidence Wi-Fi/LAN thật; synthetic clients trên laptop chỉ bổ sung capacity test, không được tuyên bố thay thế số PDA vật lý.
+- Nếu LAN pilot FAIL, sửa transport/architecture trước; không che FAIL bằng Cloud fallback rồi coi LAN đã đạt.
+
+Chi tiết: `docs/lan/LAN_PILOT_001.md`.
+
+## D-026 — Update phải có automatic discovery và manual fallback
+
+Owner approved 2026-09-11.
+
+- Android/PDA và Windows LAN Agent đều phải tự kiểm tra/hiển thị khi có bản mới.
+- Đồng thời phải có thao tác cập nhật thủ công độc lập (`Kiểm tra cập nhật`/download/install) để recovery khi automatic flow lỗi.
+- Artifact phải verify signer/hash trước acceptance.
+- LAN Agent update phải stage + health-check + rollback, không được phá local DB/config/log hoặc để service half-updated.
+- BETA/STABLE có update channel/artifact riêng.
+
+## D-027 — LAN Agent là lightweight background service + tray/settings console
+
+Owner approved 2026-09-11.
+
+- LAN Agent phải chạy nền ổn định cùng Windows nhưng không được là EXE hoàn toàn ẩn.
+- Tách background service nhẹ khỏi tray/settings console là kiến trúc ưu tiên để UI có thể đóng mà service vẫn chạy và idle footprint thấp.
+- Tray/settings tối thiểu hiển thị Service/LAN/Internet, client count, latency/error/queue, CPU/RAM, version/update; cho phép chọn local database/data directory, mở log, diagnostics và start/stop/restart có kiểm soát.
+- Framework/runtime không khóa trước; phải chọn dựa trên footprint đo thực tế, maintainability, Windows service/tray/update support.
+- Mục tiêu tối ưu CPU/RAM phải được đo bằng pilot, không chỉ ước lượng.
