@@ -1,70 +1,97 @@
 # NEXT ACTIONS
 
-Checkpoint: `LAN-PILOT-20260911-01`
+Checkpoint: `LAN-PILOT-20260911-02`
 
 ## Priority objective
 
-`LAN-PILOT-001 — build and validate LAN feasibility before deep business implementation.`
+`LAN-PILOT-001 — compile/release no-admin pilot artifacts, then validate LAN feasibility on restricted corporate laptop + up to 3 Newland MT90 PDA.`
 
-Owner approved 2026-09-11. Do not continue deep business feature work before the LAN pilot gate unless the work is independent and clearly supports the pilot.
+Owner approved 2026-09-11. Deep business feature work remains behind the LAN feasibility gate unless independent and directly supportive.
 
-## Stream A — LAN CONTRACT + AUTO-LAN
+## Stream A — LAN CONTRACT + AUTO-LAN [DONE FOR PILOT BASELINE]
 
-1. Define versioned LAN health/discovery contract.
-2. Define PDA transport states: `CLOUD_ONLY`, `LAN_AVAILABLE`, `LAN_ACTIVE`, `LAN_LOST`, `RECONNECTING`, `LOCAL_QUEUE_ONLY`.
-3. Define service identity/environment validation, timeouts, hysteresis/backoff and fallback rules.
-4. Define event/request envelope suitable for reconnect/retry/idempotency testing.
-5. Define internal-only hostname contract for `beta-lan.supra.cc.cd`; no public DNS.
+- Versioned protocol: `docs/lan/LAN_PROTOCOL_V1.md`.
+- TCP local API/Web default: `17891`; UDP discovery: `17892`.
+- PDA states: `CLOUD_ONLY`, `LAN_AVAILABLE`, `LAN_ACTIVE`, `LAN_LOST`, `RECONNECTING`, `LOCAL_QUEUE_ONLY`.
+- Candidate discovery: cached endpoint -> UDP broadcast -> manual endpoint recovery; internal DNS is not required.
+- LAN activation requires Agent identity/environment/protocol health verification + hysteresis.
+- Test-only durable event envelope uses event ID + device ID + device sequence/idempotency.
 
-## Stream B — WINDOWS LAN AGENT BETA
+## Stream B — WINDOWS LAN AGENT BETA [IN PROGRESS]
 
-1. Choose implementation/runtime after comparing footprint + maintainability for Windows service/tray/update.
-2. Build lightweight background service skeleton.
-3. Add local HTTP API + health + metrics + local durable queue/database.
-4. Add tray/settings console showing Service/LAN/Internet, client count, latency/error/queue, CPU/RAM, versions.
-5. Add safe local data-directory selection, logs/diagnostics and controlled service start/stop/restart.
-6. Add updater contract with automatic discovery/notification plus manual `Kiểm tra cập nhật`; stage/verify/health-check/rollback.
-7. Produce BETA artifact/install instructions.
+Implemented baseline:
 
-## Stream C — ANDROID LAN TEST APP
+- portable per-user `.exe`, no Administrator/SCM service;
+- `asInvoker`, no HKLM/Program Files/firewall/router/DNS changes;
+- tray/settings runtime;
+- local HTTP API, UDP discovery, embedded diagnostics Web;
+- SQLite WAL test store + duplicate protection;
+- selectable writable data directory with integrity verify/rollback;
+- manual update check + automatic release notification;
+- optional HKCU user auto-start if policy permits;
+- synthetic LoadGen tool.
 
-1. Create/continue native Android BETA foundation using existing signing/environment separation.
-2. Add auto-discovery and auto-enter LAN mode.
-3. Show current transport and fallback reason.
-4. Add request/realtime/queue/reconnect test controls and metrics.
-5. Add local durable queue so test events survive network/app restart.
-6. Add automatic update discovery/notification and independent manual update controls.
-7. Build signed BETA APK suitable for 1/2/3 physical PDA testing.
+Next:
 
-## Stream D — LAN WEB BETA
+1. finish CI/release artifact gate;
+2. add/verify CPU metric on target laptop;
+3. implement and test actual no-admin staged self-update + health rollback before final pilot PASS;
+4. harden tray/update threading and bounded logs/metrics if measurement requires;
+5. run physical laptop feasibility tests without bypassing corporate policy.
 
-1. Serve a lightweight local diagnostics site from LAN Agent/local host.
-2. Target internal hostname `beta-lan.supra.cc.cd` after Owner configures/accepts internal DNS/routing instructions.
-3. Display service health, connected PDA, p50/p95/p99 latency, request/error rate, queue/backlog, CPU/RAM/local DB, Internet/Cloud status and build versions.
-4. Keep frontend contract reusable for future operational/admin Web.
+## Stream C — ANDROID LAN TEST APP [IN PROGRESS]
 
-## Stream E — TEST HARNESS / QUALITY
+Implemented baseline:
 
-1. Physical test profiles for 1, 2 and 3 PDA simultaneously.
-2. Synthetic laptop clients for 10/25/50/100+ logical-client service capacity tests; never represent these as equivalent Wi-Fi evidence.
-3. Network scenarios: LAN only, Internet only, both, neither, reconnect, service restart, laptop restart, app restart.
-4. Measure success/error rates, p50/p95/p99, throughput, reconnect time, queue recovery, event loss, CPU/RAM, DB/log growth and uptime.
-5. Verify updater automatic notification + manual recovery path for APK and LAN Agent.
-6. Record evidence and PASS/FAIL report.
+- lightweight native app, `minSdk 21`, no Newland scanner SDK dependency;
+- signed BETA build pipeline using existing BETA signer;
+- auto LAN discovery, health validation and hysteresis;
+- Cloud fallback + local queue mode;
+- durable SQLite test-event queue;
+- echo/latency test, transport status and manual endpoint recovery;
+- automatic release discovery + manual update entry point.
+
+Next:
+
+1. finish signed APK CI/release gate;
+2. install on Newland MT90 and capture exact Android/device revision from the app;
+3. test auto `LAN_AVAILABLE -> LAN_ACTIVE` and all fallback transitions;
+4. verify update/install behavior on real MT90;
+5. only after physical evidence tune timeout/hysteresis/poll cadence.
+
+## Stream D — LAN WEB BETA [BASELINE IMPLEMENTED]
+
+- Served directly by LAN Agent at `http://<laptop-LAN-IP>:17891/`.
+- Shows health, Agent IP(s), connected devices, request/errors, latency percentiles, event/duplicate counts, RAM/DB size, data directory and update check.
+- `beta-lan.supra.cc.cd` is not a pilot dependency and will only be added if legitimate internal DNS later exists.
+
+Next: add CPU/status evidence and tune dashboard refresh only if target-laptop measurement shows need.
+
+## Stream E — TEST HARNESS / QUALITY [IN PROGRESS]
+
+1. CI must produce immutable prerelease artifacts:
+   - `VHDCHY-LAN-Agent-BETA-win-x64.zip` + SHA256;
+   - `VHDCHY-LAN-Pilot-BETA.apk` + SHA256/signature verification.
+2. Physical test: 1 -> 2 -> 3 MT90 simultaneously.
+3. Synthetic LoadGen: 10 -> 25 -> 50 -> 100+ logical clients on laptop; this measures Agent software capacity only.
+4. Scenarios: same Wi-Fi discovery, manual-IP diagnostic, Internet off/LAN on, LAN off/Internet on, both off, Agent restart, PDA/app restart, laptop restart/login, Wi-Fi reconnect/AP transition where possible.
+5. Measure success/error rates, p50/p95/p99, throughput, reconnect, queue recovery, event loss/duplicates, RAM/CPU, DB growth and uptime.
+6. Classify corporate restrictions explicitly: discovery blocked, inbound TCP blocked, AP isolation, executable/update policy block, unstable Wi-Fi or resource limit.
+7. Produce evidence-based PASS/FAIL report.
 
 ## LAN-PILOT gate
 
 PASS requires at minimum:
 
-- 3 physical PDA concurrently connect and automatically enter LAN mode under correct policy;
+- Agent runs as ordinary user without security-policy bypass;
+- 3 physical MT90 concurrently connect and automatically enter LAN mode;
 - deterministic fallback/reconnect with zero unexplained test-event loss;
-- synthetic capacity provides clear headroom above 3 physical PDA;
-- LAN Agent restart/laptop restart recover predictably;
-- automatic + manual update paths work;
-- tray/settings requirements work with low measured idle footprint;
-- LAN Web reports consistent status/metrics.
+- synthetic capacity shows clear software headroom above three real PDA;
+- restart/recovery behavior is predictable;
+- automatic update notification and independent manual update work; actual Agent self-update + rollback is verified before final PASS;
+- tray/settings/Web operate within acceptable measured CPU/RAM footprint on the target laptop.
 
-If FAIL: fix LAN transport/runtime/architecture first.
+If corporate policy prevents PDA-to-laptop inbound LAN without legitimate user privileges, report `FAIL/NOT-FEASIBLE` for laptop-as-LAN-Agent under current conditions instead of requiring router/admin changes.
 
 ## Deferred until LAN-PILOT PASS or clearly independent
 
@@ -72,12 +99,10 @@ If FAIL: fix LAN transport/runtime/architecture first.
 - protected business mutations;
 - full Sheets projection activation;
 - LAN HA/Master-Backup/fencing;
-- Durable Objects/R2 unless pilot measurement proves need.
+- Durable Objects/R2 unless measurement proves need.
 
-Existing `CORE-REFINE-001`, `SHEETS-001`, `AUTH-001` source work may remain checkpointed but does not outrank this gate.
+Existing `CORE-REFINE-001`, `SHEETS-001`, `AUTH-001` source remains checkpointed.
 
 ## Owner action
 
-At implementation start: NONE.
-
-When LAN artifacts are ready, Owner will need to run/install them on the test laptop/PDA and, where required, apply internal DNS/hosts/router settings provided by the test runbook. No STABLE promotion.
+No action while CI/build is being finished. Once known-good artifacts exist, Owner only needs to copy/run the portable Agent as a normal user and install the signed APK on the MT90. The runbook will not require Administrator, router, route, Wi-Fi or DNS changes. No STABLE promotion.
