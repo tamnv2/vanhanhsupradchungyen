@@ -65,7 +65,7 @@ Không cố chạy đến hard limit khoảng 25 phút. Tranche dài dùng soft 
 
 Owner approved 2026-09-10.
 
-Trước work tranche phải phân tích dependencies. Work items độc lập phải được xử lý song song khi tool cho phép; chỉ tuần tự hóa dependency/migration/release gate thật sự.
+Trước work tranche phải phân tích dependencies. Work items độc lập phải được xử lý song song khi tool cho phép; chỉ tuần tự hóa phần thật sự có dependency hoặc migration/release gate.
 
 ## D-014 — Detailed immutable change history
 
@@ -136,7 +136,7 @@ Owner approved 2026-09-11.
 
 - Build sớm ba artifact có thể kế thừa: Android/PDA BETA test app, Windows LAN Agent BETA và LAN Web BETA.
 - Mục tiêu trước mắt là kiểm chứng transport/LAN thực tế: auto-LAN, kết nối, latency, throughput, ổn định, reconnect, queue và service capacity trước khi đầu tư sâu vào business feature.
-- PDA phải tự nhận biết `beta-lan.supra.cc.cd`/LAN service đúng environment và tự chuyển LAN mode theo health/policy; khi LAN mất phải fallback deterministic, không flapping.
+- PDA phải tự nhận biết valid BETA LAN service và tự chuyển LAN mode theo health/policy; khi LAN mất phải fallback deterministic, không flapping.
 - Điều kiện test vật lý hiện có là tối đa khoảng 3 PDA + 1 laptop. Physical 1/2/3-PDA test là evidence Wi-Fi/LAN thật; synthetic clients trên laptop chỉ bổ sung capacity test, không được tuyên bố thay thế số PDA vật lý.
 - Nếu LAN pilot FAIL, sửa transport/architecture trước; không che FAIL bằng Cloud fallback rồi coi LAN đã đạt.
 
@@ -152,12 +152,26 @@ Owner approved 2026-09-11.
 - LAN Agent update phải stage + health-check + rollback, không được phá local DB/config/log hoặc để service half-updated.
 - BETA/STABLE có update channel/artifact riêng.
 
-## D-027 — LAN Agent là lightweight background service + tray/settings console
+## D-027 — LAN Agent là lightweight background runtime + tray/settings console
+
+Owner approved 2026-09-11; implementation constrained further by D-028.
+
+- LAN Agent phải chạy nền ổn định nhưng không được là EXE hoàn toàn ẩn.
+- Tray/settings tối thiểu hiển thị Agent/LAN/Internet, client count, latency/error/queue, CPU/RAM, version/update; cho phép chọn local database/data directory, mở log, diagnostics và restart/exit có kiểm soát.
+- Framework/runtime phải được chọn dựa trên footprint đo thực tế và khả năng chạy trong quyền thật của laptop công ty.
+- Mục tiêu tối ưu CPU/RAM phải được đo bằng pilot, không chỉ ước lượng.
+
+## D-028 — LAN pilot phải hoạt động theo mô hình no-admin / minimum-information
 
 Owner approved 2026-09-11.
 
-- LAN Agent phải chạy nền ổn định cùng Windows nhưng không được là EXE hoàn toàn ẩn.
-- Tách background service nhẹ khỏi tray/settings console là kiến trúc ưu tiên để UI có thể đóng mà service vẫn chạy và idle footprint thấp.
-- Tray/settings tối thiểu hiển thị Service/LAN/Internet, client count, latency/error/queue, CPU/RAM, version/update; cho phép chọn local database/data directory, mở log, diagnostics và start/stop/restart có kiểm soát.
-- Framework/runtime không khóa trước; phải chọn dựa trên footprint đo thực tế, maintainability, Windows service/tray/update support.
-- Mục tiêu tối ưu CPU/RAM phải được đo bằng pilot, không chỉ ước lượng.
+- Laptop mục tiêu là Windows corporate laptop khoảng 2 core / 4 thread, 8 GB RAM, user thường và bị hạn chế nhiều quyền.
+- Không giả định Owner có Administrator, quyền cài Windows Service/driver/certificate, tạo firewall rule, chỉnh HKLM, route, Wi-Fi, AP/router hoặc internal DNS.
+- Pilot LAN Agent dùng portable per-user process + tray/settings, manifest `asInvoker`; optional auto-start chỉ dùng HKCU nếu policy cho phép.
+- Pilot Web dùng trực tiếp laptop LAN IP + high user-space port. `beta-lan.supra.cc.cd` không phải dependency của feasibility test và chỉ được gắn khi internal DNS thật sự có sẵn.
+- LAN discovery ưu tiên cached endpoint + UDP broadcast + manual endpoint recovery; không scan subnet và không yêu cầu thay network configuration.
+- Nếu corporate firewall/AppLocker/AP isolation chặn inbound/discovery và Owner không có quyền hợp lệ để thay đổi, phải ghi đúng là feasibility FAIL/constraint; không yêu cầu bypass policy.
+- PDA vật lý mục tiêu đầu tiên là Newland MT90; do exact OS/hardware revision chưa biết, pilot không phụ thuộc scanner SDK và dùng Android API compatibility rộng.
+- Cả Android và LAN Agent phải giữ đường cập nhật thủ công độc lập bên cạnh automatic release discovery; LAN Agent self-update về sau không được phụ thuộc quyền Administrator.
+
+Protocol chi tiết: `docs/lan/LAN_PROTOCOL_V1.md`.
