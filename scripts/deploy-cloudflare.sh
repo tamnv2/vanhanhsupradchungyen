@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-required=(APP_ENV CF_ACCOUNT_ID CLOUDFLARE_API_TOKEN PUBLIC_HOST)
+required=(APP_ENV CF_ACCOUNT_ID CLOUDFLARE_API_TOKEN PUBLIC_HOST GAS_EXEC_URL)
 for v in "${required[@]}"; do
   [[ -n "${!v:-}" ]] || { echo "Missing $v" >&2; exit 2; }
 done
@@ -31,14 +31,14 @@ fi
 
 [[ -n "$db_id" ]] || { echo "Unable to resolve/create D1 database" >&2; exit 3; }
 
-# Wrangler resolves relative paths from the config file location. Keep the generated
-# config in the repository root so main=worker/src/index.js resolves correctly.
 config="$PWD/wrangler.generated.json"
 trap 'rm -f "$config"' EXIT
 jq -n \
   --arg name "$worker_name" \
   --arg account "$CF_ACCOUNT_ID" \
   --arg app_env "$APP_ENV" \
+  --arg gas_exec "$GAS_EXEC_URL" \
+  --arg build_sha "${GITHUB_SHA:-manual}" \
   --arg host "$PUBLIC_HOST" \
   --arg db_name "$db_name" \
   --arg db_id "$db_id" \
@@ -48,7 +48,7 @@ jq -n \
     compatibility_date:"2026-09-10",
     account_id:$account,
     workers_dev:false,
-    vars:{APP_ENV:$app_env},
+    vars:{APP_ENV:$app_env,GAS_EXEC_URL:$gas_exec,BUILD_SHA:$build_sha},
     routes:[{pattern:$host,custom_domain:true}],
     d1_databases:[{binding:"DB",database_name:$db_name,database_id:$db_id}]
   }' > "$config"
@@ -56,14 +56,14 @@ jq -n \
 CLOUDFLARE_API_TOKEN="$CLOUDFLARE_API_TOKEN" npx --yes wrangler@4 deploy --config "$config"
 
 for i in $(seq 1 24); do
-  payload=$(curl -fsS "https://$PUBLIC_HOST/health" 2>/dev/null || true)
-  if [[ -n "$payload" ]] && jq -e --arg env "$APP_ENV" '.ok == true and .service == "VHDCHY_WORKER" and .environment == $env and .d1.ok == true' <<<"$payload" >/dev/null 2>&1; then
-    echo "Cloudflare health PASS: $PUBLIC_HOST"
+  payload=$(curl -fsS "https://$PUBLIC_HOST/health/deep" 2>/dev/null || true)
+  if [[ -n "$payload" ]] && jq -e --arg env "$APP_ENV" '.ok == true and .service == "VHDCHY_WORKER" and .environment == $env and .d1.ok == true and .googleGateway.ok == true' <<<"$payload" >/dev/null 2>&1; then
+    echo "Cloudflare deep health PASS: $PUBLIC_HOST"
     echo "D1 database id: $db_id"
     exit 0
   fi
   sleep 10
 done
 
-echo "Health check failed after deploy: $PUBLIC_HOST" >&2
+echo "Deep health check failed after deploy: $PUBLIC_HOST" >&2
 exit 4
