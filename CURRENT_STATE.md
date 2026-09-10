@@ -1,6 +1,6 @@
 # CURRENT STATE
 
-Cập nhật: 2026-09-10
+Cập nhật: 2026-09-11
 
 ## Trạng thái tổng quát
 
@@ -9,6 +9,7 @@ Cập nhật: 2026-09-10
 - Pick Pack 1291 cũ: read-only reference/evidence; không phải authority/runtime dependency.
 - Governance/continuity contract đã được Owner duyệt, có CI guard.
 - `RECONCILE-001`: DONE.
+- Owner đã chuyển `LAN-PILOT-001` thành priority feasibility gate trước business build sâu.
 
 ## Foundation đã xác minh
 
@@ -56,12 +57,32 @@ REWORK additively:
 
 Applied migration `0001_business_core.sql` is historical and must not be edited; fixes use `0002+`.
 
+## LAN priority gate — approved
+
+`LAN-PILOT-001` now precedes deep business implementation. Deliverables are reusable, not disposable prototypes:
+
+- signed Android/PDA BETA LAN test app;
+- Windows LAN Agent BETA with lightweight background service + tray/settings console;
+- internal LAN Web BETA at `beta-lan.supra.cc.cd` after internal DNS/routing setup;
+- test harness and evidence report.
+
+Mandatory pilot behavior:
+
+- PDA auto-detects valid BETA LAN service and auto-enters LAN mode;
+- deterministic fallback/reconnect without unexplained event loss;
+- physical test with 1/2/3 PDA + 1 laptop;
+- synthetic service-load test on laptop for larger logical-client counts;
+- Android and LAN Agent each have automatic update discovery/notification plus manual update fallback;
+- LAN Agent exposes operational settings/metrics including selectable local data directory while keeping low measured CPU/RAM footprint.
+
+Detailed contract: `docs/lan/LAN_PILOT_001.md`.
+
 ## Branch/live refs
 
-- `main`: source/integration/authority; reconciliation + BETA source snapshot are now recorded here.
-- `beta`: `947a4feb48bc5c99867f1975b56edbb9a7309925` known-good live BETA pointer; not moved by documentation/reconciliation work.
+- `main`: source/integration/authority; LAN pilot decisions/spec now live here.
+- `beta`: `947a4feb48bc5c99867f1975b56edbb9a7309925` known-good live BETA pointer; not moved by planning/governance work.
 - `stable`: `5b7132071f032ab46f133d4416f80791505f080d`; runtime not promoted.
 
 ## Next
 
-Run the post-reconciliation parallel tranche from `NEXT_ACTIONS.md`: `CORE-REFINE-001`, `SHEETS-001`, `AUTH-001`, and `ANDROID-FOUNDATION-001` where independent. Do not implement privileged ROOT/SUPERADMIN credential acceptance by copying the retired Pick Pack algorithm; current VHDCHY Master Spec semantics are required.
+Execute `LAN-PILOT-001` from `NEXT_ACTIONS.md`: LAN contract + Windows LAN Agent + Android LAN test app + LAN Web + physical/synthetic test harness. Existing core/auth/sheets source work remains checkpointed and may proceed only where independent/supportive; it no longer outranks the LAN feasibility gate.
