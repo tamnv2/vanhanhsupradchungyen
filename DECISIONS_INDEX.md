@@ -28,5 +28,8 @@
 | D-022 | ACTIVE | Google projection availability không chặn canonical D1 core |
 | D-023 | ACTIVE | Pick Pack 1291 Sheet baseline ADAPTED; không old data/password verifier |
 | D-024 | ACTIVE | Generic resource taxonomy; dropped-goods là module Pick Pack 1291 |
+| D-025 | ACTIVE | LAN-PILOT là priority feasibility gate; 3 PDA thật + synthetic service load; PDA auto-LAN |
+| D-026 | ACTIVE | Android/LAN Agent update có auto discovery + manual fallback + verify |
+| D-027 | ACTIVE | LAN Agent = lightweight background service + tray/settings console; đo CPU/RAM thật |
 
 Lưu ý: các ID D-010..D-017 từng xuất hiện trên nhánh BETA lịch sử trước governance không còn là decision namespace authority; nội dung hợp lệ đã được re-issued thành D-015..D-022.
