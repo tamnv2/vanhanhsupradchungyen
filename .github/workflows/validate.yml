@@ -1,0 +1,48 @@
+name: Validate public repo
+
+on:
+  push:
+    branches: [main, beta, stable]
+  pull_request:
+    branches: [main, beta, stable]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate shell
+        run: bash -n scripts/*.sh
+      - name: Validate governance continuity
+        run: bash scripts/validate-governance.sh
+      - name: Validate Apps Script manifest
+        run: python3 -m json.tool gateway/appsscript.json >/dev/null
+      - name: Validate D1 migrations locally
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -d worker/migrations ]]; then
+            db="${RUNNER_TEMP}/vhdchy-migration-check.db"
+            while IFS= read -r migration; do
+              echo "Validating $migration"
+              sqlite3 "$db" < "$migration"
+            done < <(find worker/migrations -maxdepth 1 -type f -name '*.sql' | sort)
+            [[ "$(sqlite3 "$db" 'PRAGMA integrity_check;')" == "ok" ]]
+            [[ -n "$(sqlite3 "$db" "SELECT value FROM vhdchy_meta WHERE key='schema_version';")" ]]
+          fi
+      - name: Check forbidden private material
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git grep -nE -- '-----BEGIN (RSA |EC |OPENSSH |)?PRIVATE KEY-----|github_pat_[A-Za-z0-9_]+|ghp_[A-Za-z0-9]+'; then
+            echo 'Potential secret/private key found in tracked source.' >&2
+            exit 1
+          fi
+      - name: Enforce signing ignores
+        run: |
+          grep -Fx '*.jks' .gitignore
+          grep -Fx '*.keystore' .gitignore
+          grep -Fx '*.b64.txt' .gitignore
