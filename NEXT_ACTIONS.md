@@ -13,27 +13,27 @@ LAN Pilot V4 physical regression remains preserved and resumes after BETA infras
 ## Dependency graph
 
 ```text
-GitHub main authority hardening ────────────────────────────────┐
-                                                                │
-Google BETA Cloud/OAuth/GAS ───────────────┐                   │
-Cloudflare retained token verification ────┼─> verified inputs ├─> GitHub beta Environment -> AI/CI BETA gate
-VHDCHY BETA signing recovery ──────────────┘                   │
-Current Drive/workbook verification ───────────────────────────┘
+main authority hardening = DONE
+
+Google BETA Cloud/OAuth/GAS ───────────────┐
+Cloudflare retained token verification ────┼─> verified inputs -> GitHub beta Environment -> AI/CI BETA gate
+VHDCHY BETA signing recovery ──────────────┘
+Current Drive/workbook verification = DONE
 
 BETA PASS -> explicit Owner approval -> isolated STABLE recovery
 ```
 
 Independent provider lanes should run in parallel; GitHub beta variable/secret entry waits for their outputs.
 
-## Lane A — GitHub authority hardening
+## Lane A — GitHub authority hardening — DONE
 
-- PR #2 `Security: deep least-privilege permission audit and recovery hardening` is the current authority change.
-- Validation run `34609361074`: SUCCESS.
-- Review/merge PR #2 to `main` after final diff/checkpoint consistency check.
-- Do not move `beta` or `stable`.
-- Repository default Actions token stays read-only; workflows request only their own minimum permissions.
+- PR #2 merged to `main`: `6c23099b4ff64bbc55699b2611ffa57020ed28b3`.
+- PR-head validation `34610887398`: SUCCESS.
+- Post-merge `main` validation `34611144635`: SUCCESS.
+- No `beta` or `stable` ref moved.
+- Repository default Actions token remains read-only; workflows request only their own minimum permissions.
 
-## Lane B — Google Cloud/OAuth BETA — Owner UI
+## Lane B — Google Cloud/OAuth BETA — Owner UI / NEXT
 
 Create `VHDCHY-BETA` under `automation@supra.cc.cd`.
 
@@ -54,13 +54,13 @@ Do not add Drive, Sheets, Gmail, Calendar, Contacts, `script.send_mail`, `script
 
 - Create standalone `VHDCHY BETA Google Gateway`.
 - Link it to the BETA standard Cloud project.
-- Use current audited `gateway/Code.gs` + `gateway/appsscript.json` from authority repo after PR #2 merges.
+- Use current audited `gateway/Code.gs` + `gateway/appsscript.json` from `main`.
 - Current runtime scopes exactly:
   - `https://www.googleapis.com/auth/spreadsheets`
   - `https://www.googleapis.com/auth/userinfo.email`
 - Current projection workbook: `17lvVEdBno0TelhuZl3gmn7-YmyJ4o6wZxpsoP1YB9XQ`.
 - Run `bootstrapAuthorize()` once as `automation@supra.cc.cd`; if consent asks for Drive/Gmail/mail/external-request/trigger-management/Calendar/Contacts, stop and re-audit.
-- Deploy Web App using the current foundation design.
+- Deploy Web App using current foundation design.
 - Record new `GAS_SCRIPT_ID`, `GAS_DEPLOYMENT_ID`, `GAS_EXEC_URL`.
 
 Before business `doPost()` writes are activated in a later gate, Worker -> GAS privileged calls need an application-level authenticated boundary; public Web App reachability is not write authorization.
@@ -77,16 +77,16 @@ Before business `doPost()` writes are activated in a later gate, Worker -> GAS p
 
 ## Lane E — VHDCHY BETA Android signing — parallel
 
-- Locate the retained **VHDCHY BETA** keystore, not the retired Pick Pack 1291 signer in the legacy archive.
+- Locate retained **VHDCHY BETA** keystore, not retired Pick Pack 1291 signer in legacy archive.
 - Verify alias/passwords locally; recorded alias `vhdchy-beta` is a reference until verified.
 - Prepare base64 + store/key passwords privately for GitHub Environment secrets.
 - Do not generate a new key.
 - STABLE signer is not entered during BETA recovery because no current STABLE Android build workflow consumes it.
 
-## Lane F — Drive/current workbook — automatic state already provisioned
+## Lane F — Drive/current workbook — DONE / PROVISIONED_NOT_LIVE
 
-- Current BETA projection workbook ID is `17lvVEdBno0TelhuZl3gmn7-YmyJ4o6wZxpsoP1YB9XQ`.
-- `config/projections.beta.json` is corrected on PR #2 to this ID and remains `PROVISIONED_NOT_LIVE`.
+- Current BETA projection workbook ID: `17lvVEdBno0TelhuZl3gmn7-YmyJ4o6wZxpsoP1YB9XQ`.
+- `config/projections.beta.json` on `main` points to this ID and remains `PROVISIONED_NOT_LIVE`.
 - Legacy folder `BACKUP DỰ ÁN CŨ PICK PACK 1291` remains reference-only.
 
 ## Lane G — GitHub BETA entry — ONLY after B–F outputs exist
@@ -125,7 +125,7 @@ Do not create unused historical variables/scopes merely for parity.
 
 1. build current-ID environment verifier without broadening OAuth scopes;
 2. verify Google refresh + Apps Script content/deployment + `/exec` identity;
-3. verify current projection workbook through the authorized GAS bootstrap/runtime path;
+3. verify current projection workbook through authorized GAS bootstrap/runtime path;
 4. verify Cloudflare token accesses retained D1/Worker and deploy does not recreate resources;
 5. verify VHDCHY BETA Android signer/build;
 6. run repository validation and BETA deploy/health;
