@@ -18,6 +18,10 @@ android {
         versionName releaseVersion
     }
 
+    buildFeatures {
+        buildConfig true
+    }
+
     signingConfigs {
         beta {
             if (signingFile) {
