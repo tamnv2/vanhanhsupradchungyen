@@ -1,109 +1,131 @@
-# GITHUB ENVIRONMENT SETUP — REBUILD 2026-09-11
+# GITHUB ENVIRONMENT SETUP — INPUT ONLY AFTER PROVIDERS ARE READY
 
 Repo authority: `tamnv2/vanhanhsupradchungyen`.
 
-Owner thao tác UI một lần cho các mục GitHub không thể/không nên tự động đọc secret. Không copy secret/ID Google cũ từ `tamnv2supra/vanhanhdchungyen`.
+## STOP CONDITION
 
-## 1. Repository Actions permission
+Do **not** start by filling GitHub variables/secrets. GitHub is the final registry for values created or verified at Google/Cloudflare/signing providers.
 
-Vào `Settings → Actions → General`:
+Correct dependency order:
 
-- Actions: cho phép workflow cần thiết của repo.
-- `Workflow permissions`: chọn `Read and write permissions` để release workflow có thể tạo prerelease/assets.
-- Không bật quyền rộng ngoài nhu cầu chỉ để giải quyết lỗi mirror workflow cũ.
+`Google/Cloudflare/signing setup -> collect/verify IDs + credentials -> GitHub beta Environment -> AI/CI BETA verification -> BETA PASS -> STABLE provider setup -> GitHub stable Environment -> Owner approval -> STABLE verification/deploy`.
 
-## 2. Environments
+Detailed provider-first runbook: `docs/runbooks/REAUTHORIZATION_2026-09-11.md`.
 
-Tạo đúng hai Environments:
+## 1. Links
+
+- Repository Environments: https://github.com/tamnv2/vanhanhsupradchungyen/settings/environments
+- Repository Actions settings: https://github.com/tamnv2/vanhanhsupradchungyen/settings/actions
+- Google Cloud project create: https://console.cloud.google.com/projectcreate
+- Google Auth Platform: https://console.cloud.google.com/auth/overview
+- Enable Apps Script API: https://console.cloud.google.com/apis/library/script.googleapis.com
+- Enable Drive API: https://console.cloud.google.com/apis/library/drive.googleapis.com
+- Apps Script user settings/API access: https://script.google.com/home/usersettings
+- Apps Script home: https://script.google.com/home
+- OAuth 2.0 Playground: https://developers.google.com/oauthplayground/
+- Cloudflare dashboard: https://dash.cloudflare.com/
+
+## 2. What must exist BEFORE GitHub BETA entry
+
+Complete/verify these first:
+
+1. Current Cloudflare account ID and a new/known-good scoped deploy API token for the retained resources.
+2. Google Cloud project `VHDCHY-BETA` owned by `automation@supra.cc.cd`.
+3. Apps Script API + Drive API enabled in that project.
+4. Apps Script dashboard setting `Google Apps Script API` enabled for `automation@supra.cc.cd` so authorized applications may manage script content/deployments.
+5. Google Auth Platform configured as External and moved to `In production` before generating the final CI refresh token.
+6. OAuth client for BETA CI and a final refresh token using only the current CI scopes.
+7. New BETA Apps Script project linked to the BETA standard Cloud project, authorized, and deployed as a Web app.
+8. New BETA `GAS_SCRIPT_ID`, `GAS_DEPLOYMENT_ID`, and `GAS_EXEC_URL` recorded.
+9. Existing Android BETA keystore located and its alias/password/base64 available from Owner-controlled backup.
+10. Current BETA Drive root is already known from `SERVICE_AUTHORITY.md`.
+
+Only after all ten items are ready should the Owner fill the GitHub `beta` Environment.
+
+## 3. GitHub Actions repository permission
+
+Open: https://github.com/tamnv2/vanhanhsupradchungyen/settings/actions
+
+Under `Workflow permissions`, choose `Read and write permissions` because the LAN release workflow publishes prerelease assets using the repository `GITHUB_TOKEN`.
+
+Do not create a broad PAT for this purpose.
+
+## 4. Create Environments
+
+Open: https://github.com/tamnv2/vanhanhsupradchungyen/settings/environments
+
+Create exactly:
 
 - `beta`
 - `stable`
 
-`stable`: bật Required reviewers/Owner approval nếu gói/UI hiện tại hỗ trợ. BETA không cần approval.
+Configure `stable` approval/reviewer protection when supported by the current plan/UI. Do not populate/deploy STABLE until BETA recovery passes and Owner approves STABLE.
 
-## 3. Variables — BETA
+## 5. BETA — exact values currently consumed by workflows
 
-```text
-APP_ENV=beta
-OWNER_EMAIL=automation@supra.cc.cd
-CF_ACCOUNT_ID=1b1695e4f2a3abfe08dc475b352c7f42
-CF_ZONE_ID=880b887071f771f5be3caf5726d5df11
-CF_ZONE_NAME=supra.cc.cd
-PUBLIC_HOST=beta.supra.cc.cd
-LAN_HOST=beta-lan.supra.cc.cd
-GOOGLE_DRIVE_ENV_ROOT_ID=1XuIQ6yb4Ey-aKy0MbRxHfEqvyaSWHDog
-GAS_SCRIPT_ID=<NEW_BETA_GAS_SCRIPT_ID>
-GAS_DEPLOYMENT_ID=<NEW_BETA_DEPLOYMENT_ID>
-GAS_EXEC_URL=<NEW_BETA_EXEC_URL>
-ANDROID_SIGNING_ALIAS=vhdchy-beta
-ANDROID_SIGNING_SHA256=77:F1:80:45:03:DA:22:22:CE:92:58:58:95:1F:90:B6:12:AA:05:89:6B:53:DE:A0:CB:8F:FB:F0:7B:14:2A:16
-```
+### Environment variables
 
-Cloudflare IDs/hostnames above are retained from the existing provider setup per Owner confirmation; Google Drive/GAS values are new-account resources.
+| Name | Value/source |
+|---|---|
+| `APP_ENV` | fixed: `beta` |
+| `OWNER_EMAIL` | fixed: `automation@supra.cc.cd` |
+| `CF_ACCOUNT_ID` | read from the **current retained Cloudflare account**; do not copy an old ID unless it matches current dashboard |
+| `PUBLIC_HOST` | current approved BETA hostname: `beta.supra.cc.cd` |
+| `GAS_SCRIPT_ID` | new BETA Apps Script `Project Settings -> Script ID` |
+| `GAS_DEPLOYMENT_ID` | new BETA Apps Script `Deploy -> Manage deployments` deployment ID |
+| `GAS_EXEC_URL` | new BETA Web app URL ending in `/exec` |
+| `GOOGLE_DRIVE_ENV_ROOT_ID` | current BETA root: `1XuIQ6yb4Ey-aKy0MbRxHfEqvyaSWHDog` |
+| `ANDROID_SIGNING_ALIAS` | existing BETA keystore alias; recorded value is `vhdchy-beta`, verify against retained keystore before entry |
 
-## 4. Variables — STABLE
+`CF_ZONE_ID` is referenced by the current workflow environment block but is **not consumed by the current deploy scripts**. If you populate it, read it from the current Cloudflare zone; do not rely on an unverified historical value.
 
-```text
-APP_ENV=stable
-OWNER_EMAIL=automation@supra.cc.cd
-CF_ACCOUNT_ID=1b1695e4f2a3abfe08dc475b352c7f42
-CF_ZONE_ID=880b887071f771f5be3caf5726d5df11
-CF_ZONE_NAME=supra.cc.cd
-PUBLIC_HOST=supra.cc.cd
-LAN_HOST=lan.supra.cc.cd
-GOOGLE_DRIVE_ENV_ROOT_ID=1MW-XRR3_jEuE3u8Nzw3NIFPYUM5G_zHE
-GAS_SCRIPT_ID=<NEW_STABLE_GAS_SCRIPT_ID>
-GAS_DEPLOYMENT_ID=<NEW_STABLE_DEPLOYMENT_ID>
-GAS_EXEC_URL=<NEW_STABLE_EXEC_URL>
-ANDROID_SIGNING_ALIAS=vhdchy-stable
-ANDROID_SIGNING_SHA256=88:ED:44:66:EB:0E:4F:10:57:26:75:C4:8B:B9:86:30:F7:36:06:4C:5F:1A:95:04:5C:FB:C6:A4:AA:8B:42:C3
-```
+`CF_ZONE_NAME`, `LAN_HOST`, and `ANDROID_SIGNING_SHA256` are not currently consumed by the restored BETA deploy/build workflow and are not required just to make current CI run.
 
-Không copy GAS/Drive BETA sang STABLE.
+### Environment secrets
 
-## 5. Secrets — mỗi Environment
+| Name | Source |
+|---|---|
+| `CLOUDFLARE_API_TOKEN` | newly created or known-good current Cloudflare deploy token |
+| `GOOGLE_OAUTH_CLIENT_ID` | BETA Google Auth Platform OAuth client |
+| `GOOGLE_OAUTH_CLIENT_SECRET` | same BETA OAuth client |
+| `GOOGLE_OAUTH_REFRESH_TOKEN` | generated **after** BETA OAuth project is `In production` |
+| `ANDROID_SIGNING_KEY_B64` | retained BETA keystore encoded to base64 |
+| `ANDROID_SIGNING_STORE_PASSWORD` | retained BETA keystore password |
+| `ANDROID_SIGNING_KEY_PASSWORD` | retained BETA key password |
 
-```text
-CLOUDFLARE_API_TOKEN
-GOOGLE_OAUTH_CLIENT_ID
-GOOGLE_OAUTH_CLIENT_SECRET
-GOOGLE_OAUTH_REFRESH_TOKEN
-ANDROID_SIGNING_KEY_B64
-ANDROID_SIGNING_STORE_PASSWORD
-ANDROID_SIGNING_KEY_PASSWORD
-```
+Never paste secret values into chat, repository files, issues, Drive docs, workflow inputs, or variables.
 
-### Source/rotation rule
+## 6. CI OAuth scope set — corrected/minimized
 
-- `CLOUDFLARE_API_TOKEN`: dùng token hợp lệ cho setup Cloudflare hiện hữu; nếu không còn plaintext/không chắc quyền thì tạo token mới với quyền tối thiểu cần deploy Worker + D1 + custom domain hiện hành. Không rebuild Cloudflare resources.
-- `GOOGLE_OAUTH_*`: **tạo mới** dưới Google Cloud/OAuth mới của `automation@supra.cc.cd`; không dùng token/client cũ.
-- Android signing secrets: nhập lại từ Owner-controlled keystore backup hiện có. Không generate signer mới nếu keystore cũ vẫn còn.
-- Secret chỉ nhập trực tiếp vào GitHub Environment secret UI; không paste vào chat/commit/issue/document.
+The current `scripts/deploy-gas.sh` only modifies Apps Script project content, versions, and deployments. It does not call the Drive REST API.
 
-## 6. Google CI OAuth scope set
-
-Refresh token dùng bởi `scripts/deploy-gas.sh` chỉ cần quyền cho Apps Script API và kiểm tra metadata Drive root:
+The final GitHub CI refresh token therefore needs only:
 
 ```text
 https://www.googleapis.com/auth/script.projects
 https://www.googleapis.com/auth/script.deployments
-https://www.googleapis.com/auth/drive.metadata.readonly
 ```
 
-Không thêm Gmail, Calendar, Contacts, `mail.google.com`, `script.send_mail`, full Drive hoặc Sheets vào **CI OAuth client** nếu script CI hiện hành không dùng chúng.
+Do **not** add `drive.metadata.readonly` to the CI token unless a future verified workflow actually calls the Drive REST API. This avoids an unnecessary restricted Drive OAuth scope.
 
-Lưu ý: đây là scope của OAuth client mà GitHub Actions dùng; khác với scope runtime trong `gateway/appsscript.json`.
+This CI OAuth set is separate from Apps Script runtime scopes in `gateway/appsscript.json`.
 
-## 7. Gate trước khi deploy
+## 7. STABLE
 
-Không restore/chạy `verify-environments.yml` với hard-coded ID cũ. Sau khi new GAS IDs/secrets đã điền đầy đủ, cập nhật workflow verify bằng current IDs rồi mới chạy.
+Do not configure STABLE just because the fields exist.
 
-Thứ tự gate:
+After BETA provider setup + GitHub environment + CI/health all PASS and Owner explicitly approves STABLE recovery, repeat the same provider-first process with separate STABLE GAS/OAuth credentials and use:
 
-1. BETA Environment vars/secrets complete.
-2. Google OAuth refresh test PASS.
-3. Apps Script BETA project/deployment + Drive root verify PASS.
-4. Cloudflare retained resources/token verify PASS.
-5. Android signer verify PASS.
-6. Chạy BETA CI/deploy và health PASS.
-7. Chỉ sau đó cấu hình/verify STABLE và xin Owner approval trước deploy.
+- `APP_ENV=stable`
+- `OWNER_EMAIL=automation@supra.cc.cd`
+- `PUBLIC_HOST=supra.cc.cd`
+- `GOOGLE_DRIVE_ENV_ROOT_ID=1MW-XRR3_jEuE3u8Nzw3NIFPYUM5G_zHE`
+- separate STABLE `GAS_SCRIPT_ID`, `GAS_DEPLOYMENT_ID`, `GAS_EXEC_URL`
+- retained STABLE signing identity/secrets
+- current retained Cloudflare account/token values as verified
+
+Never copy BETA GAS IDs or BETA Google refresh token into STABLE.
+
+## 8. Gate
+
+GitHub BETA is considered complete only when all values above have a verified source and no placeholder remains. Then AI may rebuild the current-ID verification workflow and run BETA verification/deploy. `beta`/`stable` live refs are not moved merely because variables have been entered.
