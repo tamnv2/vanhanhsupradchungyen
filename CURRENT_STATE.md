@@ -11,6 +11,8 @@ Cập nhật: 2026-09-11
 - LAN feasibility trước migration account: `FEASIBLE / FINAL V4 PHYSICAL REGRESSION REQUIRED`.
 - Priority hiện tại: **ACCOUNT / PROVIDER AUTHORITY RECOVERY** theo mô hình `main -> beta -> stable`.
 - Permission authority hiện hành: `docs/security/PERMISSION_AUDIT_2026-09-11.md`.
+- Deep permission audit PR #2 đã MERGED vào `main`: commit `6c23099b4ff64bbc55699b2611ffa57020ed28b3`.
+- Post-merge validation run `34611144635`: SUCCESS.
 
 ## Current identity authority
 
@@ -53,7 +55,7 @@ Owner: `automation@supra.cc.cd`.
 - BACKUP `1FS1re5AGQ1viiv9i9Vlf9P4NchpW-Hvz`.
 - BETA/PICK_PACK_1291 `18KZ4FG6AAbSWSEQPE_ta3JUUwQWG93rm`.
 - BETA workbook `VHDCHY BETA - PICK PACK 1291 - 2026 Q3`: `17lvVEdBno0TelhuZl3gmn7-YmyJ4o6wZxpsoP1YB9XQ`; schema `PP1291_SHEETS_BETA_V1`; `PROVISIONED_NOT_LIVE`.
-- `config/projections.beta.json` on the permission-audit branch points to this current workbook ID; old-account workbook ID is rejected by governance validation.
+- `config/projections.beta.json` trên `main` đã trỏ đúng current workbook ID; governance validation chặn old-account workbook ID.
 
 Reference archive:
 
@@ -62,47 +64,48 @@ Reference archive:
 
 ### GAS / Google Cloud / OAuth — REBUILD_REQUIRED
 
-Old GAS/Cloud/OAuth resources from the decommissioned account are not current resources.
+Old GAS/Cloud/OAuth resources từ decommissioned account không phải current resources.
 
 Current audited BETA minimum:
 
-- Cloud API enablement: **Google Apps Script API only** for current CI path.
-- Account-level Apps Script API access must also be enabled at Apps Script user settings.
+- Cloud API enablement: **Google Apps Script API only** cho current CI path.
+- Account-level Apps Script API access cũng phải bật tại Apps Script user settings.
 - CI OAuth scopes exactly:
   - `https://www.googleapis.com/auth/script.projects`
   - `https://www.googleapis.com/auth/script.deployments`
 - GAS runtime scopes exactly:
   - `https://www.googleapis.com/auth/spreadsheets`
   - `https://www.googleapis.com/auth/userinfo.email`
-- Current gateway does not justify Drive, `script.external_request`, `script.scriptapp`, `script.send_mail`, Gmail, Calendar or Contacts scopes.
-- Final durable CI refresh token is created after intended External app publishing state is `In production`; do not use a Testing token as the durable CI token.
+- Current gateway không justify Drive, `script.external_request`, `script.scriptapp`, `script.send_mail`, Gmail, Calendar hoặc Contacts scopes.
+- Final durable CI refresh token được tạo sau khi intended External app publishing state là `In production`; không dùng Testing token làm durable CI token.
 
-### GitHub — RECOVERY_IN_PROGRESS
+### GitHub — AUTHORITY HARDENING PASS / PROVIDER INPUTS PENDING
 
 Current repo `tamnv2/vanhanhsupradchungyen`:
 
-- `main`, `beta`, `stable` and LAN pilot tags exist;
-- key workflows restored;
-- permission hardening is in PR #2 from `audit/least-privilege-20260911`;
-- PR #2 validation run `34609361074` completed SUCCESS, including governance, Apps Script manifest, D1 migration, private-material and signing-ignore checks;
-- GitHub Environments/secrets are not yet complete;
-- `verify-environments.yml` remains intentionally absent until current provider IDs exist;
-- historical release objects/assets are not yet fully restored.
+- `main`, `beta`, `stable` và LAN pilot tags tồn tại;
+- key workflows đã restore;
+- permission hardening PR #2 đã merge vào `main`;
+- PR-head validation `34610887398`: SUCCESS;
+- post-merge `main` validation `34611144635`: SUCCESS;
+- GitHub Environments/secrets chưa hoàn tất vì provider outputs mới chưa đủ;
+- `verify-environments.yml` vẫn intentionally absent cho tới khi current provider IDs tồn tại;
+- historical release objects/assets chưa fully restored.
 
-GitHub permission policy after audit:
+GitHub permission policy sau audit:
 
 - repository default `GITHUB_TOKEN`: keep read-only;
 - deploy workflows: `contents: read`;
 - LAN release workflow: workflow-level `contents: write` only;
-- no broad PAT and no Actions PR-approval capability required.
+- không cần broad PAT và Actions PR-approval capability.
 
-Do not move `beta` or `stable` as part of recovery until gates pass.
+Không move `beta` hoặc `stable` cho tới khi gates pass.
 
 ## Legacy Pick Pack permission audit
 
-Full legacy source backup was expanded/scanned and matching implementations inspected. Historical permission-bearing features include MailApp email, DriveApp file/artifact handling, ScriptApp installable-trigger management in historical bridge code, UrlFetchApp bridges, direct service Google OAuth/Sheets/Drive paths, FCM service-account logic and several DR/provider experiments.
+Full legacy source backup đã được expanded/scanned và các implementation có permission hit được kiểm tra. Historical permission-bearing features gồm MailApp email, DriveApp file/artifact handling, ScriptApp installable-trigger management trong historical main bridge, UrlFetchApp bridges, direct service Google OAuth/Sheets/Drive paths, FCM service-account logic và các DR/provider experiments.
 
-These explain old permissions but **do not carry forward automatically**. A permission is reintroduced only when a current Owner-approved VHDCHY feature exists and current source actually requires it.
+Các quyền đó giải thích kiến trúc cũ nhưng **không carry forward tự động**. Chỉ reintroduce permission khi có current Owner-approved VHDCHY feature và current source thật sự cần.
 
 ## LAN checkpoint preserved
 
@@ -118,10 +121,11 @@ Final V4 physical regression remains NOT DONE.
 
 ## Current BETA recovery gate — provider first
 
-1. merge/lock the audited authority/least-privilege source on `main` without moving `beta`/`stable`;
-2. Owner creates BETA Google Cloud/Auth/GAS values; Cloudflare token and VHDCHY BETA signing recovery can run in parallel;
-3. verify provider outputs: GAS IDs/URL, two-scope CI refresh token, Cloudflare account/token, current BETA signer;
-4. only then populate GitHub `beta` Environment with the current consumed values;
-5. AI builds current-ID environment verification, runs BETA CI/deploy/health, and records exact run/resource IDs;
-6. only after BETA integration PASS may BETA live pointer/state be confirmed;
-7. STABLE remains blocked behind BETA PASS + explicit Owner approval.
+Authority hardening on `main` is complete. Next gate:
+
+1. Owner creates BETA Google Cloud/Auth/GAS values; Cloudflare token and VHDCHY BETA signing recovery run in parallel;
+2. verify provider outputs: GAS IDs/URL, two-scope CI refresh token, Cloudflare account/token, current BETA signer;
+3. only then populate GitHub `beta` Environment with current consumed values;
+4. AI builds current-ID environment verification, runs BETA CI/deploy/health, and records exact run/resource IDs;
+5. only after BETA integration PASS may BETA live pointer/state be confirmed;
+6. STABLE remains blocked behind BETA PASS + explicit Owner approval.
