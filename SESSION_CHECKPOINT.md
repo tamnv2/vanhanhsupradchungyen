@@ -2,14 +2,14 @@
 
 Checkpoint ID: `PROVIDER-RECOVERY-20260911-02`
 Timestamp: `2026-09-11T20:53+07:00`
-Authority branch: `audit/least-privilege-20260911`
-PR: `#2 Security: deep least-privilege permission audit and recovery hardening`
+Authority ref: `main`
+Permission audit merge: `6c23099b4ff64bbc55699b2611ffa57020ed28b3`
 
 ## Why this checkpoint supersedes PROVIDER-RECOVERY-20260911-01
 
-The first recovery checkpoint correctly replaced the decommissioned Google/GitHub identities, but the initial authorization guide still requested several permissions/variables that were broader than current source requires and placed some GitHub entry steps before provider outputs existed.
+The first recovery checkpoint correctly replaced the decommissioned Google/GitHub identities, but the initial authorization guide still requested several permissions/variables broader than current source requires and placed some GitHub entry steps before provider outputs existed.
 
-This checkpoint records the deeper permission audit against both current VHDCHY source and the full retired Pick Pack 1291 source backup, and fixes the dependency order to provider-first BETA recovery.
+This checkpoint records the deeper permission audit against current VHDCHY source and the full retired Pick Pack 1291 source backup, fixes the dependency order to provider-first BETA recovery, and records the merged/validated authority state.
 
 The prior LAN checkpoint remains valid technical evidence at `docs/checkpoints/2026-09-11-LAN-PILOT-20260911-04.md`.
 
@@ -31,7 +31,7 @@ Verified legacy capabilities included:
 
 - MailApp email for historical reset/OTP flows;
 - DriveApp file/artifact/fallback/OTA handling;
-- ScriptApp installable-trigger management in historical bridge code;
+- ScriptApp installable-trigger management in historical main bridge code;
 - UrlFetchApp external bridge calls;
 - service-side Google OAuth/Sheets/Drive paths;
 - FCM service-account logic and other historical DR/provider integrations.
@@ -68,31 +68,25 @@ GitHub:
 - LAN release job alone uses workflow-level `contents: write`;
 - no broad PAT / Actions PR-approval capability required.
 
-### Source hardening on PR #2
+### Source hardening merged to main
 
-- `gateway/Code.gs`: removed DriveApp/temp Sheet trash/UrlFetch/trigger probes; bootstrap targets the current projection workbook and owner identity only.
+- `gateway/Code.gs`: removed DriveApp/temp Sheet trash/UrlFetch/trigger probes; bootstrap targets current projection workbook + owner identity only.
 - `gateway/appsscript.json`: reduced to `spreadsheets` + `userinfo.email`.
 - `scripts/deploy-gas.sh`: uses `GOOGLE_SHEETS_PROJECTION_ID` instead of Drive root.
 - deploy BETA/STABLE workflows: remove unused `CF_ZONE_ID` / Drive root inputs and use projection spreadsheet ID.
-- `config/projections.beta.json`: corrected to current workbook `17lvVEdBno0TelhuZl3gmn7-YmyJ4o6wZxpsoP1YB9XQ`, status `PROVISIONED_NOT_LIVE`.
-- `scripts/deploy-cloudflare.sh`: expected D1 missing now fails closed; no automatic replacement database creation.
-- governance validation now rejects stale old workbook ID and reintroduced broad GAS scopes.
-- `SERVICE_AUTHORITY.md`, `CURRENT_STATE.md`, `NEXT_ACTIONS.md`, GitHub setup and reauthorization runbook updated to the audited boundaries.
+- `config/projections.beta.json`: current workbook `17lvVEdBno0TelhuZl3gmn7-YmyJ4o6wZxpsoP1YB9XQ`, status `PROVISIONED_NOT_LIVE`.
+- `scripts/deploy-cloudflare.sh`: expected D1 missing fails closed; no automatic replacement database creation.
+- governance validation rejects stale old workbook ID and reintroduced broad GAS scopes.
+- `SERVICE_AUTHORITY.md`, `CURRENT_STATE.md`, `NEXT_ACTIONS.md`, GitHub setup and reauthorization runbook are aligned to the audited boundaries.
 
-### CI validation
+### CI / merge receipt
 
-PR #2 head `64563b3b28ad3b268b333cb78e88341889d08b39` validation run `34609361074`: **SUCCESS**.
-
-Successful job included:
-
-- shell validation;
-- governance continuity;
-- Apps Script manifest validation;
-- local D1 migrations;
-- forbidden private material check;
-- signing-ignore enforcement.
-
-Additional checkpoint commits were added after that validated head, so final branch validation must be re-checked before merge.
+- PR #2 final head `8699d9e559a09387524731a10412f54f9b4c5657`.
+- PR-head validation run `34610887398`: **SUCCESS**.
+- PR #2 merged to `main`: `6c23099b4ff64bbc55699b2611ffa57020ed28b3`.
+- Post-merge `main` validation run `34611144635`: **SUCCESS**.
+- No `beta` or `stable` ref moved.
+- No provider deployment was performed in this audit tranche.
 
 ## Current Drive/runtime state
 
@@ -108,10 +102,10 @@ Additional checkpoint commits were added after that validated head, so final bra
 Do not start by filling GitHub placeholders.
 
 1. Google BETA: create `VHDCHY-BETA`, enable Google Apps Script API, enable account-level Apps Script API access, configure External Auth Platform, switch intended final CI app to `In production`, create Web OAuth client, mint one final refresh token with exactly the two CI scopes above.
-2. GAS BETA: create/link standalone script, use audited current repo source, run `bootstrapAuthorize()` once, deploy Web App, record Script ID / Deployment ID / `/exec` URL.
+2. GAS BETA: create/link standalone script, use audited current `main` source, run `bootstrapAuthorize()` once, deploy Web App, record Script ID / Deployment ID / `/exec` URL.
 3. In parallel: verify current Cloudflare account ID + create/verify custom token with Workers Scripts Write + D1 Write.
-4. In parallel: verify retained **VHDCHY BETA** signing keystore/alias/passwords; do not use the legacy Pick Pack signer.
-5. Only after those outputs exist: populate GitHub Environment `beta` with the exact variables/secrets documented in `docs/GITHUB_ENV_SETUP.md`.
+4. In parallel: verify retained **VHDCHY BETA** signing keystore/alias/passwords; do not use legacy Pick Pack signer.
+5. Only after those outputs exist: populate GitHub Environment `beta` with exact variables/secrets in `docs/GITHUB_ENV_SETUP.md`.
 
 Do not paste secrets into chat.
 
