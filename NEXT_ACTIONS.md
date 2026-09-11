@@ -1,87 +1,102 @@
 # NEXT ACTIONS
 
-Checkpoint: `LAN-PILOT-20260911-04`
+Checkpoint: `PROVIDER-RECOVERY-20260911-01`
 
 ## Priority objective
 
-`LAN-PILOT-002-V4 — final physical regression of the CI-verified LAN V4 candidate on restricted corporate laptop + exactly 2 Newland MT90, supplemented by synthetic Agent load.`
+Restore the project to the pre-account-loss operating model without rebuilding providers that still retain valid setup:
 
-Owner approved the LAN-first feasibility gate. Deep business feature work remains behind this gate unless independent/supportive.
+`main authority -> BETA isolated environment -> verified gate -> STABLE isolated environment + Owner approval`.
 
-## Candidate to test
+LAN Pilot V4 physical regression remains preserved and resumes after BETA infrastructure recovery.
 
-Release: `lan-pilot-beta-v0.3.36`
-Source commit: `7b4488a89f585812c1bccba5d07d86049482bf4c`
-Build run: `34562489063` — SUCCESS
-Repository validation: `34562489066` — SUCCESS
+## Dependency graph
 
-Automated gates already PASS:
+### Lane A — GitHub authority (independent now)
 
-- one semantic version across Agent/APK/Release;
-- Windows Agent source updater invariants;
-- Windows self-contained build/package;
-- Agent version `0.3.36`;
-- Android background lifecycle source invariants;
-- Android signed release APK;
-- APK package/version verification;
-- SHA256 files for Agent/APK;
-- prerelease publication with all four expected assets.
+- Complete authority/current-state/security documentation on `recovery/identity-authority-20260911`.
+- PR to `main`; run validation.
+- Do not move `beta` or `stable`.
+- Owner configures GitHub `beta` and `stable` Environments, variables and secrets from `docs/GITHUB_ENV_SETUP.md`.
+- Recreate release objects/assets only after signing environment is verified; imported tags alone are not equivalent to releases.
 
-## V4 behavior under physical verification
+### Lane B — Google Cloud/OAuth BETA (Owner UI required, can run in parallel with Lane A)
 
-- PDA auto-discovers/reacquires valid LAN Agent without manual endpoint.
-- Realtime uses `streamEpoch + sequence`; Agent restart or buffer gap forces deterministic resync.
-- Receiver latency uses Agent clock calibration instead of raw PDA-vs-laptop wall-clock subtraction.
-- Foreground app: realtime LAN ON.
-- App leaves foreground: realtime OFF.
-- If unfinished work or durable pending queue exists: bounded foreground finish service may continue only that work/recovery, then stops.
-- If network remains unavailable: durable queue remains local and resumes on next app open; app must not stay awake indefinitely.
-- Agent/APK update notification and manual update path both remain available.
-- Agent staged updater verifies SHA256, stages without Administrator, restarts, health-checks and has rollback path.
-- Agent/PDA diagnostics include richer lifecycle, queue, update, realtime, transfer and resource evidence.
+- Create/select a dedicated BETA Google Cloud project owned by `automation@supra.cc.cd`.
+- Enable Apps Script API and Drive API.
+- Configure Google Auth Platform Branding/Audience/Data Access.
+- Use External audience because this is a consumer Google Account, not Workspace-internal identity.
+- Request only CI scopes documented in `docs/GITHUB_ENV_SETUP.md`.
+- Move Publishing status from Testing to In production before generating the final durable CI refresh token.
+- Generate one offline refresh token and store it only in GitHub `beta` Environment secrets.
 
-## Physical evidence ceiling
+### Lane C — Google Drive BETA (automatic work mostly complete)
 
-Owner currently has exactly **2 physical MT90**. Therefore:
+Current provisioned BETA resources under `automation@supra.cc.cd` are recorded in `SERVICE_AUTHORITY.md` and are `PROVISIONED_NOT_LIVE`.
 
-- both PDA must pass connection/reacquisition/realtime/transfer/queue/background/update/soak tests;
-- synthetic load must show clear software headroom above two clients;
-- final report must state RF/Wi-Fi behavior above two physical PDA remains unproven;
-- synthetic clients must never be presented as equivalent physical-PDA RF evidence.
+Next automatic step after GAS identity exists: update the BETA projection registry/config to current workbook ID, verify sheet schema/readback, then mark it live only after integration PASS.
 
-## Final physical regression sequence
+### Lane D — GAS BETA (depends on BETA OAuth/project creation)
 
-1. Replace laptop Agent with `0.3.36`; install matching `0.3.36` APK on both MT90.
-2. Verify Agent and both APK screens report `0.3.36`; both PDA auto-enter `LAN_ACTIVE` with no manual endpoint.
-3. Restart Agent at least three times while both PDA remain untouched; verify automatic reacquisition, epoch change and clean resync without stale-cursor lock.
-4. Realtime normal: PDA A → laptop + PDA B, then B → laptop + A; record corrected latency/gaps.
-5. Realtime heavy: `200 × 2 KB` each direction and near-simultaneously; verify no unexplained gap/loss.
-6. Transfer: 1/10/25 MB both directions, then run FULL suites on both PDA near-simultaneously.
-7. Offline durable queue: turn Wi-Fi off where policy permits; create a 5-event batch; verify pending reaches 5; restore Wi-Fi; verify LAN reacquires, all events are accepted/idempotent and pending returns to 0.
-8. Background policy: with no job pending, Home/background and confirm realtime stops; while an active transfer/FULL task runs, leave the UI and confirm finish-service notification/work completion then service stops; repeat with pending queue and unavailable network to confirm bounded retry then sleep.
-9. Update flow: verify automatic notification detects a truly newer semantic version only; verify manual fallback is always reachable. For Agent, physically verify staged no-admin replacement and healthy commit; rollback behavior should be tested only with a controlled safe failure case if practical. For APK, verify SHA/package/version validation reaches Android installer under MT90/company policy.
-10. Laptop LoadGen: 10 → 25 → 50 → 100 logical clients; record physical-vs-synthetic counts separately.
-11. Soak: 30 min → 2 h → longer work window if feasible, watching Agent CPU/RAM, laptop CPU/RAM, DB/log growth, errors and reconnects.
-12. Export one Agent ZIP + FULL diagnostics TXT from each PDA and submit for final analysis.
+- Create a new BETA standalone Apps Script project owned by `automation@supra.cc.cd`.
+- Associate with the intended BETA Google Cloud project where required by the current API/deployment flow.
+- Upload gateway source + manifest with audited runtime scopes.
+- Run `bootstrapAuthorize()` once interactively as `automation@supra.cc.cd`.
+- Create BETA Web App deployment using current design.
+- Record new `GAS_SCRIPT_ID`, `GAS_DEPLOYMENT_ID`, `GAS_EXEC_URL` in GitHub `beta` Environment variables.
+- Test endpoint and Apps Script API mutation/version/deployment from CI credentials.
 
-## Gate metrics
+### Lane E — retained Cloudflare provider (parallel after GitHub token is entered)
 
-- automatic LAN reacquisition success/delay and discovery source;
-- epoch-reset/resync correctness and sequence gaps;
-- corrected realtime display latency/p95 and publish ACK latency;
-- request success/error/client-cancel counts and p50/p95/p99;
-- upload/download Mbps and completion errors;
-- durable queue peak/recovery/event loss/duplicate handling;
-- foreground/background service duration, wake-lock boundedness and battery/power state;
-- Agent/laptop CPU/RAM/threads/handles/GC and DB/log growth;
-- synthetic req/s at 10/25/50/100;
-- update notification/manual path/install/staged update/health/rollback evidence;
-- soak stability.
+- Do not recreate zone/Worker/D1/DNS.
+- Validate current scoped Cloudflare token against existing account/zone/D1.
+- Verify BETA Worker/D1 health without destructive deploy first.
+- Next deploy must reuse existing resources rather than create replacements if names/IDs resolve correctly.
 
-## Completion rule
+### Lane F — Android signing (parallel after GitHub Environment exists)
 
-Do not mark `LAN-PILOT PASS` solely because CI is green. Final PASS requires physical V4 evidence from the restricted laptop + both MT90 with no unexplained event loss, predictable restart/reconnect, acceptable footprint, and update/background behavior consistent with the design above.
+- Restore BETA signing secrets from Owner-controlled keystore backup.
+- Verify alias and SHA256 against recorded fingerprint.
+- Do not generate a new key.
 
-## Owner action
+## BETA integration gate
 
-Use only release `lan-pilot-beta-v0.3.36` for the next regression. Do not change corporate firewall/router/DNS or use Administrator. No STABLE promotion.
+Only after Lanes A–F prerequisites are complete:
+
+1. restore/update `verify-environments.yml` with CURRENT IDs only;
+2. verify Google OAuth refresh + Apps Script project + Drive root;
+3. verify Cloudflare token/resource access;
+4. verify Android signing material;
+5. run repository validation and BETA deployment/health;
+6. update checkpoint with exact commit/run/resource IDs;
+7. move/confirm `beta` pointer only to the verified known-good recovery commit.
+
+## STABLE recovery
+
+Blocked until BETA PASS.
+
+After BETA PASS:
+
+- configure isolated STABLE Google Cloud/OAuth/GAS resources;
+- use STABLE Drive root only;
+- restore STABLE GitHub Environment vars/secrets;
+- verify retained STABLE Cloudflare resources;
+- verify STABLE signing material;
+- require Owner approval before STABLE deployment/pointer move.
+
+Do not copy BETA GAS IDs, Drive IDs, OAuth tokens or signing secrets into STABLE.
+
+## LAN Pilot continuity after recovery
+
+Pre-recovery checkpoint is preserved at `docs/checkpoints/2026-09-11-LAN-PILOT-20260911-04.md`.
+
+After BETA infra is restored, resume the physical V4 regression on the restricted corporate laptop + exactly two MT90. No Administrator/router/DNS/firewall changes. Synthetic clients are capacity evidence only.
+
+## Soft-stop/checkpoint rule
+
+For any CI/provider tranche approaching ~20 minutes:
+
+- stop starting new long work;
+- record commit/ref + run/job ID + provider state;
+- update `SESSION_CHECKPOINT.md` with `DONE / IN_PROGRESS / NOT_STARTED`, tests, blockers and exact next actions;
+- continue independent lanes in parallel instead of waiting idly for a long job.

@@ -12,7 +12,7 @@ Status: ACTIVE / OWNER-APPROVED 2026-09-11
 
 ## 3. Pick Pack 1291 reference policy
 
-Folder Drive `BACKUP PICK PACK 1291` bên trong `VẬN HÀNH DC HƯNG YÊN` là reference archive read-only.
+Folder Drive `BACKUP DỰ ÁN CŨ PICK PACK 1291` bên trong `VẬN HÀNH DC HƯNG YÊN` là reference archive read-only.
 
 Nguyên tắc cứng:
 
@@ -22,6 +22,7 @@ Nguyên tắc cứng:
 - Pattern tham khảo phải được đánh giá theo `REFERENCE -> EVALUATED -> ADOPTED | ADAPTED | REJECTED`.
 - Chỉ `ADOPTED` hoặc `ADAPTED` mới trở thành thiết kế VHDCHY.
 - Dự án cũ không được trở thành runtime dependency, fallback target, authority data source hoặc implicit scope definition của VHDCHY.
+- Legacy account/resource IDs trong folder này không phải current config.
 
 ## 4. Authority hierarchy
 
@@ -29,27 +30,30 @@ Khi có mâu thuẫn, áp dụng thứ tự:
 
 1. Quyết định mới nhất của Owner.
 2. `PROJECT_SCOPE.md`.
-3. `DECISIONS.md` và decision record hiện hành.
-4. `CURRENT_STATE.md`.
-5. Spec/architecture hiện hành của VHDCHY.
-6. Spec/module hiện hành.
-7. Pick Pack 1291 reference digest/index.
-8. File lịch sử/backup cũ.
+3. `SERVICE_AUTHORITY.md` cho account/provider/resource identity.
+4. `DECISIONS.md` và decision record hiện hành.
+5. `CURRENT_STATE.md`.
+6. Spec/architecture hiện hành của VHDCHY.
+7. Spec/module hiện hành.
+8. Pick Pack 1291 reference digest/index.
+9. File lịch sử/backup cũ.
 
 Không dùng nguồn cấp thấp để ghi đè nguồn cấp cao hơn.
 
 ## 5. Phạm vi hệ thống và dịch vụ
 
-- Source authority: GitHub `tamnv2/vanhanhdchungyen`.
-- Google owner/runtime account: `vanhanhdchungyen@gmail.com`.
-- Cloudflare zone: `supra.cc.cd`.
+- Source authority repo hiện hành: GitHub `tamnv2/vanhanhsupradchungyen`.
+- Old repo `tamnv2supra/vanhanhdchungyen`: migration/reference source trong thời gian đối soát; không phải writable authority sau khi repo mới qua restoration gate.
+- Google owner/runtime account hiện hành: `automation@supra.cc.cd`.
+- `vanhanhdchungyen@gmail.com`: DECOMMISSIONED / không được sử dụng lại.
+- Cloudflare zone: `supra.cc.cd`; setup Cloudflare/domain hiện hữu được giữ nguyên vì Owner chỉ thay login/email, không rebuild provider resources.
 - BETA/STABLE dùng Worker, D1, GAS, Drive runtime và secrets độc lập.
 - Google Cloud/OAuth/GAS tách theo BETA/STABLE.
 - Google Drive chứa runtime data, archive/media/export/backup theo thiết kế hiện hành.
 - Google Sheets là thành phần dữ liệu/projection/human-readable/DR theo module; không mặc định là authority nếu spec không nói vậy.
 - Android/PDA là client native chính cho nghiệp vụ phù hợp.
-- Windows LAN Agent + LAN Web là deliverable chính thức của VHDCHY. Trước business build sâu, BETA phải chạy `LAN-PILOT-001` để kiểm chứng auto-LAN trên PDA, kết nối/ổn định/độ trễ/chịu tải/reconnect, update flow và footprint Windows thực tế.
-- Điều kiện test vật lý hiện có: tối đa khoảng 3 PDA Newland MT90 đồng thời + 1 laptop công ty khoảng 2 core/4 thread, 8 GB RAM.
+- Windows LAN Agent + LAN Web là deliverable chính thức của VHDCHY. Trước business build sâu, BETA phải hoàn tất LAN Pilot feasibility gate.
+- Điều kiện test vật lý hiện có: **chính xác 2 PDA Newland MT90** + 1 laptop công ty; synthetic clients chỉ bổ sung capacity evidence, không thay thế RF/Wi-Fi evidence vật lý.
 - Laptop được coi là môi trường minimum-information/no-admin: không giả định quyền Administrator, Windows Service, firewall rule, route, Wi-Fi/AP/router hay internal DNS. Pilot không được yêu cầu Owner bypass policy bảo mật công ty.
 - LAN Agent pilot là portable per-user background process có tray/settings, manifest `asInvoker`; không phải SCM Windows Service. Đóng UI không dừng Agent; dữ liệu mặc định nằm trong vùng user có quyền ghi và có thể đổi sang thư mục writable khác với verify/rollback.
 - Android và LAN Agent đều phải có automatic update discovery/notification và manual update fallback độc lập; LAN Agent self-update về sau không được phụ thuộc Administrator.
@@ -63,11 +67,11 @@ Không dùng nguồn cấp thấp để ghi đè nguồn cấp cao hơn.
 
 ### BETA
 
-AI được phép phát triển, test, migrate, deploy và sửa tự động tối đa trong phạm vi Owner đã cấp. BETA phải luôn trỏ tới known-good live commit gần nhất. `LAN-PILOT-001` là priority feasibility gate trước khi đầu tư sâu vào business implementation.
+AI được phép phát triển, test, migrate, deploy và sửa tự động tối đa trong phạm vi Owner đã cấp. Trong giai đoạn account/provider recovery, không move live BETA pointer cho tới khi GitHub Environment + Google Drive/GAS/OAuth BETA + provider verification đều PASS.
 
 ### STABLE
 
-Chỉ promote khi BETA gate đạt và Owner duyệt theo release gate hiện hành. Không tự suy diễn quyền promote.
+Chỉ restore/promote khi BETA gate đạt và Owner duyệt theo release gate hiện hành. Không tự suy diễn quyền promote. Không copy BETA IDs/secrets sang STABLE.
 
 ## 7. Secrets
 

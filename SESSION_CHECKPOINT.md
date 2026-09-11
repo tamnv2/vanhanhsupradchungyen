@@ -1,120 +1,92 @@
 # SESSION CHECKPOINT
 
-Checkpoint ID: `LAN-PILOT-20260911-04`
-Timestamp: `2026-09-11 Asia/Ho_Chi_Minh`
+Checkpoint ID: `PROVIDER-RECOVERY-20260911-01`
+Timestamp: `2026-09-11T19:41+07:00`
+Authority branch: `recovery/identity-authority-20260911`
 
-## Authority/source basis
+## Why this checkpoint supersedes the previous current checkpoint
 
-- MAIN contains reconciled DC core/Sheet baseline plus LAN Pilot V4 source and CI guards.
-- Cloud BETA live/source ref remains `947a4feb48bc5c99867f1975b56edbb9a7309925`.
-- STABLE ref remains `5b7132071f032ab46f133d4416f80791505f080d`.
-- LAN packaging/build work did not move cloud BETA or STABLE.
-- No Stable promotion.
+The Google runtime account used by the old environment was decommissioned and the GitHub authority account/repository changed. The prior LAN checkpoint remains valid technical evidence but is archived at `docs/checkpoints/2026-09-11-LAN-PILOT-20260911-04.md` so provider recovery cannot accidentally overwrite or reinterpret it.
 
-## Prior physical evidence
+## Current identities
 
-Restricted corporate ordinary-user laptop + exactly two Newland NLS-MT90 Android 11 devices already established basic LAN feasibility:
+- Google runtime owner: `automation@supra.cc.cd` — VERIFIED_CURRENT through Drive connector.
+- Old Google account `vanhanhdchungyen@gmail.com`: DECOMMISSIONED / DO NOT USE.
+- GitHub current account: `tamnv2` — VERIFIED_CURRENT.
+- GitHub current repo: `tamnv2/vanhanhsupradchungyen` — RECOVERY_IN_PROGRESS.
+- Old repo `tamnv2supra/vanhanhdchungyen`: LEGACY_REFERENCE / migration source only.
 
-- Agent runs without Administrator/network-policy changes;
-- both PDA reached `LAN_ACTIVE` with no manual endpoint stored;
-- health success streaks 73/67, failures 0;
-- Agent saw two active clients;
-- captured echo roughly 10–57 ms; Agent p50/p95/p99 roughly 47/67/90 ms;
-- durable event flow to local SQLite PASS;
-- pending queues ended at zero;
-- duplicate rejection PASS;
-- no observed transport/API error in that session except favicon noise.
+## DONE in this recovery tranche
 
-Current feasibility classification: `FEASIBLE / FINAL V4 PHYSICAL REGRESSION REQUIRED`.
+### Google Drive
 
-## Owner requirements implemented in V4 source
+- Created VHDCHY root and separated BETA/STABLE/document/export/backup folders under `automation@supra.cc.cd`.
+- Created BETA `PICK_PACK_1291` folder and provisioned new Q3 workbook with the approved 17-tab schema.
+- New BETA workbook ID: `17lvVEdBno0TelhuZl3gmn7-YmyJ4o6wZxpsoP1YB9XQ`.
+- Renamed `BACKUP PICK PACK 1291` to `BACKUP DỰ ÁN CŨ PICK PACK 1291`.
+- Added a README marker inside the legacy backup stating REFERENCE ONLY / NOT AUTHORITY / NOT RUNTIME.
 
-- correct Agent/APK update/version behavior;
-- automatic update notification plus independent manual update fallback;
-- Agent staged no-admin update path with SHA256, restart health probe and rollback path;
-- realtime restart/cursor fix using `streamEpoch + sequence` and explicit resync;
-- corrected cross-device realtime latency via Agent clock calibration;
-- substantially richer Agent/PDA diagnostics;
-- resource/battery policy: foreground realtime, no background realtime, bounded finish-only service for unfinished work/queue, stop when work completes, resume discovery/sync on next app open;
-- Agent remains portable user-mode with tray/settings/dashboard and no router/DNS/firewall/Admin assumptions.
+### GitHub source recovery
 
-## Defects found and corrected during V4 hardening
+- New repo exists and is writable by the current GitHub connection.
+- Main/beta/stable branches and LAN pilot tags exist in the new repo.
+- Source/history largely imported from old public repo.
+- Key workflows restored on new `main`: LAN Pilot build, deploy BETA, deploy STABLE, validate.
+- Historical release objects/assets are NOT yet recreated in the new repo.
+- `verify-environments.yml` intentionally remains absent because its old copy hard-coded decommissioned Google identity/IDs.
 
-Automated regression exposed and blocked multiple issues before the final candidate:
+### Authority/security corrections on this recovery branch
 
-- AndroidX not enabled after FileProvider/AndroidX dependency;
-- malformed C# updater raw/interpolated string;
-- `Debug.getPss()` type mismatch;
-- Android BuildConfig generation absent;
-- Windows staged updater health-success branch unreachable because stale `%HEALTH_OK%` batch expansion;
-- Activity resources not released after a final foreground-started tracked job completed after Activity destruction;
-- transient CI source-gate pattern mismatches corrected.
+- Added `SERVICE_AUTHORITY.md` as the current account/provider/resource identity authority.
+- Updated `AI_BOOTSTRAP.md` to read `SERVICE_AUTHORITY.md` every new session and prohibit stale/model-memory IDs.
+- Updated `AI_OPERATING_CONTRACT.md` with provider state classifications, provider-write preflight, parallel execution, ~20 minute checkpoint behavior and OAuth discipline.
+- Updated `PROJECT_SCOPE.md` for current Google/GitHub identities, exact 2-MT90 physical boundary and renamed legacy backup folder.
+- Removed unused Apps Script `script.send_mail` runtime scope.
+- Updated `docs/GITHUB_ENV_SETUP.md` with current Drive roots, current owner email, retained Cloudflare IDs, new-GAS placeholders, secret rules and narrow CI OAuth scope set.
+- Updated `CURRENT_STATE.md` and `NEXT_ACTIONS.md` to prioritize provider recovery without losing the LAN checkpoint.
 
-CI now guards the important updater and Android lifecycle source invariants so these regressions cannot silently re-enter the packaged candidate.
+## IN PROGRESS / NOT YET LIVE
 
-## Final automated candidate
+- New Drive BETA workbook/resources are `PROVISIONED_NOT_LIVE` until BETA integration passes.
+- GitHub Environments `beta` and `stable` plus vars/secrets are not yet confirmed configured in the new repo.
+- New Google Cloud/OAuth BETA/STABLE resources are not created/verified yet.
+- New GAS BETA/STABLE projects/deployments do not exist yet.
+- Cloudflare setup is Owner-confirmed retained but not yet re-verified with a current token from the new GitHub Environment.
+- Android signing identities are retained by design but new repo secrets still need to be entered and verified.
+- New repo release objects/assets are absent.
 
-Release: `lan-pilot-beta-v0.3.36`
-Source commit: `7b4488a89f585812c1bccba5d07d86049482bf4c`
-Build run: `34562489063` — SUCCESS
-Repository validation run: `34562489066` — SUCCESS
+## Provider classification
 
-Verified jobs:
+- Google Drive account/profile: VERIFIED_CURRENT.
+- Drive folder/workbook provisioning: VERIFIED_CURRENT but PROVISIONED_NOT_LIVE.
+- Cloudflare/domain resources: OWNER_CONFIRMED_NOT_TOOL_VERIFIED / RETAIN.
+- Google Cloud/OAuth/GAS old resources: REBUILD_REQUIRED.
+- Android keystore identity: RETAIN / OWNER-CONTROLLED BACKUP, pending new-repo secret verification.
+- Old Google account/resources: DECOMMISSIONED.
 
-- Windows Agent job `103147915091`: SUCCESS;
-- Android PDA job `103147914859`: SUCCESS;
-- prerelease job `103148233504`: SUCCESS.
+## Exact Owner actions required next
 
-Android verification:
+Use the generated detailed reauthorization guide; do not paste secrets into chat.
 
-- source background-lifecycle invariants PASS;
-- release build PASS;
-- signature v1 + v2 PASS;
-- package `vn.vhdchy.lanpilot.beta`;
-- versionCode `36`;
-- versionName `0.3.36`.
+1. GitHub: configure Actions write permission and Environments `beta`/`stable`; enter current vars/secrets.
+2. Google BETA: create/select BETA Cloud project under `automation@supra.cc.cd`; enable Apps Script API + Drive API; configure Google Auth Platform; set Audience External and Publishing Status `In production`; create the BETA OAuth client and generate one offline refresh token using only approved CI scopes.
+3. GAS BETA: create BETA project/deployment, run interactive `bootstrapAuthorize()` once and record Script/Deployment/Exec IDs in GitHub BETA variables.
+4. Restore BETA signing secrets from existing keystore backup.
+5. Supply/recreate a least-privilege Cloudflare deploy token in GitHub BETA if the prior plaintext token is unavailable.
 
-Windows verification:
+## Work AI can continue automatically after Owner inputs
 
-- updater source invariants PASS;
-- .NET self-contained Agent + LoadGen publish PASS;
-- product version gate for `0.3.36` PASS;
-- Agent artifact upload PASS.
+- Verify new repo variables indirectly through CI presence checks without reading secret values.
+- Build current-ID `verify-environments.yml`.
+- Update BETA projection config/registry to the new workbook ID.
+- Run CI validation and BETA provider health checks.
+- Reconcile branch pointers only after gates pass.
+- Then prepare isolated STABLE recovery and wait for Owner STABLE approval.
 
-Release contains four required assets:
+## Parallelization
 
-- `VHDCHY-LAN-Agent-BETA-win-x64.zip`;
-- `VHDCHY-LAN-Agent-BETA-win-x64.sha256`;
-- `VHDCHY-LAN-Pilot-BETA.apk`;
-- `VHDCHY-LAN-Pilot-BETA.apk.sha256`.
+Owner GitHub setup, BETA Google Cloud/OAuth setup, Cloudflare token preparation and Android signing secret restoration are independent and can be done in parallel. GAS BETA creation depends on the intended BETA Google Cloud/OAuth project decision. STABLE provider recovery depends on BETA PASS.
 
-GitHub-reported release digests:
+## LAN continuity
 
-- Agent ZIP SHA256 `0fbfcb846c1b81441f65ae484dc701c35381705a001fffca553d8dcdf687a5e4`;
-- APK SHA256 `02f9f3832f70da808c94890f87bad9fd68a04f4a2f124df74f4d9f5f2d8e465a`.
-
-## Exact next action
-
-Owner physical action is now the only blocker to final LAN feasibility PASS:
-
-1. install matching `0.3.36` Agent and APK on both MT90;
-2. verify displayed versions and automatic LAN_ACTIVE without manual endpoint;
-3. restart Agent repeatedly and verify automatic reacquisition + epoch resync;
-4. realtime normal/heavy both directions and near-simultaneous;
-5. transfer 1/10/25 MB + concurrent FULL suites;
-6. Wi-Fi-off 5-event durable queue test, then recovery to pending 0 with no unexplained loss;
-7. foreground/background/no-work/in-flight-work/pending-queue lifecycle tests;
-8. automatic/manual update path and actual no-admin Agent staged update validation;
-9. synthetic 10/25/50/100 load;
-10. soak;
-11. export one Agent ZIP + FULL TXT from each PDA for final analysis.
-
-Detailed sequence is in `NEXT_ACTIONS.md`.
-
-## Boundary
-
-Two real MT90 are the current physical ceiling. Synthetic capacity evidence must not be reported as proof of RF/Wi-Fi behavior above two real devices.
-
-## Owner action required
-
-YES: install and physically test release `lan-pilot-beta-v0.3.36` on the real corporate laptop/Wi-Fi + both MT90. No Administrator, router, DNS or firewall changes are requested.
+The physical LAN regression remains pending exactly as before. Do not mark LAN-PILOT PASS until real laptop + two MT90 evidence is completed. Provider recovery is a prerequisite for restoring project automation, not evidence of LAN feasibility completion.
