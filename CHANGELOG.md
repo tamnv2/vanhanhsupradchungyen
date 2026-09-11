@@ -99,3 +99,14 @@ Lịch sử này là append-only.
 - Không thêm quyền Admin, không yêu cầu router/DNS/firewall, không thêm public diagnostic upload endpoint.
 - Ghi nhận build trung gian `34516009029`: Android PASS, Windows compile FAIL do overload `StopAsync`; đã sửa ở commit `bc3736237c70de4a0f0b236b0f12a607bad00676` và final build PASS.
 - Chi tiết: `docs/changelog/2026-09-11-lan-pilot-0.6.1.md`.
+
+## 2026-09-11 — lan-pilot-0.7.0
+
+- Phân tích evidence thật từ Agent + 2 Newland MT90 trên mạng công ty: hai PDA đạt `LAN_ACTIVE`, manual endpoint trống, health streak 73/67 với failure 0; latency và durable-event path đủ tốt để chuyển trạng thái feasibility từ UNKNOWN sang FEASIBLE/NEEDS-STRESS-EVIDENCE.
+- Owner xác nhận hiện chỉ có đúng 2 MT90; thêm D-029: dùng 2 PDA thật + synthetic capacity để quyết định feasibility hiện tại, nhưng không suy diễn RF/Wi-Fi cho >2 PDA.
+- Phát hành comprehensive measurement build `lan-pilot-beta-v0.2.20`.
+- Android 0.2 thêm application-level LAN priority/reacquisition, discovery-source evidence, upload/download 1/10/25 MB, realtime PDA↔laptop↔PDA, heavy realtime 200×2KB, FULL suite và FULL diagnostics.
+- Agent 0.2 thêm realtime bounded buffer/long-poll, transfer endpoints, richer metrics, laptop Test Center và local-only dashboard LoadGen 10/25/50/100 logical clients.
+- Build run `34548902991`: Windows Agent SUCCESS, Android signed APK SUCCESS, prerelease SUCCESS.
+- Không thay Worker/D1/Stable; LAN build vẫn portable no-admin và không yêu cầu router/DNS/firewall change.
+- Chi tiết: `docs/changelog/2026-09-11-lan-pilot-0.7.0.md` và `docs/lan/LAN_PILOT_002_COMPREHENSIVE_TEST.md`.
