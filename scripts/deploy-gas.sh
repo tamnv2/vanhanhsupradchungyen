@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-required=(APP_ENV OWNER_EMAIL GOOGLE_DRIVE_ENV_ROOT_ID GAS_SCRIPT_ID GAS_DEPLOYMENT_ID GAS_EXEC_URL GOOGLE_OAUTH_CLIENT_ID GOOGLE_OAUTH_CLIENT_SECRET GOOGLE_OAUTH_REFRESH_TOKEN)
+required=(APP_ENV OWNER_EMAIL GOOGLE_SHEETS_PROJECTION_ID GAS_SCRIPT_ID GAS_DEPLOYMENT_ID GAS_EXEC_URL GOOGLE_OAUTH_CLIENT_ID GOOGLE_OAUTH_CLIENT_SECRET GOOGLE_OAUTH_REFRESH_TOKEN)
 for v in "${required[@]}"; do
   [[ -n "${!v:-}" ]] || { echo "Missing $v" >&2; exit 2; }
 done
@@ -17,7 +17,7 @@ p=sys.argv[1]
 s=open(p, encoding='utf-8').read()
 s=s.replace('__ENVIRONMENT__', os.environ['APP_ENV'].upper())
 s=s.replace('__OWNER_EMAIL__', os.environ['OWNER_EMAIL'])
-s=s.replace('__ENV_ROOT_FOLDER_ID__', os.environ['GOOGLE_DRIVE_ENV_ROOT_ID'])
+s=s.replace('__PROJECTION_SPREADSHEET_ID__', os.environ['GOOGLE_SHEETS_PROJECTION_ID'])
 open(p,'w',encoding='utf-8').write(s)
 PY
 
@@ -64,14 +64,13 @@ set_deployment_version() {
     "$deploy_url"
 }
 
-# Version 1 was the Owner-created web-app deployment and was verified healthy before
-# the first CI mutation. If the current BETA endpoint is unhealthy, restore that known
-# good version first so CI never compounds a broken deployment.
+# Version 1 is the Owner-created bootstrap web-app deployment. It must be manually
+# verified healthy before CI is allowed to take over this environment.
 if ! endpoint_ok; then
-  echo "Current GAS endpoint unhealthy; restoring known-good version 1 before retry"
-  rollback_response=$(set_deployment_version 1 "CI recovery to verified version 1")
+  echo "Current GAS endpoint unhealthy; restoring verified bootstrap version 1 before retry"
+  rollback_response=$(set_deployment_version 1 "CI recovery to verified bootstrap version 1")
   jq -e --arg id "$GAS_DEPLOYMENT_ID" '.deploymentId == $id' <<<"$rollback_response" >/dev/null
-  wait_endpoint 18 || { echo "Unable to restore GAS endpoint to verified version 1" >&2; exit 4; }
+  wait_endpoint 18 || { echo "Unable to restore GAS endpoint to verified bootstrap version 1" >&2; exit 4; }
   echo "GAS rollback PASS: version=1"
 fi
 
@@ -105,7 +104,7 @@ if wait_endpoint 24; then
   exit 0
 fi
 
-echo "New GAS deployment endpoint failed; rolling back to verified version 1" >&2
+echo "New GAS deployment endpoint failed; rolling back to verified bootstrap version 1" >&2
 rollback_response=$(set_deployment_version 1 "Automatic rollback after failed CI deployment")
 jq -e --arg id "$GAS_DEPLOYMENT_ID" '.deploymentId == $id' <<<"$rollback_response" >/dev/null
 if wait_endpoint 18; then
