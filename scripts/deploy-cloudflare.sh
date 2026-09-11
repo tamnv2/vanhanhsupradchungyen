@@ -15,21 +15,17 @@ esac
 auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json')
 base="https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID"
 
+# Recovery rule: Cloudflare runtime already exists and must be retained.
+# A missing D1 is therefore an identity/configuration failure, never a signal to
+# create a replacement database automatically.
 list=$(curl -fsS "${auth[@]}" "$base/d1/database?name=$db_name")
 jq -e '.success == true' <<<"$list" >/dev/null
 db_id=$(jq -r --arg n "$db_name" '.result[]? | select(.name==$n) | (.uuid // .id)' <<<"$list" | head -n1)
-
-if [[ -z "$db_id" ]]; then
-  create_body=$(jq -nc --arg name "$db_name" '{name:$name,primary_location_hint:"apac"}')
-  created=$(curl -fsS -X POST "${auth[@]}" --data "$create_body" "$base/d1/database")
-  jq -e '.success == true' <<<"$created" >/dev/null
-  db_id=$(jq -r '.result.uuid // .result.id // empty' <<<"$created")
-  echo "Created D1 database: $db_name (APAC location hint)"
-else
-  echo "Using existing D1 database: $db_name"
-fi
-
-[[ -n "$db_id" ]] || { echo "Unable to resolve/create D1 database" >&2; exit 3; }
+[[ -n "$db_id" ]] || {
+  echo "Expected retained D1 database not found: $db_name. Refusing to create replacement." >&2
+  exit 3
+}
+echo "Using retained D1 database: $db_name"
 
 config="$PWD/wrangler.generated.json"
 trap 'rm -f "$config"' EXIT

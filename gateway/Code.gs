@@ -1,41 +1,49 @@
 /**
  * VHDCHY Google Gateway foundation.
  * Placeholder được CI thay trước khi update Apps Script project.
+ *
+ * Least-privilege rule:
+ * - current gateway needs the designated projection workbook + owner identity only;
+ * - no Drive file-management, outbound UrlFetch or installable-trigger capability
+ *   is authorized until an implemented Owner-approved feature needs it.
  */
 const BOOTSTRAP = Object.freeze({
   environment: "__ENVIRONMENT__",
   ownerEmail: "__OWNER_EMAIL__",
-  projectRootFolderId: "__ENV_ROOT_FOLDER_ID__",
+  projectionSpreadsheetId: "__PROJECTION_SPREADSHEET_ID__",
   projectName: "VẬN HÀNH DC HƯNG YÊN"
 });
 
 function bootstrapAuthorize() {
   ScriptApp.requireAllScopes(ScriptApp.AuthMode.FULL);
 
-  const root = DriveApp.getFolderById(BOOTSTRAP.projectRootFolderId);
   const activeEmail = Session.getActiveUser().getEmail() || Session.getEffectiveUser().getEmail();
   if (activeEmail && activeEmail.toLowerCase() !== BOOTSTRAP.ownerEmail.toLowerCase()) {
     throw new Error("OWNER_ACCOUNT_MISMATCH: " + activeEmail);
   }
 
-  const temp = SpreadsheetApp.create("VHDCHY_" + BOOTSTRAP.environment + "_AUTH_TEST_" + Date.now());
-  temp.getSheets()[0].getRange("A1:B2").setValues([
-    ["environment", BOOTSTRAP.environment],
-    ["status", "AUTH_TEST_PASS"]
-  ]);
-  DriveApp.getFileById(temp.getId()).setTrashed(true);
-
-  const resp = UrlFetchApp.fetch("https://www.google.com/generate_204", { muteHttpExceptions: true });
-  const triggerCount = ScriptApp.getProjectTriggers().length;
+  // Read-only probe against the explicitly designated projection workbook.
+  // This verifies that the current owner can open the intended workbook without
+  // requesting broad Drive access or creating/trashing temporary files.
+  const workbook = SpreadsheetApp.openById(BOOTSTRAP.projectionSpreadsheetId);
+  const workbookTitle = workbook.getName();
+  const sheetCount = workbook.getSheets().length;
 
   PropertiesService.getScriptProperties().setProperties({
     VHDCHY_ENVIRONMENT: BOOTSTRAP.environment,
     VHDCHY_OWNER_EMAIL: BOOTSTRAP.ownerEmail,
-    VHDCHY_ROOT_FOLDER_ID: BOOTSTRAP.projectRootFolderId,
+    VHDCHY_PROJECTION_SPREADSHEET_ID: BOOTSTRAP.projectionSpreadsheetId,
     VHDCHY_BOOTSTRAP_AUTH_AT: new Date().toISOString()
   }, false);
 
-  return { ok: true, environment: BOOTSTRAP.environment, scriptId: ScriptApp.getScriptId(), urlFetchStatus: resp.getResponseCode(), triggerCount: triggerCount };
+  return {
+    ok: true,
+    environment: BOOTSTRAP.environment,
+    scriptId: ScriptApp.getScriptId(),
+    projectionSpreadsheetId: BOOTSTRAP.projectionSpreadsheetId,
+    workbookTitle: workbookTitle,
+    sheetCount: sheetCount
+  };
 }
 
 function doGet() {

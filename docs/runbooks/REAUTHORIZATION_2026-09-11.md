@@ -1,535 +1,401 @@
-# VHDCHY — PROVIDER-FIRST REAUTHORIZATION / RECOVERY RUNBOOK
+# VHDCHY — PROVIDER-FIRST REAUTHORIZATION / RECOVERY RUNBOOK V3
 
 Date: 2026-09-11
 Status: OWNER-ACTION + AI-VERIFY
 Authority: `PROJECT_SCOPE.md` + `SERVICE_AUTHORITY.md` + `CURRENT_STATE.md`
+Permission audit: `docs/security/PERMISSION_AUDIT_2026-09-11.md`
 
-## 0. Critical correction — GitHub is NOT step 1
+## 0. Dependency order
 
-Do not start by filling GitHub variables/secrets. Most of those values are outputs of Google/Cloudflare/signing setup.
-
-Correct dependency order:
+Do not begin with GitHub values. Provider outputs come first.
 
 ```text
-Retained provider state / backups
-        │
-        ├── Google BETA setup ─────────────┐
-        ├── Cloudflare token verification ├── can run in parallel
-        └── Android signing recovery ──────┘
-                         │
-                         v
-             Collect verified IDs/secrets
-                         │
-                         v
-               GitHub beta Environment
-                         │
-                         v
-                  AI/CI BETA verify
-                         │
-                  BETA PASS required
-                         │
-                         v
-             STABLE provider setup + Owner approval
-                         │
-                         v
-              GitHub stable Environment
-                         │
-                         v
-                 AI/CI STABLE verify
+Google BETA ───────────┐
+Cloudflare token ──────┼─> verified IDs/secrets -> GitHub beta -> AI/CI verify -> BETA PASS
+VHDCHY BETA signer ────┘                                           |
+                                                                    v
+                                                        Owner approves STABLE
+                                                                    |
+                                                                    v
+                                                     build STABLE providers/GitHub
 ```
 
-## 1. Current service decision matrix
+Cloudflare/domain runtime is retained. Google Cloud/OAuth/GAS is rebuilt. The retired Pick Pack 1291 archive is reference only.
 
-| Service | Decision | Current rule |
-|---|---|---|
-| Domain `supra.cc.cd` | RETAIN | Do not recreate |
-| Cloudflare zone/DNS/Worker/D1 | RETAIN | Only re-verify and create/rotate deploy token if needed |
-| Google Account | CURRENT NEW OWNER | `automation@supra.cc.cd` only |
-| Google Drive runtime | REBUILT | Use current IDs in `SERVICE_AUTHORITY.md` |
-| Google Cloud/OAuth | REBUILD | BETA first; STABLE after BETA PASS |
-| GAS | REBUILD | BETA first; STABLE after BETA PASS |
-| GitHub repo | CURRENT AUTHORITY | `tamnv2/vanhanhsupradchungyen` |
-| GitHub Environments/secrets | REBUILD LAST | Fill only after provider values exist |
-| Android signing | RETAIN | Reuse original keystore identity; no key rotation unless explicitly approved |
-| Old Pick Pack backup | REFERENCE ONLY | `BACKUP DỰ ÁN CŨ PICK PACK 1291`; never authority/runtime |
-
-## 2. Official setup links
+## 1. Direct setup links
 
 ### Google
 
-- Google Cloud create project: https://console.cloud.google.com/projectcreate
-- Google Cloud console: https://console.cloud.google.com/
-- Google Auth Platform overview: https://console.cloud.google.com/auth/overview
-- Enable Google Apps Script API: https://console.cloud.google.com/apis/library/script.googleapis.com
-- Enable Google Drive API: https://console.cloud.google.com/apis/library/drive.googleapis.com
-- Apps Script dashboard user settings: https://script.google.com/home/usersettings
+- Create Cloud project: https://console.cloud.google.com/projectcreate
+- Google Auth Platform: https://console.cloud.google.com/auth/overview
+- Apps Script API library: https://console.cloud.google.com/apis/library/script.googleapis.com
+- Apps Script account API-access setting: https://script.google.com/home/usersettings
 - Apps Script home: https://script.google.com/home
-- OAuth 2.0 Playground: https://developers.google.com/oauthplayground/
-- Search Console/domain verification: https://search.google.com/search-console
+- OAuth Playground: https://developers.google.com/oauthplayground/
+- Search Console, only if Google requires domain verification: https://search.google.com/search-console
 
 ### Cloudflare
 
 - Dashboard: https://dash.cloudflare.com/
-- API token documentation: https://developers.cloudflare.com/fundamentals/api/get-started/create-token/
-- GitHub Actions/Workers CI documentation: https://developers.cloudflare.com/workers/ci-cd/external-cicd/github-actions/
+- API tokens: https://dash.cloudflare.com/profile/api-tokens
+- Permission reference: https://developers.cloudflare.com/fundamentals/api/reference/permissions/
 
-### GitHub — use only after provider setup
+### GitHub — use after provider values exist
 
 - Environments: https://github.com/tamnv2/vanhanhsupradchungyen/settings/environments
 - Actions settings: https://github.com/tamnv2/vanhanhsupradchungyen/settings/actions
 
-## 3. Phase A — Google account safety prerequisite
+## 2. Phase A — secure current Google identity
 
-Current Google runtime owner: `automation@supra.cc.cd`.
+Current runtime owner: `automation@supra.cc.cd`.
 
-Before creating automation credentials:
+Before automation credentials:
 
-- confirm independent recovery email;
-- configure recovery phone where appropriate;
-- enable 2-Step Verification/passkey;
-- store backup codes outside this Google Drive account;
-- do not add Gmail solely for the project;
-- do not use this identity for unrelated bulk-email or mass account-registration activity.
+- independent recovery email;
+- recovery phone where appropriate;
+- 2-Step Verification/passkey;
+- backup codes stored outside the automated Drive account;
+- do not add Gmail solely for VHDCHY;
+- do not use this identity for bulk email/mass unrelated registrations.
 
-The account has no Gmail mailbox; that does not block Drive/Sheets/Apps Script/OAuth.
+Never use `vanhanhdchungyen@gmail.com` again.
 
-## 4. Phase B — Google BETA foundation
+## 3. Phase B — create Google BETA Cloud/OAuth
 
-Do BETA completely before STABLE.
+### B1. Create standard Cloud project
 
-### B1. Create the standard Cloud project
-
-Open: https://console.cloud.google.com/projectcreate
-
-Sign in as `automation@supra.cc.cd`.
+Open https://console.cloud.google.com/projectcreate while logged in as `automation@supra.cc.cd`.
 
 Create:
 
 ```text
-Project name: VHDCHY-BETA
+VHDCHY-BETA
 ```
 
-If the account is not part of a Google Workspace/Cloud Identity organization, leave organization/location at the available personal/default choice; do not invent an organization.
+Record Project ID and Project number. Project number is used when linking the Apps Script project.
 
-After creation, record locally:
+### B2. Enable only the API current CI needs
 
-- Project name;
-- Project ID;
-- Project number.
+Enable **Google Apps Script API**:
 
-The **Project number** will later be used to associate the Apps Script project with this standard Cloud project.
+https://console.cloud.google.com/apis/library/script.googleapis.com
 
-### B2. Enable required APIs in VHDCHY-BETA
+Do **not** enable Drive API, Sheets API, Gmail, Calendar, Contacts, People or Firebase merely for this recovery. Current CI does not call those REST APIs. Apps Script built-in `SpreadsheetApp` does not require enabling the Sheets REST API in this Cloud project.
 
-Select project `VHDCHY-BETA`, then open:
+### B3. Enable Apps Script API access at account level
 
-- Apps Script API: https://console.cloud.google.com/apis/library/script.googleapis.com
-- Drive API: https://console.cloud.google.com/apis/library/drive.googleapis.com
+Open:
 
-Enable both.
+https://script.google.com/home/usersettings
 
-Reason:
-
-- CI uses the Apps Script API to update project content/versions/deployments.
-- The GAS runtime uses the built-in Drive service and a standard Cloud project; Google documents enabling Drive API when using built-in Drive service after switching to a standard project.
-
-Do **not** enable Gmail, Calendar, Contacts, People, or unrelated APIs for this recovery.
-
-### B3. Enable Apps Script API access at the Google-account level
-
-This is separate from enabling the API in Cloud Console and was missing from the earlier guide.
-
-Open: https://script.google.com/home/usersettings
-
-Under Apps Script user settings, enable the setting that allows the **Google Apps Script API** to access/manage your script projects.
-
-Why this matters: Google disables Apps Script API management of script content/deployments by default. Even with a valid OAuth token, CI can fail unless this account-level access is explicitly enabled.
-
-Official explanation: https://developers.google.com/apps-script/api/how-tos/enable
+Enable the setting allowing **Google Apps Script API** access to script projects. Google keeps this access off by default as a security measure.
 
 ### B4. Configure Google Auth Platform
 
-Open while `VHDCHY-BETA` is selected:
+Open:
 
 https://console.cloud.google.com/auth/overview
 
-Because `automation@supra.cc.cd` is a normal Google Account using an external domain email, not an account inside a Google Workspace organization owned by this project, use **External** audience.
-
-Configure the pages Google currently exposes as Branding / Audience / Data Access / Clients.
-
-Suggested truthful values:
+Use:
 
 ```text
 App name: VHDCHY BETA Automation
 User support email: automation@supra.cc.cd
-Developer/contact email: automation@supra.cc.cd
 Audience: External
+Developer/contact email: automation@supra.cc.cd
 ```
 
-Do not add logos/homepage/privacy-policy URLs just to make the page look complete unless Google requires them for the action you are taking and the URLs actually exist.
+`automation@supra.cc.cd` is a normal Google Account, not an Internal Google Workspace organization identity, therefore do not select Internal.
 
-### B5. Configure only the CI OAuth scopes needed by current code
+### B5. CI OAuth scopes — exact minimum
 
-The current `scripts/deploy-gas.sh` calls only the Apps Script API for:
+Current CI deployment calls Apps Script project/version/deployment endpoints only.
 
-- project content update;
-- version creation;
-- deployment update.
-
-The final CI refresh token needs only:
+Authorize exactly:
 
 ```text
 https://www.googleapis.com/auth/script.projects
 https://www.googleapis.com/auth/script.deployments
 ```
 
-Do **not** add `drive.metadata.readonly` to the CI token now. The restored deploy script does not call the Drive REST API, and `drive.metadata.readonly` is a restricted Drive scope. Removing it reduces unnecessary OAuth exposure.
+Do not add Drive, Sheets, Gmail, Calendar, Contacts, `script.send_mail`, `script.scriptapp` or `script.external_request` to the CI OAuth client.
 
-Also do not add Gmail/Calendar/Contacts/`script.send_mail`/full Drive/Sheets scopes to the **CI OAuth client**.
+### B6. Publishing state and the 7-day Testing issue
 
-Runtime Apps Script scopes are separate and are covered later.
+During initial setup, Testing is acceptable. Before producing the **final** CI refresh token, move the External OAuth app to its intended `In production` publishing state.
 
-### B6. Move OAuth publishing status to In production BEFORE generating the final refresh token
+Reason: refresh tokens for non-basic scopes issued while an External app remains in Testing have a limited lifetime. `In production` removes that Testing-specific seven-day behavior, but refresh tokens remain revocable and are not immortal.
 
-This step is specifically for the GitHub CI refresh token.
+Domain ownership does not itself remove the Testing lifetime rule.
 
-In Google Auth Platform -> Audience, use `Publish app` / set publishing status to **In production**.
+Official references:
 
-Why: Google states that for an External OAuth project in `Testing`, refresh tokens expire after 7 days unless the request is limited to basic identity scopes. Our CI requests Apps Script scopes, so a Testing token is not suitable for durable CI.
+- https://developers.google.com/identity/protocols/oauth2
+- https://support.google.com/cloud/answer/15544987
+- https://support.google.com/cloud/answer/13464323
 
-Official token rule: https://developers.google.com/identity/protocols/oauth2
+### B7. Create BETA CI OAuth client
 
-Important nuance:
+Google Auth Platform -> Clients -> Create OAuth client.
 
-- `In production` removes the special 7-day Testing lifetime.
-- It does **not** mean a refresh token is mathematically permanent. Tokens can still be revoked, invalidated by security/policy changes, or expire after extended non-use.
-- Domain ownership itself does not remove the 7-day Testing rule.
-
-For this owner-only / very small personal-use automation, Google documents verification exceptions for personal use. An unverified warning/user cap can still appear if sensitive/restricted scopes are involved. Do not attempt to bypass provider warnings; follow the current Google UI if it requires an additional verification step.
-
-References:
-
-- Audience/publishing status: https://support.google.com/cloud/answer/15549945
-- Personal-use verification exception: https://support.google.com/cloud/answer/13464323
-
-### B7. Create the BETA OAuth client
-
-In Google Auth Platform -> Clients:
-
-1. Create OAuth client.
-2. Application type: `Web application`.
-3. Name: `VHDCHY BETA GitHub CI`.
-4. Authorized redirect URI: `https://developers.google.com/oauthplayground`.
-5. Create.
-
-Record privately:
-
-- Client ID;
-- Client secret.
-
-Do not put them in GitHub yet. Keep them ready until all BETA provider outputs have been collected.
-
-### B8. Generate the final BETA refresh token
-
-Only do this after B6 shows the intended `In production` publishing state.
-
-Open: https://developers.google.com/oauthplayground/
-
-1. Open the gear/settings panel.
-2. Enable `Use your own OAuth credentials`.
-3. Enter the BETA Client ID and Client Secret in the Playground UI.
-4. In the scope field, authorize exactly:
+Use:
 
 ```text
-https://www.googleapis.com/auth/script.projects
-https://www.googleapis.com/auth/script.deployments
+Application type: Web application
+Name: VHDCHY BETA GitHub CI
+Authorized redirect URI: https://developers.google.com/oauthplayground
 ```
 
-5. Authorize using `automation@supra.cc.cd`.
-6. Review the consent screen; do not approve Gmail/Calendar/Contacts/Drive scopes in this CI authorization.
-7. Exchange authorization code for tokens.
-8. Record the returned refresh token privately.
+Keep Client ID and Client secret private. Do not enter GitHub yet.
 
-If a refresh token was previously generated while the project was still in Testing, do not treat that old token as the final CI token; generate the final token after the intended production publishing state is set.
+### B8. Generate one durable BETA refresh token
 
-Google documents a limit of 100 refresh tokens per Google Account per OAuth client; repeatedly minting new ones can invalidate older tokens. Therefore create/reuse one intended BETA CI refresh token rather than generating one on every deployment.
+Open https://developers.google.com/oauthplayground/.
 
-## 5. Phase C — Create and authorize GAS BETA
+1. Gear/settings -> `Use your own OAuth credentials`.
+2. Enter BETA Client ID and Client secret locally in Playground.
+3. Authorize exactly the two scopes in B5.
+4. Authorize as `automation@supra.cc.cd`.
+5. Exchange code for tokens.
+6. Keep the refresh token private.
 
-### C1. Create the new Apps Script project
+Do not mint a new refresh token every CI run.
 
-Open: https://script.google.com/home
+## 4. Phase C — create GAS BETA with reduced runtime scopes
 
-Create a standalone script project named:
+### C1. Create standalone project
+
+Open https://script.google.com/home and create:
 
 ```text
 VHDCHY BETA Google Gateway
 ```
 
-### C2. Associate GAS with the standard VHDCHY-BETA Cloud project
+### C2. Link the standard Cloud project
 
-In the Apps Script editor:
+Apps Script -> Project Settings -> Google Cloud Project -> Change project.
 
-`Project Settings -> Google Cloud Project -> Change project`
+Use the Project number from B1.
 
-Enter the **Project number** recorded in B1 and set the project.
+### C3. Use current authority source only
 
-Google recommends choosing the standard Cloud project early because switching later can force re-authorization.
-
-Official reference: https://developers.google.com/apps-script/guides/cloud-platform-projects
-
-### C3. Put the current authority source into GAS
-
-Use current repo source only:
+Use:
 
 - `gateway/Code.gs`
 - `gateway/appsscript.json`
 
-Do not copy old Script ID/deployment ID/OAuth credentials from the decommissioned Google account.
+Do not copy historical GAS IDs, deployment IDs or manifests from old accounts/projects.
 
-Current audited runtime manifest scopes are:
+### C4. Current GAS runtime scopes — exact minimum
+
+The deep audit removed artificial bootstrap-only privileges. Current manifest is:
 
 ```text
-https://www.googleapis.com/auth/drive
 https://www.googleapis.com/auth/spreadsheets
-https://www.googleapis.com/auth/script.external_request
-https://www.googleapis.com/auth/script.scriptapp
 https://www.googleapis.com/auth/userinfo.email
 ```
 
-`script.send_mail` is intentionally absent because current gateway source does not send mail.
+Why:
 
-These are **GAS runtime scopes**, not the two-scope GitHub CI OAuth token.
+- `spreadsheets`: open/update the explicitly designated projection workbook;
+- `userinfo.email`: reject accidental authorization from the wrong Google account.
 
-### C4. Run bootstrapAuthorize() once manually
-
-Run `bootstrapAuthorize()` as `automation@supra.cc.cd`.
-
-Expected behavior:
-
-- account authorization prompt appears;
-- owner identity check passes;
-- BETA Drive root can be resolved;
-- temporary test Spreadsheet is created and trashed;
-- URL fetch probe runs;
-- script properties are written.
-
-Review the consent screen carefully. If Gmail/send-mail/Calendar/Contacts permissions appear, stop and audit the manifest/source instead of approving them.
-
-### C5. Create the BETA Web App deployment
-
-In Apps Script:
-
-`Deploy -> New deployment -> Web app`
-
-Use the current approved architecture:
-
-- Execute as: `User deploying` / `automation@supra.cc.cd`.
-- Access setting must match the current approved web-app design. Do not change the security model merely to make deployment easier.
-
-After deployment, record privately/non-secret locally:
-
-- **Script ID**: `Project Settings -> Script ID`.
-- **Deployment ID**: `Deploy -> Manage deployments`.
-- **Web app /exec URL**.
-
-These three outputs are what GitHub needs later.
-
-## 6. Phase D — Cloudflare retained setup: verify and create token only
-
-Cloudflare zone/DNS/Worker/D1 are retained; do not recreate them because Google/GitHub identities changed.
-
-### D1. Read current IDs from the current dashboard
-
-Open: https://dash.cloudflare.com/
-
-Read the **current account ID** from the account that now owns the retained VHDCHY resources. Do not blindly reuse a historical ID if the dashboard does not match it.
-
-The restored workflow currently needs `CF_ACCOUNT_ID` for deployment.
-
-`CF_ZONE_ID` is present in the workflow environment block but is not consumed by the current deploy scripts. If you decide to populate it, read it from the current `supra.cc.cd` zone rather than using an unverified old value.
-
-### D2. Create/rotate a scoped CI token if needed
-
-If the previous token value is unavailable or its scope is uncertain, create a new token.
-
-Cloudflare docs: https://developers.cloudflare.com/fundamentals/api/get-started/create-token/
-
-For the current deployment path, start with only permissions needed for retained Worker + D1 deployment. Current API calls require at least:
-
-- Account: Workers Scripts — Edit/Write;
-- Account: D1 — Edit/Write.
-
-Wrangler/custom-domain operations may also require route/account lookup permissions depending on the current provider behavior. If needed, add only the specific documented permission required by the observed error rather than granting Global API Key/full account access.
-
-Cloudflare's official Workers CI guidance starts from the `Edit Cloudflare Workers` token template; if using the template, restrict resources to the intended account/zone and remove unrelated permissions where the dashboard allows it without breaking the current Wrangler path.
-
-Record the token privately. Do not put it in GitHub until Phase F.
-
-## 7. Phase E — Android BETA signing recovery
-
-Keep the existing BETA signing identity. Do not generate a new keystore.
-
-Locate the Owner-controlled BETA keystore backup.
-
-Verify alias/fingerprint locally before GitHub entry. Recorded alias is:
+Not authorized now:
 
 ```text
-vhdchy-beta
+Drive
+script.external_request
+script.scriptapp
+script.send_mail
+Gmail
+Calendar
+Contacts
 ```
 
-If using Java `keytool`, inspect the keystore rather than trusting filename alone.
+The retired Pick Pack project used several of these because it had MailApp, Drive artifacts, triggers and external bridges. Current VHDCHY does not.
 
-Prepare privately:
+### C5. BETA projection workbook
 
-- `ANDROID_SIGNING_ALIAS`;
-- keystore base64 value for `ANDROID_SIGNING_KEY_B64`;
-- store password;
-- key password.
+Current BETA projection workbook:
 
-Do not put keystore bytes/passwords into chat or repository files.
+```text
+VHDCHY BETA - PICK PACK 1291 - 2026 Q3
+ID: 17lvVEdBno0TelhuZl3gmn7-YmyJ4o6wZxpsoP1YB9XQ
+State: PROVISIONED_NOT_LIVE
+```
 
-The Cloudflare token work and Android signing recovery can run in parallel with Google BETA setup because they do not depend on each other.
+The corrected bootstrap opens this workbook instead of requesting full Drive permission or creating/trashing temporary spreadsheets.
 
-## 8. Phase F — NOW fill GitHub BETA
+### C6. Manual authorization
 
-Only after Phases B/C/D/E have produced verified values should you open GitHub.
+Run `bootstrapAuthorize()` once as `automation@supra.cc.cd`.
+
+Consent must correspond to Sheets access + email identity. If Drive, Gmail/mail, external-request, trigger-management, Calendar or Contacts access appears, stop and re-audit instead of approving.
+
+### C7. Web App deployment
+
+Apps Script -> Deploy -> New deployment -> Web app.
+
+Use current foundation design:
+
+- Execute as: user deploying (`automation@supra.cc.cd`).
+- Keep the current foundation Web App access model; `doPost()` is still fail-closed with `FOUNDATION_ONLY` 503.
+
+Record:
+
+- Script ID;
+- Deployment ID;
+- `/exec` URL.
+
+Before actual business projection writes are enabled later, Worker -> GAS privileged calls need an application-level authenticated boundary. Anonymous Web App reachability must not become authorization for writes.
+
+## 5. Phase D — Cloudflare retained runtime
+
+Do not rebuild Worker/D1/DNS/domain.
+
+### D1. Verify current account
+
+Open https://dash.cloudflare.com/ and read the account ID that owns the retained VHDCHY resources.
+
+### D2. Create/rotate a least-privilege token if necessary
+
+Open https://dash.cloudflare.com/profile/api-tokens.
+
+Create a **custom token**, scoped to the current account, with only:
+
+```text
+Account -> Workers Scripts -> Write
+Account -> D1 -> Write
+```
+
+Do not use the stock `Edit Cloudflare Workers` template unchanged because it grants additional permissions such as routes/KV/R2/Tail/account reads.
+
+Current Worker config uses Custom Domain (`custom_domain: true`). Cloudflare handles its DNS/certificate; current deploy does not need DNS Write or Workers Routes Write.
+
+Recovery hardening: if expected D1 (`vhdchy-data-beta` or later STABLE equivalent) is missing, deployment now fails rather than silently creating a replacement database.
+
+## 6. Phase E — recover VHDCHY BETA Android signer
+
+Use the retained **VHDCHY** BETA keystore, not the retired Pick Pack 1291 keystore from the reference archive.
+
+Current BETA workflow consumes:
+
+```text
+ANDROID_SIGNING_ALIAS
+ANDROID_SIGNING_KEY_B64
+ANDROID_SIGNING_STORE_PASSWORD
+ANDROID_SIGNING_KEY_PASSWORD
+```
+
+Recorded VHDCHY BETA alias is `vhdchy-beta`; verify against the retained keystore before entry.
+
+`ANDROID_SIGNING_SHA256` is not consumed by the current workflow and therefore does not need to be created as a GitHub variable merely for completeness.
+
+Do not put keystore/password material in chat or repo files.
+
+Cloudflare token work and signing recovery can be done in parallel with Google setup.
+
+## 7. Phase F — populate GitHub BETA only now
 
 ### F1. Repository Actions permission
 
-Open: https://github.com/tamnv2/vanhanhsupradchungyen/settings/actions
+Open https://github.com/tamnv2/vanhanhsupradchungyen/settings/actions.
 
-Under `Workflow permissions`, select `Read and write permissions` because the LAN build workflow publishes prerelease assets using `GITHUB_TOKEN`.
+Keep repository default `GITHUB_TOKEN` permissions at **Read repository contents and packages permissions**.
 
-### F2. Create Environment `beta`
+Do not globally switch to repository-wide Read and write. Current workflows declare minimum permissions themselves:
 
-Open: https://github.com/tamnv2/vanhanhsupradchungyen/settings/environments
+- deploy BETA/STABLE: `contents: read`;
+- LAN Pilot release: `contents: write` to publish release assets.
 
-Create/configure `beta`.
+Do not enable `Allow GitHub Actions to create and approve pull requests`.
 
-### F3. BETA variables required by current workflows
+### F2. Create environment `beta`
 
-| GitHub variable | Enter this value/source |
-|---|---|
-| `APP_ENV` | `beta` |
-| `OWNER_EMAIL` | `automation@supra.cc.cd` |
-| `CF_ACCOUNT_ID` | verified current Cloudflare account ID from D1 |
-| `PUBLIC_HOST` | `beta.supra.cc.cd` |
-| `GAS_SCRIPT_ID` | new BETA value from C5 |
-| `GAS_DEPLOYMENT_ID` | new BETA value from C5 |
-| `GAS_EXEC_URL` | new BETA `/exec` URL from C5 |
-| `GOOGLE_DRIVE_ENV_ROOT_ID` | `1XuIQ6yb4Ey-aKy0MbRxHfEqvyaSWHDog` |
-| `ANDROID_SIGNING_ALIAS` | verified retained BETA alias (`vhdchy-beta` if keystore check matches) |
+Open https://github.com/tamnv2/vanhanhsupradchungyen/settings/environments.
 
-`CF_ZONE_ID` may be left absent unless a current workflow change starts consuming it; if populated, use the verified current zone ID.
+Create `beta`. If available, restrict deployment branches/tags so only branch `beta` can deploy to this environment.
 
-Do not add obsolete/unconsumed variables merely because an older runbook listed them.
+### F3. BETA variables
 
-### F4. BETA secrets required by current workflows
+Enter only current consumed variables:
 
-Enter directly in GitHub Environment secrets:
+```text
+APP_ENV=beta
+OWNER_EMAIL=automation@supra.cc.cd
+CF_ACCOUNT_ID=<verified current account ID>
+PUBLIC_HOST=beta.supra.cc.cd
+GAS_SCRIPT_ID=<new BETA GAS Script ID>
+GAS_DEPLOYMENT_ID=<new BETA deployment ID>
+GAS_EXEC_URL=<new BETA /exec URL>
+GOOGLE_SHEETS_PROJECTION_ID=17lvVEdBno0TelhuZl3gmn7-YmyJ4o6wZxpsoP1YB9XQ
+ANDROID_SIGNING_ALIAS=<verified VHDCHY BETA alias>
+```
+
+Do not create unconsumed variables just because old runbooks had them:
+
+```text
+CF_ZONE_ID
+CF_ZONE_NAME
+LAN_HOST
+GOOGLE_DRIVE_ENV_ROOT_ID
+ANDROID_SIGNING_SHA256
+```
+
+### F4. BETA secrets
+
+Deploy/GAS:
 
 ```text
 CLOUDFLARE_API_TOKEN
 GOOGLE_OAUTH_CLIENT_ID
 GOOGLE_OAUTH_CLIENT_SECRET
 GOOGLE_OAUTH_REFRESH_TOKEN
+```
+
+Android build/release:
+
+```text
 ANDROID_SIGNING_KEY_B64
 ANDROID_SIGNING_STORE_PASSWORD
 ANDROID_SIGNING_KEY_PASSWORD
 ```
 
-Source mapping:
+Secrets go only into GitHub Environment secrets/provider secret stores.
 
-- `CLOUDFLARE_API_TOKEN` -> D2.
-- `GOOGLE_OAUTH_CLIENT_ID` -> B7.
-- `GOOGLE_OAUTH_CLIENT_SECRET` -> B7.
-- `GOOGLE_OAUTH_REFRESH_TOKEN` -> B8.
-- Android secrets -> E.
+## 8. Phase G — AI/CI BETA verification
 
-Do not send these values to AI. After entry, AI only needs to test whether workflows can use them.
+After Owner finishes F:
 
-## 9. Phase G — AI/CI BETA verification gate
+1. verify OAuth refresh with the two approved scopes;
+2. verify Apps Script content/deployment and `/exec` identity;
+3. run `bootstrapAuthorize()` result check against the new projection workbook;
+4. verify Cloudflare token sees the retained D1 and Worker deployment succeeds without recreation;
+5. verify VHDCHY BETA signing material/build;
+6. run BETA deploy and health;
+7. only after all PASS may the BETA restoration gate be considered complete.
 
-After Owner says GitHub BETA is fully populated, AI should:
+`config/projections.beta.json` must use the new workbook ID and remain marked `PROVISIONED_NOT_LIVE` until this gate passes.
 
-1. verify current GitHub workflow/config state;
-2. rebuild the environment verification workflow using current IDs only;
-3. test OAuth token exchange without printing tokens;
-4. verify Apps Script API can read/update the intended BETA script/deployment;
-5. verify GAS `/exec` returns the expected BETA identity;
-6. verify current BETA Drive root through authorized GAS behavior/current provider state;
-7. verify Cloudflare token resolves/deploys the retained BETA resources rather than creating replacements unexpectedly;
-8. verify Android signer by CI build/signature checks;
-9. run BETA deployment/health;
-10. checkpoint run IDs, commits, PASS/FAIL and exact blocker.
+## 9. STABLE
 
-Do not move the `beta` live pointer merely because secrets were entered. Move only after the BETA gate passes according to the project release contract.
+Do not pre-fill STABLE just because GitHub exposes the fields.
 
-## 10. STABLE — only after BETA PASS + Owner approval
+After BETA PASS and explicit Owner approval:
 
-Do not pre-populate STABLE with BETA credentials.
+- create separate `VHDCHY-STABLE` Google Cloud/OAuth/GAS resources;
+- provision a separate STABLE projection workbook;
+- create separate STABLE OAuth client/refresh token with the same two CI scopes;
+- create environment `stable`, restrict it to branch `stable`, and enable Owner required review where supported;
+- add only STABLE variables/secrets consumed by current STABLE workflows;
+- do not add STABLE Android signing secrets until a current STABLE Android build workflow actually needs them.
 
-After BETA PASS and explicit Owner approval, repeat the provider-first process for STABLE:
+Never copy BETA Google credentials/IDs into STABLE.
 
-- separate standard Cloud/GAS project;
-- separate OAuth client + refresh token;
-- new STABLE GAS Script ID/Deployment ID/Exec URL;
-- current STABLE Drive root: `1MW-XRR3_jEuE3u8Nzw3NIFPYUM5G_zHE`;
-- retained STABLE signing identity;
-- verified retained Cloudflare state;
-- GitHub `stable` Environment filled only after those values exist.
+## 10. Legacy Pick Pack 1291 rule
 
-Then run STABLE verification/deployment behind the Owner gate.
+The full retired project used broader permissions for real historical features: MailApp password/OTP mail, Drive file/OTA/log storage, triggers, UrlFetch bridges, direct Worker Google Sheets OAuth, Drive REST, FCM service account and DR providers.
 
-## 11. Account-lock / anti-abuse controls
+Those capabilities are **not** current VHDCHY requirements. Do not carry their permissions/credentials forward unless a current Owner-approved VHDCHY feature is implemented and re-audited.
 
-No configuration guarantees Google will never flag an account. The recovery design minimizes unnecessary risk:
-
-- dedicated `automation@supra.cc.cd` identity;
-- no Gmail sending workload;
-- current manifest has no `script.send_mail`;
-- CI token has only `script.projects` + `script.deployments`;
-- one stable refresh token per environment; no token churn;
-- no repeated authorize/revoke loops;
-- no unnecessary throwaway projects/accounts;
-- 2FA/recovery enabled;
-- quotas respected;
-- secrets never logged/committed;
-- BETA used to validate before STABLE.
-
-Google does not publish a magic anti-bot threshold. Staying under quota is necessary but not a guarantee against abuse/security systems.
-
-## 12. Important Google OAuth facts used by this runbook
-
-- External OAuth project in Testing: refresh token expires after 7 days when non-basic scopes are used.
-- Publishing status `In production`: removes that special Testing lifetime, but tokens remain revocable.
-- Google documents personal-use/few-known-users exceptions where OAuth verification is not mandatory; warning/user cap may remain.
-- `drive.metadata.readonly` is a restricted Drive scope, so it is intentionally removed from current CI authorization because the current deploy script does not need it.
-- Apps Script API access has two separate gates: API enabled in the Cloud project **and** explicit account-level permission in Apps Script dashboard for applications to manage scripts/deployments.
-
-Official references:
-
-- OAuth refresh tokens: https://developers.google.com/identity/protocols/oauth2
-- OAuth publishing status: https://support.google.com/cloud/answer/15549945
-- Personal-use verification exception: https://support.google.com/cloud/answer/13464323
-- Apps Script API access gate: https://developers.google.com/apps-script/api/how-tos/enable
-- Apps Script standard Cloud projects: https://developers.google.com/apps-script/guides/cloud-platform-projects
-- Apps Script updateContent scope: https://developers.google.com/apps-script/api/reference/rest/v1/projects/updateContent
-- Apps Script versions.create scope: https://developers.google.com/apps-script/api/reference/rest/v1/projects.versions/create
-- Apps Script deployments scope: https://developers.google.com/apps-script/api/reference/rest/v1/projects.deployments/create
-- Drive scope classification: https://developers.google.com/workspace/drive/api/guides/api-specific-auth
-- Cloudflare token creation: https://developers.cloudflare.com/fundamentals/api/get-started/create-token/
-- GitHub Environments: https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments
-
-## 13. New-chat continuity
-
-Every new AI session bootstraps from:
-
-1. `PROJECT_SCOPE.md`
-2. `SERVICE_AUTHORITY.md`
-3. `CURRENT_STATE.md`
-4. `NEXT_ACTIONS.md`
-5. `DECISIONS_INDEX.md`
-
-Then read only task-specific detail. Chat/model memory never overrides authority files. Around the 20-minute execution soft-stop, checkpoint before stopping so the next session can continue without reconstructing hidden model memory.
+Detailed evidence: `docs/security/PERMISSION_AUDIT_2026-09-11.md`.
