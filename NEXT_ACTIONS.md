@@ -1,77 +1,87 @@
 # NEXT ACTIONS
 
-Checkpoint: `LAN-PILOT-20260911-03`
+Checkpoint: `LAN-PILOT-20260911-04`
 
 ## Priority objective
 
-`LAN-PILOT-002 — comprehensive LAN validation on restricted corporate laptop + exactly 2 available Newland MT90, supplemented by synthetic Agent load.`
+`LAN-PILOT-002-V4 — final physical regression of the CI-verified LAN V4 candidate on restricted corporate laptop + exactly 2 Newland MT90, supplemented by synthetic Agent load.`
 
-Owner approved 2026-09-11. Deep business feature work remains behind this feasibility gate unless independent/supportive.
+Owner approved the LAN-first feasibility gate. Deep business feature work remains behind this gate unless independent/supportive.
 
-## Build target — 0.2 series
+## Candidate to test
 
-New measurement build adds:
+Release: `lan-pilot-beta-v0.3.36`
+Source commit: `7b4488a89f585812c1bccba5d07d86049482bf4c`
+Build run: `34562489063` — SUCCESS
+Repository validation: `34562489066` — SUCCESS
 
-- application-level hard LAN priority while APK process is alive;
-- Agent restart -> automatic PDA LAN reacquisition measurement;
-- discovery source evidence (`UDP`/`CACHE` where observable);
-- PDA upload/download test at 1 MB and 25 MB;
-- FULL transfer suite at 1/10/25 MB both directions;
-- realtime PDA ↔ Agent ↔ laptop/PDA using bounded long-poll event stream;
-- realtime heavy burst `200 x 2 KB`;
-- receiver display latency, p95 and sequence-gap counters;
-- laptop Test Center realtime visibility;
-- local-only LoadGen buttons for 10/25/50/100 logical clients;
-- FULL PDA diagnostics export combining transport, realtime, transfer and test history.
+Automated gates already PASS:
 
-Detailed procedure: `docs/lan/LAN_PILOT_002_COMPREHENSIVE_TEST.md`.
+- one semantic version across Agent/APK/Release;
+- Windows Agent source updater invariants;
+- Windows self-contained build/package;
+- Agent version `0.3.36`;
+- Android background lifecycle source invariants;
+- Android signed release APK;
+- APK package/version verification;
+- SHA256 files for Agent/APK;
+- prerelease publication with all four expected assets.
 
-## Physical evidence available
+## V4 behavior under physical verification
+
+- PDA auto-discovers/reacquires valid LAN Agent without manual endpoint.
+- Realtime uses `streamEpoch + sequence`; Agent restart or buffer gap forces deterministic resync.
+- Receiver latency uses Agent clock calibration instead of raw PDA-vs-laptop wall-clock subtraction.
+- Foreground app: realtime LAN ON.
+- App leaves foreground: realtime OFF.
+- If unfinished work or durable pending queue exists: bounded foreground finish service may continue only that work/recovery, then stops.
+- If network remains unavailable: durable queue remains local and resumes on next app open; app must not stay awake indefinitely.
+- Agent/APK update notification and manual update path both remain available.
+- Agent staged updater verifies SHA256, stages without Administrator, restarts, health-checks and has rollback path.
+- Agent/PDA diagnostics include richer lifecycle, queue, update, realtime, transfer and resource evidence.
+
+## Physical evidence ceiling
 
 Owner currently has exactly **2 physical MT90**. Therefore:
 
-- both PDA must pass connection/reacquisition/realtime/transfer/queue/soak tests;
+- both PDA must pass connection/reacquisition/realtime/transfer/queue/background/update/soak tests;
 - synthetic load must show clear software headroom above two clients;
-- final report must explicitly state that RF/Wi-Fi behavior above two physical PDA is unproven until more devices are available;
+- final report must state RF/Wi-Fi behavior above two physical PDA remains unproven;
 - synthetic clients must never be presented as equivalent physical-PDA RF evidence.
 
-## Test sequence after release
+## Final physical regression sequence
 
-1. Install same 0.2 BETA APK on both MT90 and run matching 0.2 Agent.
-2. Baseline: both PDA auto-enter `LAN_ACTIVE`, no manual endpoint.
-3. Restart Agent three times while both PDA remain untouched; measure automatic reacquisition.
-4. Wi-Fi off/on + durable queue recovery on each PDA if policy permits.
-5. Realtime normal: A -> laptop + B, then B -> laptop + A.
-6. Realtime heavy: 200 x 2 KB each direction, then both near-simultaneously.
-7. Transfer: 1 MB x3, 25 MB x3 per PDA; then FULL suite 1/10/25 MB.
-8. Run FULL suite on both PDA near-simultaneously.
-9. Laptop synthetic LoadGen: 10 -> 25 -> 50 -> 100 clients.
-10. Screen-off/background test; Agent restart while screen off.
-11. Soak: 30 min -> 2 h -> longer work-window if feasible.
-12. Export one Agent ZIP + FULL TXT from both PDA for evidence analysis.
+1. Replace laptop Agent with `0.3.36`; install matching `0.3.36` APK on both MT90.
+2. Verify Agent and both APK screens report `0.3.36`; both PDA auto-enter `LAN_ACTIVE` with no manual endpoint.
+3. Restart Agent at least three times while both PDA remain untouched; verify automatic reacquisition, epoch change and clean resync without stale-cursor lock.
+4. Realtime normal: PDA A → laptop + PDA B, then B → laptop + A; record corrected latency/gaps.
+5. Realtime heavy: `200 × 2 KB` each direction and near-simultaneously; verify no unexplained gap/loss.
+6. Transfer: 1/10/25 MB both directions, then run FULL suites on both PDA near-simultaneously.
+7. Offline durable queue: turn Wi-Fi off where policy permits; create a 5-event batch; verify pending reaches 5; restore Wi-Fi; verify LAN reacquires, all events are accepted/idempotent and pending returns to 0.
+8. Background policy: with no job pending, Home/background and confirm realtime stops; while an active transfer/FULL task runs, leave the UI and confirm finish-service notification/work completion then service stops; repeat with pending queue and unavailable network to confirm bounded retry then sleep.
+9. Update flow: verify automatic notification detects a truly newer semantic version only; verify manual fallback is always reachable. For Agent, physically verify staged no-admin replacement and healthy commit; rollback behavior should be tested only with a controlled safe failure case if practical. For APK, verify SHA/package/version validation reaches Android installer under MT90/company policy.
+10. Laptop LoadGen: 10 → 25 → 50 → 100 logical clients; record physical-vs-synthetic counts separately.
+11. Soak: 30 min → 2 h → longer work window if feasible, watching Agent CPU/RAM, laptop CPU/RAM, DB/log growth, errors and reconnects.
+12. Export one Agent ZIP + FULL diagnostics TXT from each PDA and submit for final analysis.
 
 ## Gate metrics
 
-- automatic LAN reacquisition success/delay;
-- discovery source;
-- request success/error and p50/p95/p99;
-- realtime display latency/p95 and sequence gaps;
-- transfer Mbps and completion errors;
-- queue recovery/event loss/duplicate handling;
-- Agent/laptop CPU/RAM and DB growth;
+- automatic LAN reacquisition success/delay and discovery source;
+- epoch-reset/resync correctness and sequence gaps;
+- corrected realtime display latency/p95 and publish ACK latency;
+- request success/error/client-cancel counts and p50/p95/p99;
+- upload/download Mbps and completion errors;
+- durable queue peak/recovery/event loss/duplicate handling;
+- foreground/background service duration, wake-lock boundedness and battery/power state;
+- Agent/laptop CPU/RAM/threads/handles/GC and DB/log growth;
 - synthetic req/s at 10/25/50/100;
-- screen-off/background behavior;
+- update notification/manual path/install/staged update/health/rollback evidence;
 - soak stability.
 
-## Still required before final LAN-PILOT PASS
+## Completion rule
 
-- physical 0.2 test evidence from both MT90;
-- no unexplained event loss;
-- predictable restart/reconnect behavior;
-- acceptable resource footprint;
-- automatic update notification + manual fallback verified;
-- actual no-admin Agent staged self-update/health rollback remains a later mandatory gate before final production LAN release.
+Do not mark `LAN-PILOT PASS` solely because CI is green. Final PASS requires physical V4 evidence from the restricted laptop + both MT90 with no unexplained event loss, predictable restart/reconnect, acceptable footprint, and update/background behavior consistent with the design above.
 
 ## Owner action
 
-Wait for a CI-verified 0.2 prerelease. Then update Agent and both APKs and follow the Test Center / FULL suite workflow. Do not change corporate firewall/router/DNS or use Administrator. No STABLE promotion.
+Use only release `lan-pilot-beta-v0.3.36` for the next regression. Do not change corporate firewall/router/DNS or use Administrator. No STABLE promotion.
