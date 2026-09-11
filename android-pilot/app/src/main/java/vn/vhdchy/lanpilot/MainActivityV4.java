@@ -209,7 +209,12 @@ public class MainActivityV4 extends Activity {
             finally {
                 int left = ACTIVE_JOBS.decrementAndGet();
                 repo.log("JOB_END", "name=" + name + "; elapsedMs=" + (SystemClock.elapsedRealtime() - start) + "; activeJobs=" + left + "; pending=" + repo.countPending());
-                updateBackgroundUi();
+                if (!destroyed) updateBackgroundUi();
+                if (destroyed && left == 0) {
+                    repo.log("BACKGROUND_IDLE", "activity destroyed; final tracked job complete; releasing activity executor/database");
+                    io.shutdown();
+                    repo.close();
+                }
             }
         });
     }
