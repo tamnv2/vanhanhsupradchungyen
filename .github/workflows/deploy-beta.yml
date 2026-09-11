@@ -1,0 +1,70 @@
+name: Deploy BETA foundation
+
+on:
+  push:
+    branches: [beta]
+    paths:
+      - 'worker/**'
+      - 'gateway/**'
+      - 'scripts/**'
+      - '.github/workflows/deploy-beta.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-beta
+  cancel-in-progress: false
+
+env:
+  APP_ENV: ${{ vars.APP_ENV }}
+  OWNER_EMAIL: ${{ vars.OWNER_EMAIL }}
+  CF_ACCOUNT_ID: ${{ vars.CF_ACCOUNT_ID }}
+  CF_ZONE_ID: ${{ vars.CF_ZONE_ID }}
+  PUBLIC_HOST: ${{ vars.PUBLIC_HOST }}
+  GAS_SCRIPT_ID: ${{ vars.GAS_SCRIPT_ID }}
+  GAS_DEPLOYMENT_ID: ${{ vars.GAS_DEPLOYMENT_ID }}
+  GAS_EXEC_URL: ${{ vars.GAS_EXEC_URL }}
+  GOOGLE_DRIVE_ENV_ROOT_ID: ${{ vars.GOOGLE_DRIVE_ENV_ROOT_ID }}
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}
+  GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}
+  GOOGLE_OAUTH_REFRESH_TOKEN: ${{ secrets.GOOGLE_OAUTH_REFRESH_TOKEN }}
+
+jobs:
+  deploy:
+    if: ${{ github.ref_name == 'beta' }}
+    environment: beta
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Select changed components
+        id: changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            gas=true
+            cf=true
+          else
+            files=$(git diff --name-only HEAD^ HEAD)
+            gas=false
+            cf=false
+            if grep -Eq '^(gateway/|scripts/deploy-gas\.sh$)' <<<"$files"; then gas=true; fi
+            if grep -Eq '^(worker/|scripts/deploy-cloudflare\.sh$)' <<<"$files"; then cf=true; fi
+            if grep -Eq '^scripts/deploy-environment\.sh$|^\.github/workflows/deploy-beta\.yml$' <<<"$files"; then gas=true; cf=true; fi
+          fi
+          echo "gas=$gas" >> "$GITHUB_OUTPUT"
+          echo "cf=$cf" >> "$GITHUB_OUTPUT"
+          echo "Selected components: GAS=$gas Cloudflare=$cf"
+      - name: Deploy selected components
+        env:
+          DEPLOY_GAS: ${{ steps.changes.outputs.gas }}
+          DEPLOY_CLOUDFLARE: ${{ steps.changes.outputs.cf }}
+        run: ./scripts/deploy-environment.sh
