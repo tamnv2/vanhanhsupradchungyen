@@ -1,38 +1,41 @@
 # SERVICE AUTHORITY — VHDCHY
 
 Status: ACTIVE / OWNER-APPROVED 2026-09-11
-Purpose: one compact authority map for provider/account/resource identity so AI does not reuse stale IDs or decommissioned accounts.
+Purpose: compact authority map for provider/account/resource identity and current permission boundaries.
 
 ## Hard rule
 
-Before any provider write/deploy, verify the active account/resource against this file and `CURRENT_STATE.md`. If a value is absent, marked UNKNOWN, LEGACY, DECOMMISSIONED, or REBUILD_REQUIRED, do not infer it from chat memory, historical backup, old repo, old logs, or old screenshots.
+Before any provider write/deploy, verify the active account/resource against this file and `CURRENT_STATE.md`. If a value is absent, UNKNOWN, LEGACY, DECOMMISSIONED or REBUILD_REQUIRED, do not infer it from chat memory, backup, old repo/logs/screenshots.
+
+Permission changes must also satisfy `docs/security/PERMISSION_AUDIT_2026-09-11.md`.
 
 ## Google identity
 
-- `vanhanhdchungyen@gmail.com`: **DECOMMISSIONED / DO NOT USE**. Never use for login, OAuth, GAS, Drive, GitHub, recovery, owner checks, CI variables, or new credentials. Any current-looking reference to this address is stale until explicitly superseded.
-- `automation@supra.cc.cd`: **CURRENT GOOGLE RUNTIME OWNER** for VHDCHY Google resources. It is a Google Account created with the owned domain email and currently has 5 TB Drive capacity.
-- `automation@supra.cc.cd` has no Gmail mailbox. Mail to the address is received through the domain mail/Cloudflare Email Routing forwarding path. Do not add Gmail scopes merely because this address is the Google Account login.
+- `vanhanhdchungyen@gmail.com`: **DECOMMISSIONED / DO NOT USE** for login, OAuth, GAS, Drive, GitHub, recovery, CI or new credentials.
+- `automation@supra.cc.cd`: **CURRENT GOOGLE RUNTIME OWNER**. Normal Google Account using the owned domain email; current Drive capacity 5 TB.
+- It has no Gmail mailbox. Domain mail forwarding is separate from Google runtime. Do not add Gmail scopes merely because this address is the Google Account login.
 
 ## GitHub
 
-- Current GitHub account: `tamnv2`.
-- Current source authority repo: `tamnv2/vanhanhsupradchungyen`.
-- Old repo `tamnv2supra/vanhanhdchungyen`: **LEGACY MIGRATION REFERENCE ONLY**. It may be read while reconciliation is incomplete, but must not be treated as the writable authority after the new repo is verified.
-- New repo source/history/tags have been partially reconstructed. GitHub Environments, environment variables/secrets, release objects/assets, and full workflow parity must be re-verified/rebuilt before BETA/STABLE are considered restored.
-- Branch names remain `main`, `beta`, `stable`; do not move BETA/STABLE live refs until their restoration gates pass.
+- Current account: `tamnv2`.
+- Current authority repo: `tamnv2/vanhanhsupradchungyen`.
+- `tamnv2supra/vanhanhdchungyen`: **LEGACY MIGRATION REFERENCE ONLY**.
+- Branch model remains `main`, `beta`, `stable`; do not move BETA/STABLE live refs until restoration gates pass.
+- Keep repository default `GITHUB_TOKEN` read-only. Workflows elevate only where required (`contents: write` for LAN release publishing; deploy jobs remain `contents: read`).
 
 ## Cloudflare and domain
 
-Owner-confirmed state: only account/login email was changed; existing provider setup remains. Therefore **do not recreate** Cloudflare zone, Worker, D1, DNS, domain, or email-routing resources solely because Google/GitHub accounts changed.
+Only account/login email changed; provider setup remains. Do **not** recreate zone, Worker, D1, DNS, domain or email-routing resources solely because Google/GitHub accounts changed.
 
 - Zone/domain: `supra.cc.cd` — RETAIN.
-- Existing BETA/STABLE Cloudflare Worker/D1 resources — RETAIN, then re-verify with new GitHub secrets before next deployment.
-- Existing public hostnames — RETAIN unless a later Owner decision changes them.
-- Cloudflare token in the old GitHub repository is not recoverable as plaintext; new repo needs a valid scoped token secret.
+- Existing BETA/STABLE Worker/D1 resources — RETAIN and re-verify.
+- Current deploy-token minimum: Account `Workers Scripts Write` + Account `D1 Write`, scoped to the current account.
+- Current custom-domain deployment does not need DNS Write or Workers Routes Write.
+- Recovery deploy must fail if expected D1 is missing; never silently create a replacement.
 
-## Google Drive — new account rebuild
+## Google Drive — rebuilt under current account
 
-Current Google Drive owner: `automation@supra.cc.cd`.
+Owner: `automation@supra.cc.cd`.
 
 - VHDCHY root: `1UbpPnlreVf3SvhUm3LUtVFGx2dLeuNAU`.
 - BETA root: `1XuIQ6yb4Ey-aKy0MbRxHfEqvyaSWHDog`.
@@ -41,28 +44,54 @@ Current Google Drive owner: `automation@supra.cc.cd`.
 - EXPORTS: `1YGm23HZbSpoCozgZz76b8LW-hfCajOUI`.
 - BACKUP: `1FS1re5AGQ1viiv9i9Vlf9P4NchpW-Hvz`.
 - BETA/PICK_PACK_1291: `18KZ4FG6AAbSWSEQPE_ta3JUUwQWG93rm`.
-- New BETA workbook `VHDCHY BETA - PICK PACK 1291 - 2026 Q3`: `17lvVEdBno0TelhuZl3gmn7-YmyJ4o6wZxpsoP1YB9XQ` — **PROVISIONED_NOT_LIVE** until BETA Google/GitHub gates pass.
+- BETA workbook `VHDCHY BETA - PICK PACK 1291 - 2026 Q3`: `17lvVEdBno0TelhuZl3gmn7-YmyJ4o6wZxpsoP1YB9XQ` — **PROVISIONED_NOT_LIVE** until BETA gate passes.
 - `BACKUP DỰ ÁN CŨ PICK PACK 1291`: `1Tz2MuCsgIY4tmmFf9NAFLbIbcmc4brb5` — **REFERENCE ONLY / NOT AUTHORITY / NOT RUNTIME**.
 
-Old Drive IDs from the decommissioned Google account are **INVALID FOR CURRENT RUNTIME** and must not be copied into new GitHub variables.
+Old Drive IDs from the decommissioned account are invalid for current runtime.
 
 ## GAS / Google Cloud / OAuth
 
-Old GAS projects, deployment IDs, OAuth clients, refresh tokens and Google Cloud resources owned by the decommissioned Google account are **REBUILD_REQUIRED**.
+Old GAS projects/deployments/OAuth clients/tokens/Cloud resources from the decommissioned account are **REBUILD_REQUIRED**.
 
-Required model:
+Current BETA/STABLE model remains isolated.
 
-- BETA and STABLE remain isolated.
-- Each environment gets its own GAS project/deployment and its own GitHub environment variables/secrets.
-- Google OAuth/Cloud configuration must use `automation@supra.cc.cd` as the owning/authorizing account.
-- OAuth refresh tokens must be generated once per intended client/environment and reused; never mint a new token on each CI run.
-- No Gmail/Calendar/Contacts scopes unless a later approved feature demonstrably needs them.
-- Apps Script manifest must use only scopes justified by current source. `script.send_mail` is not justified by current gateway source and must be removed.
+### Cloud project API enablement
+
+At the current recovery checkpoint, enable **Google Apps Script API only**. Do not enable Drive/Sheets/Gmail/Calendar/Contacts REST APIs merely for Apps Script built-in services.
+
+Also enable account-level Apps Script API access at `https://script.google.com/home/usersettings`.
+
+### GitHub CI OAuth scopes — exact current minimum
+
+```text
+https://www.googleapis.com/auth/script.projects
+https://www.googleapis.com/auth/script.deployments
+```
+
+No Drive/Sheets/Gmail/Calendar/Contacts scopes in the current CI client.
+
+### GAS runtime scopes — exact current minimum
+
+```text
+https://www.googleapis.com/auth/spreadsheets
+https://www.googleapis.com/auth/userinfo.email
+```
+
+Current gateway does not justify Drive, `script.external_request`, `script.scriptapp`, `script.send_mail`, Gmail, Calendar or Contacts scopes. Add a scope only when an Owner-approved implemented feature actually requires it.
+
+OAuth refresh tokens are created once per intended environment/client and reused; never mint a new token on each CI run.
 
 ## Android signing
 
-Existing BETA/STABLE keystore identity is retained if the Owner-controlled backup remains intact. The new GitHub repo must be populated again with environment signing secrets; do not generate replacement signing keys unless the existing keystore is confirmed lost or an explicit rotation decision is made.
+- Retain the existing **VHDCHY** signing identity if Owner-controlled backup is intact.
+- During BETA recovery, only BETA signing material is needed by the current build workflow.
+- The retired Pick Pack 1291 keystore in the legacy reference archive is not the VHDCHY signer and must not be imported into current environments.
+- Do not add STABLE signing secrets until a current STABLE Android build workflow actually consumes them.
+
+## Retired Pick Pack 1291 permission boundary
+
+The full legacy source was audited for permission-bearing features. Historical MailApp, Drive file storage, triggers, UrlFetch bridges, direct Worker Google Sheets/Drive OAuth, Firebase Messaging/service account and DR-provider credentials are **legacy evidence only**. They are not current VHDCHY permissions unless explicitly re-adopted by a later Owner decision and current-source audit.
 
 ## LAN checkpoint
 
-LAN Pilot V4 evidence and release identity remain historical project state, but release objects/assets are not yet present in the new GitHub repo. Do not claim release migration complete until those objects/assets are recreated or an explicit decision supersedes them.
+LAN Pilot V4 evidence remains historical project state. Release objects/assets are not yet considered fully restored in the new repo. No STABLE promotion.
