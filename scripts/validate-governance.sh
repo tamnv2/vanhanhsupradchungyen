@@ -42,7 +42,7 @@ grep -Fq 'docs/changelog/' AI_OPERATING_CONTRACT.md
 grep -Fq 'Pick Pack 1291 is evidence, not authority.' docs/reference/pick-pack-1291/INDEX.md
 
 # Current identity/resource guard: stale runtime identity must not remain authoritative.
-grep -Fq 'Current source authority repo hiện hành: GitHub `tamnv2/vanhanhsupradchungyen`.' PROJECT_SCOPE.md
+grep -Fq 'Source authority repo hiện hành: GitHub `tamnv2/vanhanhsupradchungyen`.' PROJECT_SCOPE.md
 grep -Fq 'Google owner/runtime account hiện hành: `automation@supra.cc.cd`.' PROJECT_SCOPE.md
 grep -Fq 'BACKUP DỰ ÁN CŨ PICK PACK 1291' PROJECT_SCOPE.md
 
