@@ -30,60 +30,88 @@ Cập nhật: 2026-09-11
 - D1 remains authority; Sheet is projection/human-readable surface.
 - Old Pick Pack rows migrated: NONE.
 
-## LAN physical evidence from 0.1.12
+## LAN physical evidence already established
 
-Corporate environment tested with restricted ordinary-user laptop + two real Newland NLS-MT90 Android 11 devices.
+Corporate environment tested with restricted ordinary-user laptop + exactly two real Newland NLS-MT90 Android 11 devices.
 
-Observed from uploaded Agent/PDA diagnostics:
+From prior 0.1.12 evidence:
 
-- Agent ran successfully without Administrator/network-policy changes.
+- Agent ran without Administrator/network-policy changes;
 - both physical PDA reached `LAN_ACTIVE` against `http://192.168.8.173:17891`;
-- both exported diagnostics had blank `SavedManualEndpoint` and cached the automatically discovered/verified LAN endpoint;
+- both diagnostics had blank manual endpoint and used discovered/cached LAN endpoint;
 - PDA health success streaks reached 73 and 67 with failure streak 0;
 - Agent observed two active clients;
-- observed PDA echo samples were approximately 10–57 ms in the captured logs;
-- Agent request distribution in the captured session was approximately p50 47 ms / p95 67 ms / p99 90 ms;
+- observed PDA echo samples were approximately 10–57 ms;
+- Agent request distribution was approximately p50 47 ms / p95 67 ms / p99 90 ms;
 - durable events reached Agent SQLite and pending queues returned to zero;
 - duplicate test event was rejected deterministically;
-- no observed transport/API error in that session; one HTTP 404 was browser favicon noise, not LAN transport failure.
+- no observed transport/API error in that session except browser favicon 404 noise.
 
-Therefore LAN feasibility moved from `UNKNOWN` to `FEASIBLE / MORE FAILURE+LOAD EVIDENCE REQUIRED`.
+LAN feasibility remains `FEASIBLE / FINAL V4 PHYSICAL REGRESSION REQUIRED`.
 
-Physical device availability is now exactly **2 MT90**, not 3. Synthetic clients supplement Agent capacity evidence but do not prove RF/Wi-Fi behavior above two physical devices.
+Physical device availability is exactly **2 MT90**. Synthetic clients supplement Agent capacity evidence but never prove RF/Wi-Fi behavior above two physical devices.
 
-## LAN Pilot comprehensive 0.2 build
+## LAN Pilot V4 automated candidate
 
-Release: `lan-pilot-beta-v0.2.20`.
-Build run: `34548902991`.
+Final automated candidate release: `lan-pilot-beta-v0.3.36`.
 
-Verified CI jobs:
+Source commit: `7b4488a89f585812c1bccba5d07d86049482bf4c`.
+Build run: `34562489063` — SUCCESS.
+Repository validation run: `34562489066` — SUCCESS.
 
-- Windows Agent build/package: SUCCESS;
-- Android signed APK build: SUCCESS;
-- prerelease publish: SUCCESS;
-- repository validation around the build: SUCCESS.
+Build/release gates verified:
 
-0.2 adds:
+- Windows updater source invariants PASS;
+- Windows Agent self-contained build/package PASS;
+- Agent product-version gate `0.3.36` PASS;
+- Android background lifecycle source invariants PASS;
+- Android release build PASS;
+- APK signature verification PASS (v1 + v2);
+- package `vn.vhdchy.lanpilot.beta`, versionCode `36`, versionName `0.3.36` PASS;
+- Agent ZIP + SHA256 and APK + SHA256 published PASS;
+- prerelease publish PASS.
 
-- application-level LAN hard-priority/reacquisition testing;
-- Agent-start timestamp and discovery-source evidence;
-- PDA upload/download throughput tests (1/10/25 MB suite; 25 MB heavy button);
-- realtime PDA ↔ Agent ↔ laptop/PDA long-poll stream;
-- heavy realtime `200 x 2 KB`;
-- receiver display-latency/p95 and sequence-gap counters;
-- laptop Test Center realtime view and transfer/realtime metrics;
-- local-only dashboard LoadGen triggers for 10/25/50/100 logical clients;
-- FULL PDA diagnostics export;
-- comprehensive two-PDA runbook in `docs/lan/LAN_PILOT_002_COMPREHENSIVE_TEST.md`.
+V4 corrects/implements:
 
-Important boundary: hard LAN priority is application-level transport selection. The 0.2 test intentionally measures screen-off/background behavior; if Android suspends/kills the process and reacquisition stops, that is evidence to add a foreground LAN monitor rather than hide the limitation.
+- Agent/APK/release use one injected semantic version;
+- Agent staged no-admin updater with SHA256 verification, health check and rollback path;
+- fixed updater batch health-success logic so a healthy staged update can actually commit rather than false-rollback;
+- APK update verifies SHA256, package and target version before invoking Android installer; manual fallback remains;
+- realtime uses `streamEpoch + sequence` and explicit resync after Agent restart/buffer gap;
+- corrected cross-device latency measurement using Agent clock calibration; ACK latency uses same-device monotonic clock;
+- physical and synthetic clients are measured separately;
+- long-poll client cancellation is separated from true Agent errors;
+- foreground app uses realtime; background realtime stops;
+- unfinished task/durable queue may use bounded `START_NOT_STICKY` foreground finish service, bounded wake lock/retry, then stops;
+- final destroyed-Activity tracked job explicitly releases executor/database after completion;
+- richer Agent/PDA lifecycle/network/update/queue/realtime/transfer/resource diagnostics;
+- Agent realtime waiting is signal-driven rather than active 50 ms polling.
+
+Release artifact SHA256 reported by GitHub:
+
+- Agent ZIP: `0fbfcb846c1b81441f65ae484dc701c35381705a001fffca553d8dcdf687a5e4`;
+- APK: `02f9f3832f70da808c94890f87bad9fd68a04f4a2f124df74f4d9f5f2d8e465a`.
+
+## What remains before final LAN-PILOT PASS
+
+Automated source/build/sign/version/package/release gates are complete. Remaining gates require the real corporate laptop + two MT90:
+
+- actual no-admin Agent staged replacement and health/rollback behavior;
+- update notification/manual fallback and Android installer policy on real devices;
+- automatic LAN reacquisition + epoch resync after Agent restart;
+- realtime normal/heavy physical propagation and gap/latency evidence;
+- transfer throughput/stability;
+- Wi-Fi-off durable queue batch recovery with zero unexplained event loss;
+- foreground/background finish-service behavior and battery/resource footprint;
+- synthetic 10/25/50/100 Agent capacity and soak;
+- exported Agent ZIP + FULL TXT analysis from both PDA.
 
 ## Branch/live refs
 
-- `main`: source/integration/authority; 0.2 LAN pilot source and plan live here.
+- `main`: source/integration/authority; V4 LAN pilot source and checkpoint live here.
 - cloud `beta`: `947a4feb48bc5c99867f1975b56edbb9a7309925` known-good Worker BETA pointer; LAN packaging work does not move it.
 - `stable`: `5b7132071f032ab46f133d4416f80791505f080d`; not promoted.
 
 ## Next
 
-Use release `lan-pilot-beta-v0.2.20` on the laptop and both MT90. Execute `LAN-PILOT-002`: baseline, repeated Agent restart/reacquisition, Wi-Fi queue recovery, realtime normal/heavy, transfer normal/heavy, concurrent FULL suites, synthetic 10/25/50/100 load, background/screen-off and soak. Export one Agent ZIP + FULL TXT from each PDA for evidence-based analysis. No STABLE promotion.
+Install matching `0.3.36` Agent/APK on the restricted laptop and both MT90, run the V4 physical regression matrix, then export one Agent diagnostics ZIP plus FULL diagnostics TXT from each PDA for evidence-based analysis. Do not change corporate firewall/router/DNS or use Administrator. No STABLE promotion.
