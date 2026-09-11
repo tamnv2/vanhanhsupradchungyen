@@ -13,7 +13,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="VHDCHY LAN BETA PILOT"
+            android:text="VHDCHY LAN BETA PILOT — FULL TEST"
             android:textStyle="bold"
             android:textSize="20sp" />
 
@@ -33,9 +33,17 @@
             android:textSize="18sp" />
 
         <TextView
+            android:id="@+id/lanPriority"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Transport = đường truyền app đang dùng. LAN_ACTIVE là đã dùng Agent trong LAN; CLOUD_ONLY là đang dùng Internet; LOCAL_QUEUE_ONLY là chưa có LAN/Internet và dữ liệu test được giữ local."
+            android:layout_marginTop="4dp"
+            android:text="LAN priority: đang khởi tạo..."
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="LAN priority = khi Agent BETA hợp lệ xuất hiện, app chủ động ưu tiên LAN. Dùng để test laptop bật/restart thì PDA tự quay về LAN mà không nhập IP."
             android:textSize="12sp" />
 
         <TextView
@@ -46,24 +54,12 @@
             android:textIsSelectable="true" />
 
         <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="LAN endpoint = địa chỉ Agent mà PDA đang kiểm tra/kết nối. Bình thường app tự tìm, không cần nhập tay."
-            android:textSize="12sp" />
-
-        <TextView
             android:id="@+id/status"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:minLines="4"
             android:textIsSelectable="true" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Success streak / Failure streak = số lần health-check LAN liên tiếp thành công/thất bại. Dùng để tránh chuyển LAN ↔ Cloud liên tục khi Wi‑Fi chập chờn."
-            android:textSize="12sp" />
 
         <Button
             android:id="@+id/discover"
@@ -72,23 +68,11 @@
             android:layout_marginTop="12dp"
             android:text="Tìm LAN ngay" />
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Ép app chạy một vòng tìm Agent ngay thay vì chờ chu kỳ tự động."
-            android:textSize="12sp" />
-
         <Button
             android:id="@+id/echo"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Test Echo / Latency" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Echo đo thời gian một request PDA → laptop → PDA. Latency càng thấp và ổn định càng tốt."
-            android:textSize="12sp" />
 
         <Button
             android:id="@+id/event"
@@ -99,7 +83,107 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Tạo một test event có số thứ tự, lưu local trước rồi gửi qua LAN. Dùng để kiểm tra reconnect/retry mà không làm mất hoặc nhân đôi event."
+            android:layout_marginTop="18dp"
+            android:text="Realtime PDA ↔ Laptop ↔ PDA"
+            android:textStyle="bold"
+            android:textSize="17sp" />
+
+        <TextView
+            android:id="@+id/realtimeStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Realtime: đang chờ dữ liệu..."
+            android:textIsSelectable="true" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Khi một PDA gửi realtime, laptop dashboard và PDA còn lại nhận qua long-poll. App đo số bản tin, độ trễ hiển thị p95 và sequence gap."
+            android:textSize="12sp" />
+
+        <Button
+            android:id="@+id/realtimeOne"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Gửi 1 bản tin realtime" />
+
+        <Button
+            android:id="@+id/realtimeHeavy"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Realtime nặng: 200 bản tin × 2 KB" />
+
+        <TextView
+            android:id="@+id/testStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Test realtime: chưa chạy"
+            android:textIsSelectable="true" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:text="Truyền tải dữ liệu"
+            android:textStyle="bold"
+            android:textSize="17sp" />
+
+        <TextView
+            android:id="@+id/transferStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Transfer: chưa chạy"
+            android:textIsSelectable="true" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Đo upload và download PDA ↔ laptop bằng dữ liệu test, hiển thị Mbps và thời gian hoàn thành."
+            android:textSize="12sp" />
+
+        <Button
+            android:id="@+id/transfer1"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Test truyền 1 MB" />
+
+        <Button
+            android:id="@+id/transfer25"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Test truyền nặng 25 MB" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:text="Bộ test PDA đầy đủ"
+            android:textStyle="bold"
+            android:textSize="17sp" />
+
+        <TextView
+            android:id="@+id/suiteStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="FULL SUITE: chưa chạy"
+            android:textIsSelectable="true" />
+
+        <Button
+            android:id="@+id/fullSuite"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Chạy FULL SUITE: 100 echo + 1/10/25MB + realtime nặng" />
+
+        <Button
+            android:id="@+id/fullExport"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Xuất FULL diagnostics" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="FULL diagnostics gồm kết quả LAN priority, realtime, transfer, suite và log nền để gửi vào chat VHDCHY phân tích."
             android:textSize="12sp" />
 
         <Button
@@ -107,25 +191,13 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="Xuất log chẩn đoán" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Xuất file TXT gồm trạng thái, endpoint, queue và lịch sử chẩn đoán. Sau khi test, tải file này vào chat VHDCHY để phân tích."
-            android:textSize="12sp" />
+            android:text="Xuất log chẩn đoán cơ bản" />
 
         <Button
             android:id="@+id/update"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Kiểm tra cập nhật" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Kiểm tra GitHub Release để biết có APK BETA mới hay không. Manual update vẫn là đường recovery nếu auto-check lỗi."
-            android:textSize="12sp" />
 
         <TextView
             android:layout_width="match_parent"
@@ -151,7 +223,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Chỉ dùng khi auto-discovery thất bại để phân biệt lỗi discovery với lỗi LAN/firewall. Không phải cấu hình bắt buộc khi vận hành bình thường."
+            android:text="Chỉ dùng manual endpoint khi cần phân loại lỗi discovery. Vận hành bình thường không phụ thuộc IP nhập tay."
             android:textSize="12sp" />
 
         <TextView
@@ -164,13 +236,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Pending local queue = số test event còn nằm trên PDA, chưa được Agent xác nhận. Khi LAN trở lại, app sẽ thử gửi lại."
-            android:textSize="12sp" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="18dp"
-            android:text="Pilot chỉ truyền test payload, chưa dùng credential/dữ liệu nghiệp vụ thật. Log có thể chứa IP LAN/endpoint và trạng thái thiết bị vì đây là dữ liệu cần thiết để chẩn đoán." />
+            android:text="Pilot chỉ dùng test payload, chưa dùng credential hay dữ liệu nghiệp vụ thật."
+            android:layout_marginTop="18dp" />
     </LinearLayout>
 </ScrollView>
