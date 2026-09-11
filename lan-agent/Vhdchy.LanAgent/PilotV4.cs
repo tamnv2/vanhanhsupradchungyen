@@ -1037,7 +1037,7 @@ start "" "%INSTALL%\VHDCHY.LanAgent.exe"
 timeout /t 5 /nobreak >nul
 set "HEALTH_OK=0"
 for /L %%i in (1,1,5) do (
-  powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "try {{$r=Invoke-WebRequest -UseBasicParsing 'http://127.0.0.1:17891/health' -TimeoutSec 2; if($r.StatusCode -eq 200){{exit 0}}}} catch {{}}; exit 1" >nul 2>&1
+  powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; $r=Invoke-WebRequest -UseBasicParsing 'http://127.0.0.1:17891/health' -TimeoutSec 2; exit [int]($r.StatusCode -ne 200)" >nul 2>&1
   if not errorlevel 1 set "HEALTH_OK=1"
   if "%HEALTH_OK%"=="1" goto success
   timeout /t 2 /nobreak >nul
