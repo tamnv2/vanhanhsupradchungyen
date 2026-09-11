@@ -110,3 +110,18 @@ Lịch sử này là append-only.
 - Build run `34548902991`: Windows Agent SUCCESS, Android signed APK SUCCESS, prerelease SUCCESS.
 - Không thay Worker/D1/Stable; LAN build vẫn portable no-admin và không yêu cầu router/DNS/firewall change.
 - Chi tiết: `docs/changelog/2026-09-11-lan-pilot-0.7.0.md` và `docs/lan/LAN_PILOT_002_COMPREHENSIVE_TEST.md`.
+
+## 2026-09-11 — lan-pilot-0.8.0
+
+- Hoàn tất LAN Pilot V4 automated regression candidate `lan-pilot-beta-v0.3.36` từ source `7b4488a89f585812c1bccba5d07d86049482bf4c`.
+- Sửa cơ chế version/update: Agent, APK và Release dùng cùng semantic version; Agent/APK đều có SHA256 verification và manual fallback; Agent có staged no-admin update + restart health check + rollback path.
+- Sửa staged Agent updater health loop để healthy update có thể commit thay vì false-rollback; CI có source invariant chống tái phát.
+- Sửa realtime restart/cursor bằng `streamEpoch + sequence`, explicit resync khi epoch/buffer gap thay đổi và chuyển Agent long-poll sang signal-driven wait.
+- Sửa đo realtime cross-device bằng Agent clock calibration; ACK latency dùng monotonic clock trên cùng PDA.
+- Tách physical PDA/synthetic metrics, client-cancel khỏi service error; mở rộng diagnostics Agent/PDA.
+- Android V4 thực thi foreground realtime; khi app rời foreground chỉ unfinished work/durable recovery mới dùng bounded `START_NOT_STICKY` finish service; service/wake lock/retry tự dừng, và Activity resources được giải phóng sau final tracked job.
+- Build run `34562489063`: Windows Agent SUCCESS, Android signed APK SUCCESS, prerelease SUCCESS; repo validation `34562489066` SUCCESS.
+- APK verified package `vn.vhdchy.lanpilot.beta`, versionCode `36`, versionName `0.3.36`, signature v1/v2 PASS.
+- Automated source/build/sign/version/package/release gates đã PASS; final LAN-PILOT PASS vẫn cần physical regression trên laptop công ty + đúng 2 MT90, gồm update thực tế, restart/resync, realtime/transfer, Wi-Fi-off queue recovery, background/battery/resource, load/soak và log analysis.
+- Không move cloud BETA/STABLE; không thay Worker/D1.
+- Chi tiết: `docs/changelog/2026-09-11-lan-pilot-0.8.0.md`.
