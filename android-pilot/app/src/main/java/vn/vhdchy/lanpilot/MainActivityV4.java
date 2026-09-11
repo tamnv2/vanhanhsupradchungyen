@@ -578,7 +578,7 @@ public class MainActivityV4 extends Activity {
     private void refreshResourceUi() {
         if (repo == null) return;
         try {
-            Runtime rt=Runtime.getRuntime();long heapUsed=rt.totalMemory()-rt.freeMemory();int pssKb=Debug.getPss();
+            Runtime rt=Runtime.getRuntime();long heapUsed=rt.totalMemory()-rt.freeMemory();long pssKb=Debug.getPss();
             Intent battery=registerReceiver(null,new IntentFilter(Intent.ACTION_BATTERY_CHANGED));int level=battery==null?-1:battery.getIntExtra(BatteryManager.EXTRA_LEVEL,-1);int scale=battery==null?100:battery.getIntExtra(BatteryManager.EXTRA_SCALE,100);int status=battery==null?-1:battery.getIntExtra(BatteryManager.EXTRA_STATUS,-1);boolean charging=status==BatteryManager.BATTERY_STATUS_CHARGING||status==BatteryManager.BATTERY_STATUS_FULL;
             PowerManager pm=(PowerManager)getSystemService(POWER_SERVICE);boolean powerSave=pm!=null&&Build.VERSION.SDK_INT>=21&&pm.isPowerSaveMode();
             String net=networkSummary();
