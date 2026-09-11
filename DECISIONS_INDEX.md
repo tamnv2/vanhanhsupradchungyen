@@ -1,6 +1,6 @@
 # DECISIONS INDEX
 
-Đây là index tra nhanh. Chi tiết authority nằm trong `DECISIONS.md`; không dùng index để thay thế nội dung decision đầy đủ khi có conflict.
+Đây là index tra nhanh. Chi tiết authority nằm trong `DECISIONS.md` hoặc active decision record; không dùng index để thay thế nội dung decision đầy đủ khi có conflict.
 
 | ID | Trạng thái | Tóm tắt |
 |---|---|---|
@@ -28,9 +28,10 @@
 | D-022 | ACTIVE | Google projection availability không chặn canonical D1 core |
 | D-023 | ACTIVE | Pick Pack 1291 Sheet baseline ADAPTED; không old data/password verifier |
 | D-024 | ACTIVE | Generic resource taxonomy; dropped-goods là module Pick Pack 1291 |
-| D-025 | ACTIVE | LAN-PILOT priority gate; 3 PDA thật + synthetic service load; PDA auto-LAN |
+| D-025 | ACTIVE | LAN-PILOT priority gate; physical PDA + synthetic service load; PDA auto-LAN |
 | D-026 | ACTIVE | Android/LAN Agent update có auto discovery + manual fallback + verify |
 | D-027 | ACTIVE | LAN Agent lightweight background runtime + tray/settings; đo CPU/RAM thật |
 | D-028 | ACTIVE | LAN pilot no-admin/minimum-information; portable user-mode, no router/DNS/firewall assumption; MT90 target |
+| D-029 | ACTIVE | Hiện chỉ có 2 MT90: cho phép quyết định feasibility bằng 2 PDA thật + synthetic headroom, nhưng không được suy diễn RF/Wi-Fi >2 PDA |
 
 Lưu ý: các ID D-010..D-017 từng xuất hiện trên nhánh BETA lịch sử trước governance không còn là decision namespace authority; nội dung hợp lệ đã được re-issued thành D-015..D-022.
