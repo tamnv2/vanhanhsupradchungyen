@@ -51,7 +51,7 @@ Capabilities added:
 - Test Center synthetic LoadGen 10/25/50/100 logical clients;
 - richer Agent realtime/transfer metrics.
 
-## Exact next physical actions
+## Exact next action
 
 Use `docs/lan/LAN_PILOT_002_COMPREHENSIVE_TEST.md`:
 
