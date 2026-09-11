@@ -3,6 +3,7 @@ plugins {
 }
 
 def runNumber = System.getenv('GITHUB_RUN_NUMBER') ?: '1'
+def releaseVersion = System.getenv('LAN_PILOT_VERSION') ?: "0.3.${runNumber}"
 def signingFile = System.getenv('ANDROID_SIGNING_STORE_FILE')
 
 android {
@@ -14,7 +15,7 @@ android {
         minSdk 21
         targetSdk 35
         versionCode Integer.parseInt(runNumber)
-        versionName "0.2.${runNumber}"
+        versionName releaseVersion
     }
 
     signingConfigs {
@@ -47,4 +48,8 @@ android {
     packaging {
         resources.excludes += ['META-INF/DEPENDENCIES', 'META-INF/LICENSE*', 'META-INF/NOTICE*']
     }
+}
+
+dependencies {
+    implementation 'androidx.core:core:1.13.1'
 }
