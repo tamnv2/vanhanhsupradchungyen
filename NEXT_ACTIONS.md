@@ -1,102 +1,149 @@
 # NEXT ACTIONS
 
-Checkpoint: `PROVIDER-RECOVERY-20260911-01`
+Checkpoint: `PROVIDER-RECOVERY-20260911-02`
 
 ## Priority objective
 
-Restore the project to the pre-account-loss operating model without rebuilding providers that still retain valid setup:
+Restore the project without rebuilding provider resources that still exist:
 
-`main authority -> BETA isolated environment -> verified gate -> STABLE isolated environment + Owner approval`.
+`main authority -> provider-first BETA recovery -> GitHub beta registry -> verified BETA gate -> Owner-approved isolated STABLE`.
 
 LAN Pilot V4 physical regression remains preserved and resumes after BETA infrastructure recovery.
 
 ## Dependency graph
 
-### Lane A — GitHub authority (independent now)
+```text
+GitHub main authority hardening ────────────────────────────────┐
+                                                                │
+Google BETA Cloud/OAuth/GAS ───────────────┐                   │
+Cloudflare retained token verification ────┼─> verified inputs ├─> GitHub beta Environment -> AI/CI BETA gate
+VHDCHY BETA signing recovery ──────────────┘                   │
+Current Drive/workbook verification ───────────────────────────┘
 
-- Complete authority/current-state/security documentation on `recovery/identity-authority-20260911`.
-- PR to `main`; run validation.
+BETA PASS -> explicit Owner approval -> isolated STABLE recovery
+```
+
+Independent provider lanes should run in parallel; GitHub beta variable/secret entry waits for their outputs.
+
+## Lane A — GitHub authority hardening
+
+- PR #2 `Security: deep least-privilege permission audit and recovery hardening` is the current authority change.
+- Validation run `34609361074`: SUCCESS.
+- Review/merge PR #2 to `main` after final diff/checkpoint consistency check.
 - Do not move `beta` or `stable`.
-- Owner configures GitHub `beta` and `stable` Environments, variables and secrets from `docs/GITHUB_ENV_SETUP.md`.
-- Recreate release objects/assets only after signing environment is verified; imported tags alone are not equivalent to releases.
+- Repository default Actions token stays read-only; workflows request only their own minimum permissions.
 
-### Lane B — Google Cloud/OAuth BETA (Owner UI required, can run in parallel with Lane A)
+## Lane B — Google Cloud/OAuth BETA — Owner UI
 
-- Create/select a dedicated BETA Google Cloud project owned by `automation@supra.cc.cd`.
-- Enable Apps Script API and Drive API.
-- Configure Google Auth Platform Branding/Audience/Data Access.
-- Use External audience because this is a consumer Google Account, not Workspace-internal identity.
-- Request only CI scopes documented in `docs/GITHUB_ENV_SETUP.md`.
-- Move Publishing status from Testing to In production before generating the final durable CI refresh token.
-- Generate one offline refresh token and store it only in GitHub `beta` Environment secrets.
+Create `VHDCHY-BETA` under `automation@supra.cc.cd`.
 
-### Lane C — Google Drive BETA (automatic work mostly complete)
+Current exact requirements:
 
-Current provisioned BETA resources under `automation@supra.cc.cd` are recorded in `SERVICE_AUTHORITY.md` and are `PROVISIONED_NOT_LIVE`.
+- enable **Google Apps Script API only** for current CI deployment path;
+- enable account-level Apps Script API access at `https://script.google.com/home/usersettings`;
+- Auth Platform audience: External;
+- final CI app publishing state: `In production` before minting durable refresh token;
+- CI OAuth scopes exactly:
+  - `https://www.googleapis.com/auth/script.projects`
+  - `https://www.googleapis.com/auth/script.deployments`
+- create one intended BETA refresh token; do not mint a token on every CI run.
 
-Next automatic step after GAS identity exists: update the BETA projection registry/config to current workbook ID, verify sheet schema/readback, then mark it live only after integration PASS.
+Do not add Drive, Sheets, Gmail, Calendar, Contacts, `script.send_mail`, `script.scriptapp` or other scopes to the CI client.
 
-### Lane D — GAS BETA (depends on BETA OAuth/project creation)
+## Lane C — GAS BETA — depends on intended BETA Cloud project
 
-- Create a new BETA standalone Apps Script project owned by `automation@supra.cc.cd`.
-- Associate with the intended BETA Google Cloud project where required by the current API/deployment flow.
-- Upload gateway source + manifest with audited runtime scopes.
-- Run `bootstrapAuthorize()` once interactively as `automation@supra.cc.cd`.
-- Create BETA Web App deployment using current design.
-- Record new `GAS_SCRIPT_ID`, `GAS_DEPLOYMENT_ID`, `GAS_EXEC_URL` in GitHub `beta` Environment variables.
-- Test endpoint and Apps Script API mutation/version/deployment from CI credentials.
+- Create standalone `VHDCHY BETA Google Gateway`.
+- Link it to the BETA standard Cloud project.
+- Use current audited `gateway/Code.gs` + `gateway/appsscript.json` from authority repo after PR #2 merges.
+- Current runtime scopes exactly:
+  - `https://www.googleapis.com/auth/spreadsheets`
+  - `https://www.googleapis.com/auth/userinfo.email`
+- Current projection workbook: `17lvVEdBno0TelhuZl3gmn7-YmyJ4o6wZxpsoP1YB9XQ`.
+- Run `bootstrapAuthorize()` once as `automation@supra.cc.cd`; if consent asks for Drive/Gmail/mail/external-request/trigger-management/Calendar/Contacts, stop and re-audit.
+- Deploy Web App using the current foundation design.
+- Record new `GAS_SCRIPT_ID`, `GAS_DEPLOYMENT_ID`, `GAS_EXEC_URL`.
 
-### Lane E — retained Cloudflare provider (parallel after GitHub token is entered)
+Before business `doPost()` writes are activated in a later gate, Worker -> GAS privileged calls need an application-level authenticated boundary; public Web App reachability is not write authorization.
+
+## Lane D — retained Cloudflare — parallel with Google
 
 - Do not recreate zone/Worker/D1/DNS.
-- Validate current scoped Cloudflare token against existing account/zone/D1.
-- Verify BETA Worker/D1 health without destructive deploy first.
-- Next deploy must reuse existing resources rather than create replacements if names/IDs resolve correctly.
+- Verify current account ID in the retained Cloudflare account.
+- If token must be recreated, custom token minimum is:
+  - Account `Workers Scripts Write`;
+  - Account `D1 Write`.
+- No DNS Write or Workers Routes Write for current Custom Domain path.
+- Recovery deploy must fail if expected D1 is missing; do not auto-create a replacement.
 
-### Lane F — Android signing (parallel after GitHub Environment exists)
+## Lane E — VHDCHY BETA Android signing — parallel
 
-- Restore BETA signing secrets from Owner-controlled keystore backup.
-- Verify alias and SHA256 against recorded fingerprint.
+- Locate the retained **VHDCHY BETA** keystore, not the retired Pick Pack 1291 signer in the legacy archive.
+- Verify alias/passwords locally; recorded alias `vhdchy-beta` is a reference until verified.
+- Prepare base64 + store/key passwords privately for GitHub Environment secrets.
 - Do not generate a new key.
+- STABLE signer is not entered during BETA recovery because no current STABLE Android build workflow consumes it.
 
-## BETA integration gate
+## Lane F — Drive/current workbook — automatic state already provisioned
 
-Only after Lanes A–F prerequisites are complete:
+- Current BETA projection workbook ID is `17lvVEdBno0TelhuZl3gmn7-YmyJ4o6wZxpsoP1YB9XQ`.
+- `config/projections.beta.json` is corrected on PR #2 to this ID and remains `PROVISIONED_NOT_LIVE`.
+- Legacy folder `BACKUP DỰ ÁN CŨ PICK PACK 1291` remains reference-only.
 
-1. restore/update `verify-environments.yml` with CURRENT IDs only;
-2. verify Google OAuth refresh + Apps Script project + Drive root;
-3. verify Cloudflare token/resource access;
-4. verify Android signing material;
-5. run repository validation and BETA deployment/health;
-6. update checkpoint with exact commit/run/resource IDs;
-7. move/confirm `beta` pointer only to the verified known-good recovery commit.
+## Lane G — GitHub BETA entry — ONLY after B–F outputs exist
+
+Create/configure Environment `beta` and enter only values consumed by current workflows.
+
+Variables:
+
+```text
+APP_ENV=beta
+OWNER_EMAIL=automation@supra.cc.cd
+CF_ACCOUNT_ID=<verified current Cloudflare account ID>
+PUBLIC_HOST=beta.supra.cc.cd
+GAS_SCRIPT_ID=<new BETA GAS>
+GAS_DEPLOYMENT_ID=<new BETA deployment>
+GAS_EXEC_URL=<new BETA /exec>
+GOOGLE_SHEETS_PROJECTION_ID=17lvVEdBno0TelhuZl3gmn7-YmyJ4o6wZxpsoP1YB9XQ
+ANDROID_SIGNING_ALIAS=<verified VHDCHY BETA alias>
+```
+
+Secrets:
+
+```text
+CLOUDFLARE_API_TOKEN
+GOOGLE_OAUTH_CLIENT_ID
+GOOGLE_OAUTH_CLIENT_SECRET
+GOOGLE_OAUTH_REFRESH_TOKEN
+ANDROID_SIGNING_KEY_B64
+ANDROID_SIGNING_STORE_PASSWORD
+ANDROID_SIGNING_KEY_PASSWORD
+```
+
+Do not create unused historical variables/scopes merely for parity.
+
+## BETA integration gate — AI after Owner inputs
+
+1. build current-ID environment verifier without broadening OAuth scopes;
+2. verify Google refresh + Apps Script content/deployment + `/exec` identity;
+3. verify current projection workbook through the authorized GAS bootstrap/runtime path;
+4. verify Cloudflare token accesses retained D1/Worker and deploy does not recreate resources;
+5. verify VHDCHY BETA Android signer/build;
+6. run repository validation and BETA deploy/health;
+7. checkpoint commit/ref + run/job IDs + provider resources + PASS/FAIL;
+8. only then confirm/move BETA pointer according to release gate.
 
 ## STABLE recovery
 
-Blocked until BETA PASS.
+BLOCKED until BETA PASS + explicit Owner approval.
 
-After BETA PASS:
+After approval, repeat provider-first with separate STABLE Google Cloud/OAuth/GAS/workbook IDs. Never copy BETA GAS IDs, spreadsheet ID, OAuth token or secrets into STABLE.
 
-- configure isolated STABLE Google Cloud/OAuth/GAS resources;
-- use STABLE Drive root only;
-- restore STABLE GitHub Environment vars/secrets;
-- verify retained STABLE Cloudflare resources;
-- verify STABLE signing material;
-- require Owner approval before STABLE deployment/pointer move.
+## LAN continuity
 
-Do not copy BETA GAS IDs, Drive IDs, OAuth tokens or signing secrets into STABLE.
+Pre-recovery checkpoint: `docs/checkpoints/2026-09-11-LAN-PILOT-20260911-04.md`.
 
-## LAN Pilot continuity after recovery
-
-Pre-recovery checkpoint is preserved at `docs/checkpoints/2026-09-11-LAN-PILOT-20260911-04.md`.
-
-After BETA infra is restored, resume the physical V4 regression on the restricted corporate laptop + exactly two MT90. No Administrator/router/DNS/firewall changes. Synthetic clients are capacity evidence only.
+After BETA infra is restored, resume physical V4 regression on the restricted corporate laptop + exactly two MT90. No Administrator/router/DNS/firewall changes. Synthetic clients are capacity evidence only.
 
 ## Soft-stop/checkpoint rule
 
-For any CI/provider tranche approaching ~20 minutes:
-
-- stop starting new long work;
-- record commit/ref + run/job ID + provider state;
-- update `SESSION_CHECKPOINT.md` with `DONE / IN_PROGRESS / NOT_STARTED`, tests, blockers and exact next actions;
-- continue independent lanes in parallel instead of waiting idly for a long job.
+For any CI/provider tranche approaching ~20 minutes: stop starting new long work, record commit/ref + run/job ID + provider state, update `SESSION_CHECKPOINT.md`, and continue independent lanes rather than waiting idly.
