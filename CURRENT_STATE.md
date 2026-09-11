@@ -9,102 +9,81 @@ Cập nhật: 2026-09-11
 - Pick Pack 1291 cũ: read-only reference/evidence; không phải authority/runtime dependency.
 - Governance/continuity contract đã được Owner duyệt, có CI guard.
 - `RECONCILE-001`: DONE.
-- Owner đã chuyển `LAN-PILOT-001` thành priority feasibility gate trước business build sâu.
+- `LAN-PILOT` là priority feasibility gate trước business build sâu.
 
-## Foundation đã xác minh
+## BETA cloud runtime — verified known-good
 
-- Google/Gmail/Drive account dự án và GitHub connector đã kết nối.
-- Drive runtime BETA/STABLE đã tạo.
-- GCP/OAuth/GAS BETA/STABLE đã cấu hình; Apps Script authorize/deployment PASS.
-- Cloudflare zone `supra.cc.cd` Active; CI token BETA/STABLE đã cấu hình.
-- Android signing BETA/STABLE đã tạo và credential verification PASS.
-- GitHub Environments `beta`/`stable` đầy đủ Variables/Secrets và verification PASS.
-- R2 OFF; Durable Objects chưa bật; LAN hostnames private/reserved.
-
-## BETA runtime — verified known-good
-
-- BETA deployed/source commit: `947a4feb48bc5c99867f1975b56edbb9a7309925`.
+- BETA Worker/source pointer: `947a4feb48bc5c99867f1975b56edbb9a7309925`.
 - Deploy run `34495312746`: SUCCESS.
 - Worker `vhdchy-beta` live tại `beta.supra.cc.cd`.
 - Worker Version ID: `f8ddf638-0829-4249-9ea0-8f2d38b03f05`.
 - D1 `vhdchy-data-beta`: `37eb7d59-05c0-4ba2-8162-cb6a9fe5d492`, APAC.
 - D1 schema `business_core_v1`: PASS.
-- Worker meta `BUSINESS_CORE_V1`: PASS.
-- Google Gateway advisory probe on latest deploy: PASS.
-- Protected business routes remain closed with `AUTH_REQUIRED`; anonymous mutation remains disabled.
+- Google Gateway advisory probe: PASS.
+- Protected business routes remain closed with `AUTH_REQUIRED`; anonymous mutation disabled.
 
 ## BETA Pick Pack 1291 Sheet
 
-- Cluster folder: `PICK_PACK_1291`, Drive ID `1toB5gBne5-v15clBkdbL6O5CrxzPBmEs`.
 - Workbook: `VHDCHY BETA - PICK PACK 1291 - 2026 Q3`.
 - Spreadsheet ID: `14gHSgWXP2QvtPmBD3CzFt3vQ6AED2hPSm_LxMGpXAKg`.
 - Sheet schema: `PP1291_SHEETS_BETA_V1`.
 - D1 remains authority; Sheet is projection/human-readable surface.
 - Old Pick Pack rows migrated: NONE.
-- Old Admin password verifier is not reproduced.
-- Old LAN/emergency/fallback tabs are not recreated by default.
-- Human-facing headers/catalogs from backup were ADAPTED, with validation/filter/header formatting verified.
 
-## Reconciliation result
+## LAN physical evidence from 0.1.12
 
-KEEP as generic DC concepts: clusters, shifts, employees/membership, work sessions, resource binding, labor concept, documents, immutable events, conflict/correction, projection outbox/catalog and import audit.
+Corporate environment tested with restricted ordinary-user laptop + two real Newland NLS-MT90 Android 11 devices.
 
-REWORK additively:
+Observed from uploaded Agent/PDA diagnostics:
 
-- resource typing must become generic/configurable; v1 hard-coded Pick Pack resource types must not define whole-DC taxonomy;
-- dropped-goods/nhận hàng rớt is module `PICK_PACK_1291`, not universal DC core;
-- labor/resource/position catalogs must remain configurable where semantics are module-specific.
+- Agent ran successfully without Administrator/network-policy changes.
+- both physical PDA reached `LAN_ACTIVE` against `http://192.168.8.173:17891`;
+- both exported diagnostics had blank `SavedManualEndpoint` and cached the automatically discovered/verified LAN endpoint;
+- PDA health success streaks reached 73 and 67 with failure streak 0;
+- Agent observed two active clients;
+- observed PDA echo samples were approximately 10–57 ms in the captured logs;
+- Agent request distribution in the captured session was approximately p50 47 ms / p95 67 ms / p99 90 ms;
+- durable events reached Agent SQLite and pending queues returned to zero;
+- duplicate test event was rejected deterministically;
+- no observed transport/API error in that session; one HTTP 404 was browser favicon noise, not LAN transport failure.
 
-Applied migration `0001_business_core.sql` is historical and must not be edited; fixes use `0002+`.
+Therefore LAN feasibility moved from `UNKNOWN` to `FEASIBLE / MORE FAILURE+LOAD EVIDENCE REQUIRED`.
 
-## LAN priority gate — approved
+Physical device availability is now exactly **2 MT90**, not 3. Synthetic clients supplement Agent capacity evidence but do not prove RF/Wi-Fi behavior above two physical devices.
 
-`LAN-PILOT-001` now precedes deep business implementation. Deliverables are reusable, not disposable prototypes:
+## LAN Pilot comprehensive 0.2 build
 
-- signed Android/PDA BETA LAN test app;
-- Windows LAN Agent BETA with lightweight background service + tray/settings console;
-- internal LAN Web BETA at `beta-lan.supra.cc.cd` after internal DNS/routing setup;
-- test harness and evidence report.
+Release: `lan-pilot-beta-v0.2.20`.
+Build run: `34548902991`.
 
-Mandatory pilot behavior:
+Verified CI jobs:
 
-- PDA auto-detects valid BETA LAN service and auto-enters LAN mode;
-- deterministic fallback/reconnect without unexplained event loss;
-- physical test with 1/2/3 PDA + 1 laptop;
-- synthetic service-load test on laptop for larger logical-client counts;
-- Android and LAN Agent each have automatic update discovery/notification plus manual update fallback;
-- LAN Agent exposes operational settings/metrics including selectable local data directory while keeping low measured CPU/RAM footprint.
+- Windows Agent build/package: SUCCESS;
+- Android signed APK build: SUCCESS;
+- prerelease publish: SUCCESS;
+- repository validation around the build: SUCCESS.
 
-Detailed contract: `docs/lan/LAN_PILOT_001.md`.
+0.2 adds:
 
-## LAN Pilot BETA artifact — ready for physical test
+- application-level LAN hard-priority/reacquisition testing;
+- Agent-start timestamp and discovery-source evidence;
+- PDA upload/download throughput tests (1/10/25 MB suite; 25 MB heavy button);
+- realtime PDA ↔ Agent ↔ laptop/PDA long-poll stream;
+- heavy realtime `200 x 2 KB`;
+- receiver display-latency/p95 and sequence-gap counters;
+- laptop Test Center realtime view and transfer/realtime metrics;
+- local-only dashboard LoadGen triggers for 10/25/50/100 logical clients;
+- FULL PDA diagnostics export;
+- comprehensive two-PDA runbook in `docs/lan/LAN_PILOT_002_COMPREHENSIVE_TEST.md`.
 
-Latest validated diagnostics/usability build:
-
-- release: `lan-pilot-beta-v0.1.12`;
-- source commit used by final build: `bc3736237c70de4a0f0b236b0f12a607bad00676`;
-- build run: `34516199267`;
-- Windows Agent job: SUCCESS;
-- Android APK job: SUCCESS;
-- prerelease job: SUCCESS.
-
-New verified-at-build features:
-
-- Agent tray basic telemetry: CPU/RAM/Disk/Network;
-- Agent dashboard adds plain-language explanations plus Agent CPU/RAM footprint;
-- Agent rotating diagnostic log and one-click ZIP export from tray/local dashboard;
-- Android diagnostic history and one-click TXT export using document picker;
-- Android UI explanations for transport states, endpoint, hysteresis, latency, durable event, queue and update behavior;
-- diagnostic export remains local/user-controlled; no public upload endpoint and no Admin/router/DNS/firewall requirement.
-
-Physical LAN behavior on the corporate laptop/Wi-Fi/MT90 is still `NOT YET VERIFIED`. CI success only proves build/sign/package/release integrity.
+Important boundary: hard LAN priority is application-level transport selection. The 0.2 test intentionally measures screen-off/background behavior; if Android suspends/kills the process and reacquisition stops, that is evidence to add a foreground LAN monitor rather than hide the limitation.
 
 ## Branch/live refs
 
-- `main`: source/integration/authority; latest LAN pilot source + diagnostics UX recorded here.
-- `beta`: `947a4feb48bc5c99867f1975b56edbb9a7309925` known-good live Worker BETA pointer; not moved by LAN Pilot packaging work.
-- `stable`: `5b7132071f032ab46f133d4416f80791505f080d`; runtime not promoted.
+- `main`: source/integration/authority; 0.2 LAN pilot source and plan live here.
+- cloud `beta`: `947a4feb48bc5c99867f1975b56edbb9a7309925` known-good Worker BETA pointer; LAN packaging work does not move it.
+- `stable`: `5b7132071f032ab46f133d4416f80791505f080d`; not promoted.
 
 ## Next
 
-Run physical `LAN-PILOT-001` with release `v0.1.12`: laptop Agent + 1 PDA first, then 2/3 PDA and synthetic load if connectivity works. After testing, export Agent ZIP plus TXT from each PDA and upload them into the VHDCHY project chat for evidence-based diagnosis. No Stable promotion.
+Use release `lan-pilot-beta-v0.2.20` on the laptop and both MT90. Execute `LAN-PILOT-002`: baseline, repeated Agent restart/reacquisition, Wi-Fi queue recovery, realtime normal/heavy, transfer normal/heavy, concurrent FULL suites, synthetic 10/25/50/100 load, background/screen-off and soak. Export one Agent ZIP + FULL TXT from each PDA for evidence-based analysis. No STABLE promotion.
