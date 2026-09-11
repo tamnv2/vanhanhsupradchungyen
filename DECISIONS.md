@@ -175,3 +175,15 @@ Owner approved 2026-09-11.
 - Cả Android và LAN Agent phải giữ đường cập nhật thủ công độc lập bên cạnh automatic release discovery; LAN Agent self-update về sau không được phụ thuộc quyền Administrator.
 
 Protocol chi tiết: `docs/lan/LAN_PROTOCOL_V1.md`.
+
+## D-029 — Feasibility LAN với đúng 2 MT90 vật lý hiện có
+
+Owner approved 2026-09-11.
+
+- Tồn kho test vật lý hiện tại là đúng 2 Newland MT90.
+- Được phép quyết định feasibility cho môi trường hiện tại dựa trên cả hai PDA thật kết hợp synthetic load 10/25/50/100 logical clients để đo headroom phần mềm của Agent.
+- Synthetic load không được trình bày như bằng chứng rằng Wi-Fi/RF chịu được số PDA vật lý tương đương.
+- Cả hai PDA thật phải đạt các test auto-LAN/reacquisition, realtime, transfer, durable queue/recovery và soak phù hợp trước khi kết luận feasibility PASS.
+- Báo cáo cuối phải ghi rõ hành vi RF/Wi-Fi trên 2 PDA vật lý là phần đã đo; hành vi trên >2 PDA vật lý vẫn chưa được chứng minh cho tới khi có thêm thiết bị thật.
+
+Chi tiết: `docs/decisions/D-029-LAN-TWO-PDA-FEASIBILITY.md` và `docs/lan/LAN_PILOT_002_COMPREHENSIVE_TEST.md`.
