@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent" android:fillViewport="true">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="14dp">
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="VHDCHY LAN BETA — V4 OPTIMIZED TEST" android:textStyle="bold" android:textSize="19sp" />
+        <TextView android:id="@+id/deviceInfo" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:textSize="12sp" />
+        <TextView android:id="@+id/state" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:text="Transport: khởi tạo..." android:textStyle="bold" android:textSize="18sp" />
+        <TextView android:id="@+id/lanPriority" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="LAN priority: đang khởi tạo..." android:textStyle="bold" />
+        <TextView android:id="@+id/endpoint" android:layout_width="match_parent" android:layout_height="wrap_content" android:textIsSelectable="true" />
+        <TextView android:id="@+id/status" android:layout_width="match_parent" android:layout_height="wrap_content" android:minLines="3" android:textIsSelectable="true" />
+        <Button android:id="@+id/discover" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Tìm / cưỡng bức ưu tiên LAN ngay" />
+        <Button android:id="@+id/echo" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Test Echo / RTT" />
+        <Button android:id="@+id/event" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Gửi 1 durable event" />
+
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:text="Realtime foreground" android:textStyle="bold" android:textSize="17sp" />
+        <TextView android:id="@+id/realtimeStatus" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Realtime: chờ..." android:textIsSelectable="true" />
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Realtime chỉ chạy khi app đang foreground. Epoch + sequence xử lý Agent restart; latency đã hiệu chỉnh chênh lệch clock PDA/laptop." android:textSize="12sp" />
+        <Button android:id="@+id/realtimeOne" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Gửi 1 realtime" />
+        <Button android:id="@+id/realtimeHeavy" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Realtime nặng 200 × 2 KB" />
+        <TextView android:id="@+id/testStatus" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Realtime test: chưa chạy" android:textIsSelectable="true" />
+
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:text="Transfer / tải" android:textStyle="bold" android:textSize="17sp" />
+        <TextView android:id="@+id/transferStatus" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Transfer: chưa chạy" android:textIsSelectable="true" />
+        <Button android:id="@+id/transfer1" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Truyền 1 MB" />
+        <Button android:id="@+id/transfer25" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Truyền nặng 25 MB" />
+        <TextView android:id="@+id/suiteStatus" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="FULL SUITE: chưa chạy" android:textIsSelectable="true" />
+        <Button android:id="@+id/fullSuite" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="FULL SUITE: 100 echo + 1/10/25MB + realtime" />
+
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:text="Offline / background" android:textStyle="bold" android:textSize="17sp" />
+        <TextView android:id="@+id/backgroundStatus" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Background: ..." android:textIsSelectable="true" />
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Ra khỏi app: realtime dừng. Nếu đang có job/queue, foreground service + wakelock hữu hạn chỉ giữ đến khi hoàn tất, sau đó tự dừng. Nếu chưa gửi được queue trong cửa sổ ngắn, chờ lần mở app tiếp theo." android:textSize="12sp" />
+        <Button android:id="@+id/offlineQueueTest" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Tạo batch 5 durable event để test offline/flush" />
+        <TextView android:id="@+id/queue" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Pending local queue: 0" android:textIsSelectable="true" />
+
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:text="Tài nguyên / pin" android:textStyle="bold" android:textSize="17sp" />
+        <TextView android:id="@+id/resourceStatus" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Resource telemetry..." android:textIsSelectable="true" />
+
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:text="Diagnostics / cập nhật" android:textStyle="bold" android:textSize="17sp" />
+        <Button android:id="@+id/exportFull" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Xuất FULL diagnostics V4" />
+        <Button android:id="@+id/update" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Kiểm tra / tải / cài cập nhật" />
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Update: so sánh version thật, tải asset APK, kiểm tra SHA256 rồi mới mở Android installer. Auto-check chỉ thông báo; manual update luôn có." android:textSize="12sp" />
+
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:text="Manual endpoint — chỉ recovery/chẩn đoán" android:textStyle="bold" />
+        <EditText android:id="@+id/manualEndpoint" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="http://192.168.x.x:17891" android:inputType="textUri" android:singleLine="true" />
+        <Button android:id="@+id/saveEndpoint" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Lưu endpoint thủ công" />
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:text="Pilot chỉ dùng test payload; không chứa credential hay dữ liệu nghiệp vụ thật." android:textSize="12sp" />
+    </LinearLayout>
+</ScrollView>
