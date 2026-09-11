@@ -1,0 +1,154 @@
+name: Build LAN Pilot BETA
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'lan-agent/**'
+      - 'android-pilot/**'
+      - 'docs/lan/**'
+      - '.github/workflows/build-lan-pilot.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  LAN_PILOT_VERSION: 0.3.${{ github.run_number }}
+
+concurrency:
+  group: lan-pilot-beta-build
+  cancel-in-progress: true
+
+jobs:
+  windows-agent:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Validate V4 updater source invariants
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $source = Get-Content lan-agent/Vhdchy.LanAgent/PilotV4.cs -Raw
+          if (-not $source.Contains('if not errorlevel 1 goto success')) { throw 'Updater health success branch is missing.' }
+          if ($source.Contains('%HEALTH_OK%')) { throw 'Updater contains stale batch percent-expansion health state.' }
+          if (-not $source.Contains('SHA256.HashData(zip)')) { throw 'Agent ZIP SHA256 verification is missing.' }
+          if (-not $source.Contains('goto rollback')) { throw 'Updater rollback branch is missing.' }
+      - name: Publish portable user-mode LAN Agent
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $version = $env:LAN_PILOT_VERSION
+          dotnet publish lan-agent/Vhdchy.LanAgent/Vhdchy.LanAgent.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:Version=$version -o out/agent
+          dotnet publish lan-agent/Vhdchy.LanLoadGen/Vhdchy.LanLoadGen.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o out/loadgen
+          $pv = (Get-Item out/agent/VHDCHY.LanAgent.exe).VersionInfo.ProductVersion
+          if (-not $pv.StartsWith($version)) { throw "Agent ProductVersion mismatch: expected $version, got $pv" }
+          New-Item -ItemType Directory -Force -Path out/package | Out-Null
+          Copy-Item out/agent/* out/package/
+          New-Item -ItemType Directory -Force -Path out/package/tools | Out-Null
+          Copy-Item out/loadgen/* out/package/tools/
+          $version | Set-Content -Encoding ascii out/package/VERSION.txt
+          @'
+          VHDCHY LAN Agent BETA — V4 OPTIMIZED / PORTABLE / NO ADMIN
+
+          - Run VHDCHY.LanAgent.exe as normal user. Do NOT Run as administrator.
+          - Tray shows basic CPU/RAM/Disk/Network and opens LAN Test Center.
+          - Realtime uses epoch+sequence and async long-poll. Agent restart is detected by client epoch reset/resync.
+          - Physical PDA and synthetic LoadGen counts are separated.
+          - Manual update downloads Agent ZIP, verifies SHA256, stages update in user space and restarts Agent; rollback is attempted if health fails.
+          - Automatic update check only notifies; it does not silently replace software on a corporate laptop.
+          - Export Agent ZIP + FULL PDA TXT after testing.
+          - Do not alter corporate firewall/router/DNS or bypass security policy.
+          '@ | Set-Content -Encoding UTF8 out/package/README_FIRST.txt
+          Compress-Archive -Path out/package/* -DestinationPath out/VHDCHY-LAN-Agent-BETA-win-x64.zip -Force
+          (Get-FileHash out/VHDCHY-LAN-Agent-BETA-win-x64.zip -Algorithm SHA256).Hash.ToLower() + '  VHDCHY-LAN-Agent-BETA-win-x64.zip' | Set-Content -Encoding ascii out/VHDCHY-LAN-Agent-BETA-win-x64.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-lan-pilot
+          path: |
+            out/VHDCHY-LAN-Agent-BETA-win-x64.zip
+            out/VHDCHY-LAN-Agent-BETA-win-x64.sha256
+          if-no-files-found: error
+
+  android-pda:
+    runs-on: ubuntu-latest
+    environment: beta
+    env:
+      ANDROID_SIGNING_ALIAS: ${{ vars.ANDROID_SIGNING_ALIAS }}
+      ANDROID_SIGNING_STORE_PASSWORD: ${{ secrets.ANDROID_SIGNING_STORE_PASSWORD }}
+      ANDROID_SIGNING_KEY_PASSWORD: ${{ secrets.ANDROID_SIGNING_KEY_PASSWORD }}
+      ANDROID_SIGNING_KEY_B64: ${{ secrets.ANDROID_SIGNING_KEY_B64 }}
+      ANDROID_SIGNING_STORE_FILE: /tmp/vhdchy-beta.jks
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate V4 background lifecycle source invariants
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -F 'if (ACTIVE_JOBS.get() > 0 || repo.countPending() > 0) startFinishService();' android-pilot/app/src/main/java/vn/vhdchy/lanpilot/MainActivityV4.java
+          grep -F 'if (destroyed && left == 0)' android-pilot/app/src/main/java/vn/vhdchy/lanpilot/MainActivityV4.java
+          grep -F 'io.shutdown();' android-pilot/app/src/main/java/vn/vhdchy/lanpilot/MainActivityV4.java
+          grep -F 'START_NOT_STICKY' android-pilot/app/src/main/java/vn/vhdchy/lanpilot/LanFinishService.java
+          grep -F 'wakeLock.acquire(20L * 60_000L)' android-pilot/app/src/main/java/vn/vhdchy/lanpilot/LanFinishService.java
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Install Android SDK 35
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0' >/dev/null
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Restore BETA signer
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s' "$ANDROID_SIGNING_KEY_B64" | base64 -d > "$ANDROID_SIGNING_STORE_FILE"
+          test -s "$ANDROID_SIGNING_STORE_FILE"
+      - name: Build signed release APK and verify version
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle -p android-pilot :app:assembleRelease --no-daemon
+          mkdir -p out
+          cp android-pilot/app/build/outputs/apk/release/app-release.apk out/VHDCHY-LAN-Pilot-BETA.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs out/VHDCHY-LAN-Pilot-BETA.apk
+          BADGING="$($ANDROID_HOME/build-tools/35.0.0/aapt dump badging out/VHDCHY-LAN-Pilot-BETA.apk | head -n1)"
+          echo "$BADGING"
+          echo "$BADGING" | grep -F "versionName='$LAN_PILOT_VERSION'"
+          sha256sum out/VHDCHY-LAN-Pilot-BETA.apk > out/VHDCHY-LAN-Pilot-BETA.apk.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-lan-pilot
+          path: |
+            out/VHDCHY-LAN-Pilot-BETA.apk
+            out/VHDCHY-LAN-Pilot-BETA.apk.sha256
+          if-no-files-found: error
+
+  prerelease:
+    needs: [windows-agent, android-pda]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Publish immutable BETA prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="lan-pilot-beta-v${LAN_PILOT_VERSION}"
+          gh release create "$tag" \
+            artifacts/windows-lan-pilot/VHDCHY-LAN-Agent-BETA-win-x64.zip \
+            artifacts/windows-lan-pilot/VHDCHY-LAN-Agent-BETA-win-x64.sha256 \
+            artifacts/android-lan-pilot/VHDCHY-LAN-Pilot-BETA.apk \
+            artifacts/android-lan-pilot/VHDCHY-LAN-Pilot-BETA.apk.sha256 \
+            --repo "$GITHUB_REPOSITORY" \
+            --prerelease \
+            --title "VHDCHY LAN Pilot BETA v${LAN_PILOT_VERSION}" \
+            --notes "LAN Pilot V4 regression build. Fixes update/version mismatch, realtime epoch/cursor restart handling, cross-device clock calibration, physical-vs-synthetic device metrics, client-cancel error accounting, richer diagnostics and bounded battery/resource policy. PDA realtime runs only while foreground; if the app leaves foreground with an in-flight task or durable queue, a bounded foreground finish service keeps only that work alive and stops after completion. Agent realtime wait is signal-driven rather than 50 ms polling. No admin/router/DNS/firewall changes required."
