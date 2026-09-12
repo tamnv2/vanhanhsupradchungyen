@@ -27,8 +27,9 @@ Baseline: `REPO-RESET-20260912-01`
   - `GAS_SCRIPT_ID`
   - `GOOGLE_SHEETS_PROJECTION_ID`
 - No secret values are recorded in repository files.
-- Manual-only workflow `.github/workflows/gas-beta-sync.yml` is present and restricted to `main` + environment `beta`.
+- `.github/workflows/gas-beta-sync.yml` supports guarded autonomous dispatch from `main` by changes to `.github/dispatch/gas-beta-sync.json`; manual `workflow_dispatch` remains fallback only.
 - Sync implementation `.github/scripts/gas-sync.mjs` refreshes the OAuth access token, reads current Apps Script content, renders the BETA placeholders from GitHub source, replaces Apps Script HEAD through `projects.updateContent`, then reads back and verifies the complete file set/content.
+- First autonomous sync run `34693049129` completed SUCCESS on commit `4ef67539cc088b4a6fa0bc0765b9fba801bbff44`.
 
 ## Drive / Sheet — VERIFIED CURRENT
 
@@ -40,7 +41,7 @@ Baseline: `REPO-RESET-20260912-01`
 
 ## Source baseline
 
-- Google Gateway foundation: restored after least-privilege review.
+- Google Gateway foundation: restored after least-privilege review and synchronized from GitHub to Apps Script HEAD.
 - Worker foundation: restored under `service/worker/` with reconciled contract `business_core_v2` / `BUSINESS_CORE_V2`.
 - D1 schema: consolidated into clean zero-baseline `service/worker/migrations/0001_initial.sql`; no legacy compatibility `resources` table and no historical business rows/credentials are seeded.
 - Android/LAN source and evidence: preserved only in `backup/pre-zero-20260912` pending later task-specific restoration.
@@ -52,13 +53,13 @@ Baseline: `REPO-RESET-20260912-01`
   - Apps Script API enabled and account-level Apps Script API access enabled.
   - OAuth app is External / In production; branding published.
   - CI OAuth client exists with `script.projects` + `script.deployments` only.
-  - Refresh token obtained.
-  - Real `projects.create` API request succeeded under `tam95.supra@gmail.com`.
-- GAS BETA: `SYNC_WORKFLOW_READY_NOT_RUN`.
+  - Refresh token obtained and successfully used by GitHub Actions.
+  - Real `projects.create`, `projects.getContent` and `projects.updateContent` API operations succeeded under the BETA automation path.
+- GAS BETA: `SOURCE_SYNCED_RUNTIME_AUTH_PENDING`.
   - `VHDCHY BETA - Google Gateway` exists and is linked to standard Cloud project `VHDCHY-BETA`.
-  - GitHub source has not yet been synchronized to Apps Script HEAD.
-  - Next gate: manually run `Google Gateway BETA sync` from `main` and require PASS.
-  - Runtime authorization, immutable version, versioned deployment and `/exec` health verification remain pending.
+  - GitHub source is synchronized to Apps Script HEAD and read-back verification passed.
+  - Runtime authorization for Sheets + owner identity remains pending.
+  - Immutable version, versioned deployment and `/exec` health verification remain pending.
 - Cloudflare BETA resources: `VERIFY_REQUIRED`.
 - Android BETA signer: `VERIFY_REQUIRED`.
 - STABLE: blocked until BETA PASS + explicit Owner approval.
