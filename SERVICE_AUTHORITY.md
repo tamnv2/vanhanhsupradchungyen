@@ -30,7 +30,25 @@ Current CI OAuth scopes:
 - `https://www.googleapis.com/auth/script.projects`
 - `https://www.googleapis.com/auth/script.deployments`
 
-GCP/OAuth and GAS remain `SETUP_REQUIRED` after repo reset.
+Google Cloud / OAuth BETA:
+- Standard Cloud project: `VHDCHY-BETA`
+- OAuth app: External / In production
+- OAuth owner/operator: `tam95.supra@gmail.com`
+- CI client: `VHDCHY BETA CI`
+- Status: `PASS`
+
+Google Apps Script BETA authority:
+- Script title: `VHDCHY BETA - Google Gateway`
+- Script ID: `11jvFS3xBRrl3hmZveMbQP7no_hNw50TmOA0zFrAUJtedal0FrMn2sfnQ`
+- Canonical managed deployment ID: `AKfycbzxRzxjeFyPpYQ39T3MJRL_sSKrhJhHXLY5LgGy16CnxuPEIFoJo8vr9XijrsxZttRtjQ`
+- Canonical Web App URL: `https://script.google.com/macros/s/AKfycbzxRzxjeFyPpYQ39T3MJRL_sSKrhJhHXLY5LgGy16CnxuPEIFoJo8vr9XijrsxZttRtjQ/exec`
+- Verified immutable version: `2`
+- Source authority: `service/google-gateway/`
+- Runtime bootstrap: `PASS`
+- Versioned deployment / `/exec` identity + bootstrap verification: `PASS`
+- Verification run: GitHub Actions `34696139468`
+
+The manually-created deployment URL supplied during bootstrap is non-authoritative and superseded by the managed deployment above. Future releases update the managed deployment to a new immutable version instead of creating uncontrolled deployment identities.
 
 ## Cloudflare
 
