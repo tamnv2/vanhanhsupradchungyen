@@ -1,14 +1,61 @@
 name: Validate clean baseline
+
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
+
 permissions:
   contents: read
+
 jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: test -s PROJECT_SCOPE.md && test -s SERVICE_AUTHORITY.md && test -s CURRENT_STATE.md && test -s NEXT_ACTIONS.md && test -s DECISIONS.md
+
+      - name: Validate authority files
+        run: |
+          set -euo pipefail
+          test -s PROJECT_SCOPE.md
+          test -s SERVICE_AUTHORITY.md
+          test -s CURRENT_STATE.md
+          test -s NEXT_ACTIONS.md
+          test -s DECISIONS.md
+          test -s AI_OPERATING_CONTRACT.md
+          test -s SECURITY.md
+
+      - name: Validate JSON configuration
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          json.loads(Path('config/projections.beta.json').read_text(encoding='utf-8'))
+          manifest = json.loads(Path('service/google-gateway/appsscript.json').read_text(encoding='utf-8'))
+          expected = {
+              'https://www.googleapis.com/auth/spreadsheets',
+              'https://www.googleapis.com/auth/userinfo.email',
+          }
+          actual = set(manifest.get('oauthScopes', []))
+          if actual != expected:
+              raise SystemExit(f'Unexpected GAS scopes: {sorted(actual)}')
+          PY
+
+      - name: Validate Worker source syntax
+        run: node --input-type=module --check < service/worker/src/index.js
+
+      - name: Validate clean D1 schema
+        run: |
+          set -euo pipefail
+          sqlite3 /tmp/vhdchy.db < service/worker/migrations/0001_initial.sql
+          test "$(sqlite3 /tmp/vhdchy.db "SELECT value FROM vhdchy_meta WHERE key='schema_version';")" = "business_core_v2"
+          test "$(sqlite3 /tmp/vhdchy.db "SELECT count(*) FROM clusters WHERE cluster_id='PICK_PACK_1291';")" = "1"
+          test "$(sqlite3 /tmp/vhdchy.db "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='resources';")" = "0"
+
+      - name: Validate schema/runtime contract
+        run: |
+          set -euo pipefail
+          grep -q 'CORE_SCHEMA_VERSION = "business_core_v2"' service/worker/src/index.js
+          grep -q 'RUNTIME_STATE = "BUSINESS_CORE_V2"' service/worker/src/index.js
+          grep -q "'schema_version', 'business_core_v2'" service/worker/migrations/0001_initial.sql
