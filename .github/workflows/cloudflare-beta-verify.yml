@@ -31,18 +31,25 @@ jobs:
       - name: Checkout source authority
         uses: actions/checkout@v4
 
-      - name: Validate autonomous verification request
-        if: github.event_name == 'push'
+      - name: Evaluate verification gate
+        id: gate
         run: |
           node - <<'NODE'
           const fs = require('fs');
           const cmd = JSON.parse(fs.readFileSync('.github/dispatch/cloudflare-beta-verify.json', 'utf8'));
-          if (cmd.enabled !== true) throw new Error('Dispatch must be enabled');
+          const isPush = process.env.GITHUB_EVENT_NAME === 'push';
+          if (isPush && cmd.enabled !== true) {
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, 'should_run=false\n');
+            console.log('Cloudflare verification gate disabled; clean no-op.');
+            process.exit(0);
+          }
           if (cmd.target !== 'beta') throw new Error('Dispatch target must be beta');
           if (cmd.operation !== 'verify') throw new Error('Dispatch operation must be verify');
           if (!cmd.request_id || typeof cmd.request_id !== 'string') throw new Error('Dispatch request_id is required');
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, 'should_run=true\n');
           console.log(`Authorized Cloudflare verification request: ${cmd.request_id}`);
           NODE
 
       - name: Verify Cloudflare BETA identity and expected resources
+        if: steps.gate.outputs.should_run == 'true'
         run: node .github/scripts/cloudflare-verify.mjs
