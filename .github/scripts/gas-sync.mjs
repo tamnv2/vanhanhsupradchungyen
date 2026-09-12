@@ -213,6 +213,6 @@ if (JSON.stringify(remoteManifest) !== JSON.stringify(manifest)) throw new Error
 
 console.log(`GAS sync PASS: ${process.env.APP_ENV} / ${process.env.GAS_SCRIPT_ID}`);
 
-if (dispatch.operation === 'deploy') {
+if (dispatch.operation === 'deploy' || dispatch.deploy === true) {
   await deployVersion(token, scriptId);
 }
