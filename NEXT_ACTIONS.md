@@ -4,16 +4,19 @@ Baseline: `REPO-RESET-20260912-01`
 
 ## Immediate priority — Google Gateway BETA
 
-Google Cloud/OAuth prerequisites are now verified. Execute this sequence without changing flow:
+Google Cloud/OAuth prerequisites and GitHub Environment `beta` are verified. Execute this sequence without changing flow:
 
-1. Create GitHub Environment `beta`.
-2. Add only the verified Google BETA values:
-   - secrets: `GOOGLE_OAUTH_CLIENT_SECRET`, `GOOGLE_OAUTH_REFRESH_TOKEN`;
-   - variables: `APP_ENV=BETA`, `OWNER_EMAIL=tam95.supra@gmail.com`, `GOOGLE_OAUTH_CLIENT_ID`, `GAS_SCRIPT_ID`, `GOOGLE_SHEETS_PROJECTION_ID=1My2-jG6s8WCOAMox6DfGKKi9M0TBvSrfC2uE9xFNmmk`.
-3. Add a manual-only sync workflow. Source authority is `service/google-gateway/`; do not paste source through OAuth Playground or maintain code in the Apps Script editor.
-4. Sync GitHub source to Apps Script HEAD through `projects.updateContent`, then read back and verify the complete Apps Script content against the rendered GitHub source.
-5. Owner runs `bootstrapAuthorize()` once in the Apps Script editor. This is the runtime authorization gate for Sheets + owner identity.
-6. Only after bootstrap PASS, create an immutable Apps Script version and a versioned Web App deployment.
+1. Run the manual workflow `Google Gateway BETA sync` from branch `main`.
+2. Require workflow PASS. The workflow must:
+   - obtain an access token from the stored OAuth refresh token without logging secrets;
+   - read current Apps Script content;
+   - render `service/google-gateway/Code.gs` with the BETA environment/owner/projection values;
+   - submit the complete `Code` + `appsscript` file set through `projects.updateContent`;
+   - read Apps Script content back and verify the complete file set/content.
+3. If sync FAILS, stop at the failing gate and diagnose. Do not manually paste source into OAuth Playground or Apps Script editor.
+4. Only after sync PASS, Owner runs `bootstrapAuthorize()` once in the Apps Script editor. This is the runtime authorization gate for Sheets + owner identity.
+5. Require `bootstrapAuthorize()` PASS against the designated BETA projection workbook.
+6. Only after bootstrap PASS, add the version/deployment workflow logic, create an immutable Apps Script version and create/update the versioned Web App deployment.
 7. Verify the `/exec` endpoint reports the intended Google Gateway identity, environment `BETA`, and Script ID.
 8. Record `GAS_DEPLOYMENT_ID` and `GAS_EXEC_URL` as BETA environment variables only after deployment PASS.
 
