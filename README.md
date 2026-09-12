@@ -2,17 +2,20 @@
 
 Current repository authority: `tamnv2/vanhanhsupradchungyen`.
 
-## Môi trường
+## Setup baseline
 
-- `BETA` -> `beta.supra.cc.cd`
-- `STABLE` -> `supra.cc.cd`
-- LAN hostname chỉ dùng trong mạng nội bộ, không tạo public DNS.
+Dự án được reset **trạng thái setup/provider** ngày 2026-09-12 để cấp quyền và dựng lại tích hợp theo đúng account hiện hành. Reset này **không xóa** code, kiến trúc, decision, LAN evidence hoặc lịch sử changelog đã được Owner chốt.
 
-Trong account/provider recovery, `beta` và `stable` không được move cho tới khi provider gate tương ứng PASS.
+Current identities:
+
+- Google Drive / Google Sheets / GAS: `tam95.supra@gmail.com`.
+- Cloudflare / GitHub account: `nguyenvantam050595@gmail.com`.
+- GitHub user/repo: `tamnv2` / `tamnv2/vanhanhsupradchungyen`.
+- `automation@supra.cc.cd`: `SUSPENDED_RECOVERY_CANDIDATE`; không dùng cho runtime/setup hiện tại.
 
 ## Bootstrap cho AI
 
-Mỗi phiên mới bắt đầu tại `AI_BOOTSTRAP.md` và đọc tối thiểu:
+Mỗi phiên mới đọc đúng 5 file theo thứ tự:
 
 1. `PROJECT_SCOPE.md`
 2. `SERVICE_AUTHORITY.md`
@@ -20,26 +23,27 @@ Mỗi phiên mới bắt đầu tại `AI_BOOTSTRAP.md` và đọc tối thiểu
 4. `NEXT_ACTIONS.md`
 5. `DECISIONS_INDEX.md`
 
-Chi tiết cách AI làm việc dài hạn: `AI_OPERATING_CONTRACT.md`.
+Sau đó chỉ mở tài liệu liên quan task. Không đọc toàn bộ repo/changelog/reference theo mặc định.
+
+Quy tắc thực thi dài hạn: `AI_OPERATING_CONTRACT.md`.
 Hướng dẫn Owner: `docs/AI_USAGE_GUIDE.md`.
-Provider recovery manual: `docs/runbooks/REAUTHORIZATION_2026-09-11.md`.
+Setup hiện hành: `docs/runbooks/SETUP_FROM_ZERO_2026-09-12.md`.
 
 ## Authority
 
-GitHub là authority cho code/config/trạng thái kỹ thuật; `SERVICE_AUTHORITY.md` là authority cho current account/provider/resource identity.
+- Owner decision mới nhất là cao nhất.
+- GitHub là authority cho source/config/trạng thái kỹ thuật.
+- `SERVICE_AUTHORITY.md` là authority duy nhất cho account/provider/resource identity hiện hành.
+- Provider/resource cũ trước baseline 2026-09-12 không được coi là current nếu chưa được re-verify và ghi lại.
 
-`vanhanhdchungyen@gmail.com` là DECOMMISSIONED và không được dùng lại.
+## Reference Pick Pack 1291
 
-Secret chỉ được đặt trong GitHub Environments hoặc provider secret store, không commit vào repository public hoặc chat.
-
-## Reference
-
-`BACKUP DỰ ÁN CŨ PICK PACK 1291` chỉ là read-only evidence/reference cho cluster/module tương ứng và các pattern cần thiết. Không clone 100% và không dùng dữ liệu/ID của dự án cũ làm runtime/fallback/authority của VHDCHY.
+Google Drive folder `BACKUP PICK PACK 1291` là **REFERENCE ONLY**. Được đọc để tham khảo nhưng không phải runtime, fallback, source-of-truth hay implicit requirement. Pattern chỉ trở thành thiết kế hiện hành khi được Owner chấp nhận theo `REFERENCE -> EVALUATED -> ADOPTED | ADAPTED | REJECTED`.
 
 ## Release model
 
 - `main`: source authority/integration/checkpoint.
-- `beta`: known-good live BETA ref sau BETA gate.
-- `stable`: known-good STABLE ref; chỉ restore/promote sau BETA PASS và Owner duyệt.
-- BETA/STABLE tách Drive/GAS/OAuth/secrets/signing/release gate.
-- Changelog append-only; thay đổi đáng kể có detailed record trong `docs/changelog/`.
+- `beta`: chỉ trở thành live BETA pointer sau BETA gate PASS.
+- `stable`: chỉ restore/promote sau BETA PASS + Owner approval.
+- BETA/STABLE tách Google Cloud/OAuth/GAS/Sheets, Cloudflare runtime state, secrets và signing theo thiết kế hiện hành.
+- Repo PUBLIC có chủ đích; tuyệt đối không commit secret/private key/token/keystore.

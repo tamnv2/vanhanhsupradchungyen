@@ -1,12 +1,14 @@
 {
   "environment": "beta",
+  "owner_account": "tam95.supra@gmail.com",
+  "baseline": "SETUP-RESET-20260912-01",
   "registrations": [
     {
       "cluster_id": "PICK_PACK_1291",
       "quarter_key": "2026_Q3",
-      "spreadsheet_id": "17lvVEdBno0TelhuZl3gmn7-YmyJ4o6wZxpsoP1YB9XQ",
+      "spreadsheet_id": null,
       "schema_version": "PP1291_SHEETS_BETA_V1",
-      "status": "PROVISIONED_NOT_LIVE",
+      "status": "NOT_PROVISIONED",
       "tab_map": {
         "control": "00_CONTROL",
         "catalog": "Danh mục",

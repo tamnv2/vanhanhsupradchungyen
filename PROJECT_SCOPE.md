@@ -1,78 +1,105 @@
 # PROJECT SCOPE — VẬN HÀNH DC HƯNG YÊN
 
-Status: ACTIVE / OWNER-APPROVED 2026-09-11
+Status: ACTIVE / OWNER-APPROVED 2026-09-12
 
 ## 1. Dự án chính
 
-`VẬN HÀNH DC HƯNG YÊN` (VHDCHY) là nền tảng bao quát vận hành DC Hưng Yên. Dự án không đồng nhất với Pick Pack 1291 và không bị giới hạn bởi phạm vi của dự án Pick Pack 1291 cũ.
+`VẬN HÀNH DC HƯNG YÊN` (VHDCHY) là nền tảng vận hành DC Hưng Yên. `PICK_PACK_1291` là cluster/module đầu tiên, không phải toàn bộ phạm vi hệ thống.
 
-## 2. Cụm/module đầu tiên
+## 2. Baseline reset 2026-09-12
 
-`Pick Pack 1291` là một cluster/module đầu tiên trong VHDCHY. Dự án Pick Pack 1291 cũ chỉ là nguồn tham khảo để tái sử dụng có chọn lọc những phần đã chứng minh hữu ích.
+Owner yêu cầu bắt đầu lại phần setup/quyền/provider từ mốc đã chốt logic/kịch bản.
 
-## 3. Pick Pack 1291 reference policy
+Reset có nghĩa:
 
-Folder Drive `BACKUP DỰ ÁN CŨ PICK PACK 1291` bên trong `VẬN HÀNH DC HƯNG YÊN` là reference archive read-only.
+- reset current setup/runtime/provider claims về trạng thái cần verify/provision lại;
+- không xóa code/logic/architecture/decision/test evidence đã được chốt;
+- không tự tái sử dụng old ID/token/deployment/workbook chỉ vì từng chạy thành công;
+- resource hiện hữu dưới account mới được **re-use** nếu kiểm chứng đúng owner/quyền/mục đích;
+- không làm lại một bước đã được tool xác minh đủ và vẫn phù hợp baseline hiện hành.
 
-Nguyên tắc cứng:
+Snapshot trước reset: branch `archive/pre-setup-reset-20260912`.
 
-- Pick Pack 1291 là evidence/reference, không phải authority của VHDCHY.
-- Không clone 100%.
-- Không mặc định hành vi/schema/kiến trúc cũ là yêu cầu VHDCHY.
-- Pattern tham khảo phải được đánh giá theo `REFERENCE -> EVALUATED -> ADOPTED | ADAPTED | REJECTED`.
-- Chỉ `ADOPTED` hoặc `ADAPTED` mới trở thành thiết kế VHDCHY.
-- Dự án cũ không được trở thành runtime dependency, fallback target, authority data source hoặc implicit scope definition của VHDCHY.
-- Legacy account/resource IDs trong folder này không phải current config.
+## 3. Current identity scope
 
-## 4. Authority hierarchy
+- Google Drive: `tam95.supra@gmail.com`.
+- Google Sheets: `tam95.supra@gmail.com`.
+- Google Apps Script: `tam95.supra@gmail.com`.
+- Cloudflare: account/login do `nguyenvantam050595@gmail.com` quản lý.
+- GitHub: user `tamnv2`, account email `nguyenvantam050595@gmail.com`.
+- Source authority repo: `tamnv2/vanhanhsupradchungyen`.
+- `automation@supra.cc.cd`: bị Google khóa/nghi automation; hiện là `SUSPENDED_RECOVERY_CANDIDATE`, không phải current runtime owner. Nếu lấy lại được thì migration từ `tam95.supra@gmail.com` chỉ thực hiện theo decision mới của Owner.
 
-Khi có mâu thuẫn, áp dụng thứ tự:
+## 4. Google Drive boundary
 
-1. Quyết định mới nhất của Owner.
-2. `PROJECT_SCOPE.md`.
-3. `SERVICE_AUTHORITY.md` cho account/provider/resource identity.
-4. `DECISIONS.md` và decision record hiện hành.
-5. `CURRENT_STATE.md`.
-6. Spec/architecture hiện hành của VHDCHY.
-7. Spec/module hiện hành.
-8. Pick Pack 1291 reference digest/index.
-9. File lịch sử/backup cũ.
+Current project root:
 
-Không dùng nguồn cấp thấp để ghi đè nguồn cấp cao hơn.
+- name: `VẬN HÀNH DC HƯNG YÊN`;
+- ID: `19r3s_kTjzncRdzffNntcePW5YZQ5Dxuh`;
+- owner: `tam95.supra@gmail.com`.
 
-## 5. Phạm vi hệ thống và dịch vụ
+Current runtime skeleton được giữ lại nếu ownership/quyền vẫn PASS:
 
-- Source authority repo hiện hành: GitHub `tamnv2/vanhanhsupradchungyen`.
-- Old repo `tamnv2supra/vanhanhdchungyen`: migration/reference source trong thời gian đối soát; không phải writable authority sau khi repo mới qua restoration gate.
-- Google owner/runtime account hiện hành: `automation@supra.cc.cd`.
-- `vanhanhdchungyen@gmail.com`: DECOMMISSIONED / không được sử dụng lại.
-- Cloudflare zone: `supra.cc.cd`; setup Cloudflare/domain hiện hữu được giữ nguyên vì Owner chỉ thay login/email, không rebuild provider resources.
-- BETA/STABLE dùng Worker, D1, GAS, Drive runtime và secrets độc lập.
-- Google Cloud/OAuth/GAS tách theo BETA/STABLE.
-- Google Drive chứa runtime data, archive/media/export/backup theo thiết kế hiện hành.
-- Google Sheets là thành phần dữ liệu/projection/human-readable/DR theo module; không mặc định là authority nếu spec không nói vậy.
-- Android/PDA là client native chính cho nghiệp vụ phù hợp.
-- Windows LAN Agent + LAN Web là deliverable chính thức của VHDCHY. Trước business build sâu, BETA phải hoàn tất LAN Pilot feasibility gate.
-- Điều kiện test vật lý hiện có: **chính xác 2 PDA Newland MT90** + 1 laptop công ty; synthetic clients chỉ bổ sung capacity evidence, không thay thế RF/Wi-Fi evidence vật lý.
-- Laptop được coi là môi trường minimum-information/no-admin: không giả định quyền Administrator, Windows Service, firewall rule, route, Wi-Fi/AP/router hay internal DNS. Pilot không được yêu cầu Owner bypass policy bảo mật công ty.
-- LAN Agent pilot là portable per-user background process có tray/settings, manifest `asInvoker`; không phải SCM Windows Service. Đóng UI không dừng Agent; dữ liệu mặc định nằm trong vùng user có quyền ghi và có thể đổi sang thư mục writable khác với verify/rollback.
-- Android và LAN Agent đều phải có automatic update discovery/notification và manual update fallback độc lập; LAN Agent self-update về sau không được phụ thuộc Administrator.
-- Synthetic load trên laptop được dùng để đo service capacity nhưng không thay thế bằng chứng Wi-Fi/RF của PDA thật.
-- LAN hostname không public DNS. Trong feasibility pilot, `beta-lan.supra.cc.cd` không phải dependency: PDA dùng cached endpoint + discovery và Web dùng LAN IP/port. Hostname LAN chỉ được gắn nếu internal DNS thực sự khả dụng mà không cần phá policy mạng công ty.
-- Nếu inbound/discovery bị corporate firewall/AppLocker/AP isolation chặn và không thể xử lý trong quyền hợp lệ của user thường, đó là kết quả feasibility của pilot, không phải lý do để yêu cầu nâng quyền.
-- LAN HA/Master-Backup/fencing nâng cao chỉ áp dụng sau single-node LAN pilot nếu measurement/use case chứng minh cần.
-- Durable Objects/R2/dịch vụ bổ sung chỉ bật khi có use case rõ ràng.
+- BETA root: `10_RUNTIME_BETA` — `1EpUI49xbFUtgzR3mh3M0EQu7qYYsswB5`;
+- STABLE root: `20_RUNTIME_STABLE` — `1c6RNTOHOzaX6GrQFOEd64h9rndPoeiFI`.
 
-## 6. Môi trường
+Reference archive:
+
+- name: `BACKUP PICK PACK 1291`;
+- ID: `1dQ8dYH3zi3MlPsVjNdRd1ckKzoIfYa2h`;
+- owner: `tam95.supra@gmail.com`;
+- hiện là sibling của project root, không phải child của project root;
+- `REFERENCE ONLY / NOT AUTHORITY / NOT RUNTIME`;
+- không tự di chuyển, không tự sửa nội dung, không tự lấy dữ liệu/ID cũ làm current config.
+
+## 5. Architecture đã chốt và được giữ
+
+- D1 là canonical structured authority cho service-first business core.
+- Google Sheets là projection/human-readable/reconciliation/DR surface, không phải canonical authority trừ khi decision tương lai thay đổi.
+- Projection dùng controlled writer/outbox/idempotency/retry/ACK/checkpoint; client không multi-write trực tiếp nghiệp vụ vào Sheets.
+- Android/PDA, LAN Agent và LAN Web tiếp tục là deliverable chính thức.
+- LAN pilot theo mô hình no-admin/minimum-information; không giả định quyền chỉnh router/firewall/DNS/Wi-Fi của công ty.
+- LAN hostname không public DNS.
+- Physical evidence hiện có đúng 2 Newland MT90; synthetic clients chỉ chứng minh service capacity, không thay thế RF/Wi-Fi evidence >2 PDA.
+- Android/LAN Agent phải có automatic update discovery và manual fallback.
+- Repo public; secret chỉ ở provider secret store/GitHub Environment.
+
+## 6. Reference Pick Pack 1291 policy
+
+Pick Pack 1291 cũ là evidence/reference. Không clone 100%, không migrate dữ liệu lịch sử mặc định, không dùng legacy account/resource IDs làm current config.
+
+Pattern phải đi qua:
+
+`REFERENCE -> EVALUATED -> ADOPTED | ADAPTED | REJECTED`.
+
+Chỉ `ADOPTED` hoặc `ADAPTED` mới trở thành VHDCHY design.
+
+## 7. Môi trường
 
 ### BETA
 
-AI được phép phát triển, test, migrate, deploy và sửa tự động tối đa trong phạm vi Owner đã cấp. Trong giai đoạn account/provider recovery, không move live BETA pointer cho tới khi GitHub Environment + Google Drive/GAS/OAuth BETA + provider verification đều PASS.
+Setup lại trước. Không move `beta` live pointer cho tới khi provider/resource/secrets hiện hành được verify và BETA integration gate PASS.
 
 ### STABLE
 
-Chỉ restore/promote khi BETA gate đạt và Owner duyệt theo release gate hiện hành. Không tự suy diễn quyền promote. Không copy BETA IDs/secrets sang STABLE.
+Không setup credential/deploy sâu trước BETA PASS nếu không có lý do độc lập. Promotion yêu cầu Owner approval rõ ràng. Không copy BETA IDs/secrets/token sang STABLE.
 
-## 7. Secrets
+## 8. Authority hierarchy
 
-Không ghi secret/private key/token/password/keystore base64 vào repo public, Drive docs, changelog hoặc chat. Secrets chỉ nằm trong GitHub Environment/provider secret store hoặc Owner-controlled encrypted backup.
+Khi có mâu thuẫn:
+
+1. Owner decision mới nhất.
+2. `PROJECT_SCOPE.md`.
+3. `SERVICE_AUTHORITY.md`.
+4. Active decision record / `DECISIONS.md`.
+5. `CURRENT_STATE.md`.
+6. Current architecture/spec.
+7. Module spec.
+8. Reference digest/index.
+9. Historical backup/changelog/log.
+
+Nguồn cấp thấp không được ghi đè nguồn cấp cao hơn.
+
+## 9. Secrets
+
+Không commit/paste token, password, OAuth client secret, refresh token, private key, keystore bytes/base64 hoặc signing password vào repo public, Drive docs hay chat. Chỉ ghi **tên secret**, nguồn tạo và trạng thái verification.

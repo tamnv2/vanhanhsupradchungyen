@@ -2,9 +2,11 @@
 
 ## Chat mới
 
-Chỉ cần yêu cầu: `Tiếp tục VHDCHY từ checkpoint hiện tại.`
+Chỉ cần nói:
 
-AI phải tự đọc đúng bootstrap authority:
+`Tiếp tục VHDCHY từ checkpoint hiện tại.`
+
+AI phải tự đọc theo thứ tự:
 
 1. `PROJECT_SCOPE.md`
 2. `SERVICE_AUTHORITY.md`
@@ -12,40 +14,40 @@ AI phải tự đọc đúng bootstrap authority:
 4. `NEXT_ACTIONS.md`
 5. `DECISIONS_INDEX.md`
 
-Sau đó chỉ đọc tài liệu chi tiết liên quan task và tiếp tục đúng dependency. Owner không cần kể lại lịch sử.
+Sau đó chỉ đọc tài liệu/code liên quan task. Owner không phải kể lại lịch sử và AI không được mặc định đọc toàn bộ repo/reference mỗi lần.
 
-Model memory/chat history không được ghi đè các file authority trên. Nếu provider/account/resource ID không có trong authority hiện hành, AI phải kiểm chứng hoặc đánh dấu UNKNOWN chứ không tự suy diễn.
+## Current setup baseline
 
-## Khi giao yêu cầu mới
+Baseline hiện hành: `SETUP-RESET-20260912-01`.
 
-Nói trực tiếp yêu cầu/nghiệp vụ. AI phải đối chiếu scope/authority/decisions hiện hành. Nếu yêu cầu mới thay đổi authority/architecture/business rule lớn, AI phải ghi decision hoặc authority update mới thay vì âm thầm ghi đè lịch sử.
+Các provider ID/credential/live claim cũ trước baseline chỉ là lịch sử nếu `SERVICE_AUTHORITY.md` không xác nhận lại.
 
-## Khi muốn dừng/chuyển chat
+## Khi giao việc mới
 
-Có thể nói: `Checkpoint và dừng.`
+AI phải:
 
-AI phải hoàn tất atomic work an toàn, cập nhật `SESSION_CHECKPOINT.md` + `NEXT_ACTIONS.md`, ghi changelog nếu có thay đổi đáng kể, rồi dừng.
+- đối chiếu authority + current state;
+- phân rã dependency;
+- chạy song song công việc độc lập;
+- không bắt Owner làm lại bước đã được kiểm chứng đủ;
+- không dùng memory/chat cũ để ghi đè GitHub authority.
 
-Không bắt buộc phải nói câu này nếu AI đã gần soft-stop: AI phải tự checkpoint.
+## Khi chuyển chat/dừng
+
+Có thể nói `Checkpoint và dừng.` AI phải cập nhật `SESSION_CHECKPOINT.md` + `NEXT_ACTIONS.md` và ghi changelog/decision khi cần.
 
 ## Khi hỏi trạng thái
 
-Nói: `Trạng thái dự án hiện tại?`
+Nói `Trạng thái dự án hiện tại?` AI ưu tiên authority/current checkpoint, không suy đoán từ memory.
 
-AI ưu tiên đọc authority/current state/checkpoint, không suy đoán từ memory chat.
+## Khi dùng Pick Pack 1291
 
-## Khi muốn tham khảo Pick Pack 1291
-
-Nói rõ mục tiêu. Folder hiện hành là `BACKUP DỰ ÁN CŨ PICK PACK 1291` và chỉ là reference. AI phải nói phần nào ADOPT/ADAPT/REJECT, không bê nguyên dữ liệu/ID/schema cũ vào VHDCHY.
+Reference folder là `BACKUP PICK PACK 1291`. AI chỉ đọc khi task cần; phải phân loại pattern `ADOPTED`, `ADAPTED` hoặc `REJECTED` trước khi biến thành current design.
 
 ## Khi promote STABLE
 
-Owner phải dùng ý rõ ràng như: `Duyệt promote Stable bản BETA đã đạt gate.`
+Owner phải duyệt rõ. Không có approval thì AI không được suy diễn quyền promote.
 
-Không có câu/ý duyệt này thì AI không được suy diễn quyền promote Stable.
+## Secrets
 
-## Khi tool/CI đang chạy lâu
-
-Owner không cần canh thời gian. AI contract yêu cầu soft-stop khoảng 20 phút: không khởi động job dài mới, ghi commit/run ID/status/provider state và exact next action nếu job chưa kết thúc, rồi checkpoint để phiên sau tiếp tục.
-
-Trong thời gian một job đang chạy, AI phải tiếp tục các work item độc lập có thể làm song song thay vì chờ thụ động.
+Không gửi token/password/private key/keystore/base64 vào chat. Khi cần, AI chỉ hướng dẫn nhập trực tiếp vào provider/GitHub secret UI.

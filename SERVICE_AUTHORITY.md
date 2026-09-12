@@ -1,97 +1,120 @@
 # SERVICE AUTHORITY — VHDCHY
 
-Status: ACTIVE / OWNER-APPROVED 2026-09-11
-Purpose: compact authority map for provider/account/resource identity and current permission boundaries.
+Status: ACTIVE / OWNER-APPROVED 2026-09-12
+Purpose: authority duy nhất cho identity/provider/resource hiện hành.
 
-## Hard rule
+## Status vocabulary
 
-Before any provider write/deploy, verify the active account/resource against this file and `CURRENT_STATE.md`. If a value is absent, UNKNOWN, LEGACY, DECOMMISSIONED or REBUILD_REQUIRED, do not infer it from chat memory, backup, old repo/logs/screenshots.
+- `VERIFIED_CURRENT`: tool/provider evidence xác minh tại baseline hiện hành.
+- `OWNER_CONFIRMED_NOT_TOOL_VERIFIED`: Owner chốt nhưng tool hiện tại chưa xác minh provider.
+- `VERIFIED_EXISTING_NOT_LIVE`: resource đúng owner và tồn tại, nhưng chưa được chọn/đưa live sau reset.
+- `NOT_PROVISIONED`: chưa có resource hiện hành.
+- `SETUP_REQUIRED`: phải thực hiện setup/consent/config.
+- `SUSPENDED_RECOVERY_CANDIDATE`: không dùng hiện tại; chỉ xem xét migration nếu khôi phục.
+- `LEGACY_REFERENCE`: chỉ lịch sử/reference.
+- `UNKNOWN`: chưa đủ evidence.
 
-Permission changes must also satisfy `docs/security/PERMISSION_AUDIT_2026-09-11.md`.
+Không tuyên bố DONE/LIVE/PASS cho `NOT_PROVISIONED`, `SETUP_REQUIRED`, `UNKNOWN` hoặc `OWNER_CONFIRMED_NOT_TOOL_VERIFIED`.
+
+## GitHub — VERIFIED_CURRENT
+
+- Account: `tamnv2`.
+- Account email: `nguyenvantam050595@gmail.com`.
+- Repo: `tamnv2/vanhanhsupradchungyen`.
+- Repo visibility: PUBLIC.
+- Connection rights verified: admin, maintain, push, pull, triage.
+- Default branch: `main`.
+- Snapshot trước reset: `archive/pre-setup-reset-20260912`.
+- `beta`/`stable` không được move trong setup baseline cho tới gate tương ứng.
+
+GitHub Environment secret values không thể đọc qua connector hiện hành; chúng phải được coi là stale/unknown sau reset cho tới khi owner/provider setup được hoàn tất và CI verify behavior.
 
 ## Google identity
 
-- `vanhanhdchungyen@gmail.com`: **DECOMMISSIONED / DO NOT USE** for login, OAuth, GAS, Drive, GitHub, recovery, CI or new credentials.
-- `automation@supra.cc.cd`: **CURRENT GOOGLE RUNTIME OWNER**. Normal Google Account using the owned domain email; current Drive capacity 5 TB.
-- It has no Gmail mailbox. Domain mail forwarding is separate from Google runtime. Do not add Gmail scopes merely because this address is the Google Account login.
+### Current
 
-## GitHub
+`tam95.supra@gmail.com` — current Google owner cho Drive + Sheets + GAS.
 
-- Current account: `tamnv2`.
-- Current authority repo: `tamnv2/vanhanhsupradchungyen`.
-- `tamnv2supra/vanhanhdchungyen`: **LEGACY MIGRATION REFERENCE ONLY**.
-- Branch model remains `main`, `beta`, `stable`; do not move BETA/STABLE live refs until restoration gates pass.
-- Keep repository default `GITHUB_TOKEN` read-only. Workflows elevate only where required (`contents: write` for LAN release publishing; deploy jobs remain `contents: read`).
+### Suspended
 
-## Cloudflare and domain
+`automation@supra.cc.cd` — `SUSPENDED_RECOVERY_CANDIDATE`.
 
-Only account/login email changed; provider setup remains. Do **not** recreate zone, Worker, D1, DNS, domain or email-routing resources solely because Google/GitHub accounts changed.
+- Không dùng làm current Drive/Sheets/GAS/OAuth owner.
+- Không reuse old IDs/tokens/deployments từ account này.
+- Nếu Google mở khóa và Owner muốn chuyển lại, tạo migration decision riêng; không tự chuyển.
 
-- Zone/domain: `supra.cc.cd` — RETAIN.
-- Existing BETA/STABLE Worker/D1 resources — RETAIN and re-verify.
-- Current deploy-token minimum: Account `Workers Scripts Write` + Account `D1 Write`, scoped to the current account.
-- Current custom-domain deployment does not need DNS Write or Workers Routes Write.
-- Recovery deploy must fail if expected D1 is missing; never silently create a replacement.
+### Historical account
 
-## Google Drive — rebuilt under current account
+`vanhanhdchungyen@gmail.com` — không phải current project authority. Hiện còn writer permission trên reference folder `BACKUP PICK PACK 1291`; quyền này được giữ nguyên trong baseline và phải review riêng trước khi thay đổi.
 
-Owner: `automation@supra.cc.cd`.
+## Google Drive — VERIFIED_CURRENT / EXISTING
 
-- VHDCHY root: `1UbpPnlreVf3SvhUm3LUtVFGx2dLeuNAU`.
-- BETA root: `1XuIQ6yb4Ey-aKy0MbRxHfEqvyaSWHDog`.
-- STABLE root: `1MW-XRR3_jEuE3u8Nzw3NIFPYUM5G_zHE`.
-- DOCUMENTS: `1FhoO_MQrExfI20_HGI-x-mr_Y7QSfkrn`.
-- EXPORTS: `1YGm23HZbSpoCozgZz76b8LW-hfCajOUI`.
-- BACKUP: `1FS1re5AGQ1viiv9i9Vlf9P4NchpW-Hvz`.
-- BETA/PICK_PACK_1291: `18KZ4FG6AAbSWSEQPE_ta3JUUwQWG93rm`.
-- BETA workbook `VHDCHY BETA - PICK PACK 1291 - 2026 Q3`: `17lvVEdBno0TelhuZl3gmn7-YmyJ4o6wZxpsoP1YB9XQ` — **PROVISIONED_NOT_LIVE** until BETA gate passes.
-- `BACKUP DỰ ÁN CŨ PICK PACK 1291`: `1Tz2MuCsgIY4tmmFf9NAFLbIbcmc4brb5` — **REFERENCE ONLY / NOT AUTHORITY / NOT RUNTIME**.
+Project root:
 
-Old Drive IDs from the decommissioned account are invalid for current runtime.
+- `VẬN HÀNH DC HƯNG YÊN`
+- ID `19r3s_kTjzncRdzffNntcePW5YZQ5Dxuh`
+- Owner `tam95.supra@gmail.com`
 
-## GAS / Google Cloud / OAuth
+Runtime roots:
 
-Old GAS projects/deployments/OAuth clients/tokens/Cloud resources from the decommissioned account are **REBUILD_REQUIRED**.
+- BETA `10_RUNTIME_BETA` — `1EpUI49xbFUtgzR3mh3M0EQu7qYYsswB5` — `VERIFIED_CURRENT` owner `tam95.supra@gmail.com`.
+- STABLE `20_RUNTIME_STABLE` — `1c6RNTOHOzaX6GrQFOEd64h9rndPoeiFI` — discovered under current root; `VERIFIED_EXISTING_NOT_LIVE` until the STABLE setup gate.
 
-Current BETA/STABLE model remains isolated.
+BETA skeleton already exists with `00_SHARED`, `01_CLUSTERS`, `02_MEDIA`, `03_ARCHIVE`, `04_BACKUP`, `05_LOG`, `06_EXPORT`, `07_SYSTEM`. Reuse; do not recreate unless a folder is missing or invalid.
 
-### Cloud project API enablement
+Reference:
 
-At the current recovery checkpoint, enable **Google Apps Script API only**. Do not enable Drive/Sheets/Gmail/Calendar/Contacts REST APIs merely for Apps Script built-in services.
+- `BACKUP PICK PACK 1291`
+- ID `1dQ8dYH3zi3MlPsVjNdRd1ckKzoIfYa2h`
+- owner `tam95.supra@gmail.com`
+- `LEGACY_REFERENCE / REFERENCE ONLY`.
 
-Also enable account-level Apps Script API access at `https://script.google.com/home/usersettings`.
+## Google Sheets — NOT_PROVISIONED after reset
 
-### GitHub CI OAuth scopes — exact current minimum
+No BETA projection workbook is trusted as current at baseline 2026-09-12.
+
+- Old workbook IDs in Git history are historical only.
+- `config/projections.beta.json` is intentionally reset to `NOT_PROVISIONED`.
+- New/current workbook must be created or explicitly verified under `tam95.supra@gmail.com`, placed in BETA structure, schema checked, then recorded here before use.
+
+## GAS / Google Cloud / OAuth — SETUP_REQUIRED
+
+Current owner: `tam95.supra@gmail.com`.
+
+BETA must be provisioned/authorized again. Minimum current CI OAuth scopes from current source:
 
 ```text
 https://www.googleapis.com/auth/script.projects
 https://www.googleapis.com/auth/script.deployments
 ```
 
-No Drive/Sheets/Gmail/Calendar/Contacts scopes in the current CI client.
-
-### GAS runtime scopes — exact current minimum
+Current GAS runtime scopes:
 
 ```text
 https://www.googleapis.com/auth/spreadsheets
 https://www.googleapis.com/auth/userinfo.email
 ```
 
-Current gateway does not justify Drive, `script.external_request`, `script.scriptapp`, `script.send_mail`, Gmail, Calendar or Contacts scopes. Add a scope only when an Owner-approved implemented feature actually requires it.
+Do not add Drive/Gmail/Calendar/Contacts/`script.send_mail`/`script.scriptapp`/`script.external_request` unless a current Owner-approved implementation actually requires it.
 
-OAuth refresh tokens are created once per intended environment/client and reused; never mint a new token on each CI run.
+## Cloudflare — OWNER_CONFIRMED_NOT_TOOL_VERIFIED
+
+- Managing email: `nguyenvantam050595@gmail.com`.
+- Zone/domain intent: retain `supra.cc.cd` and existing useful Worker/D1/DNS resources if still present.
+- Do not recreate or delete provider resources until account/resource identity is verified in Cloudflare dashboard.
+- Current deploy-token minimum based on current deploy source: Account `Workers Scripts Write` + Account `D1 Write`.
+- Missing expected D1 must fail closed; never silently create a replacement during recovery/setup.
 
 ## Android signing
 
-- Retain the existing **VHDCHY** signing identity if Owner-controlled backup is intact.
-- During BETA recovery, only BETA signing material is needed by the current build workflow.
-- The retired Pick Pack 1291 keystore in the legacy reference archive is not the VHDCHY signer and must not be imported into current environments.
-- Do not add STABLE signing secrets until a current STABLE Android build workflow actually consumes them.
+Existing VHDCHY signing material is historical evidence until locally re-verified. Do not use retired Pick Pack 1291 signer. BETA signer is verified/re-entered before signed release; STABLE signer remains isolated and deferred until needed.
 
-## Retired Pick Pack 1291 permission boundary
+## Permission rule
 
-The full legacy source was audited for permission-bearing features. Historical MailApp, Drive file storage, triggers, UrlFetch bridges, direct Worker Google Sheets/Drive OAuth, Firebase Messaging/service account and DR-provider credentials are **legacy evidence only**. They are not current VHDCHY permissions unless explicitly re-adopted by a later Owner decision and current-source audit.
+Every new permission requires all three:
 
-## LAN checkpoint
+1. Owner-approved current feature exists;
+2. current source actually calls the capability;
+3. narrowest provider scope/resource boundary is documented.
 
-LAN Pilot V4 evidence remains historical project state. Release objects/assets are not yet considered fully restored in the new repo. No STABLE promotion.
+Nếu thiếu một điều kiện thì không cấp quyền.

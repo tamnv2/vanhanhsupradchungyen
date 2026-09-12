@@ -13,8 +13,9 @@ required=(
   DECISIONS.md
   CHANGELOG.md
   docs/AI_USAGE_GUIDE.md
-  docs/runbooks/REAUTHORIZATION_2026-09-11.md
-  docs/security/PERMISSION_AUDIT_2026-09-11.md
+  docs/GITHUB_ENV_SETUP.md
+  docs/runbooks/SETUP_FROM_ZERO_2026-09-12.md
+  docs/security/PERMISSION_AUDIT_2026-09-12.md
   docs/reference/pick-pack-1291/INDEX.md
 )
 
@@ -22,32 +23,55 @@ for f in "${required[@]}"; do
   test -s "$f" || { echo "Missing/empty governance file: $f" >&2; exit 1; }
 done
 
-grep -Fq 'Status: ACTIVE / OWNER-APPROVED' PROJECT_SCOPE.md
+grep -Fq 'Status: ACTIVE / OWNER-APPROVED 2026-09-12' PROJECT_SCOPE.md
 grep -Fq 'VẬN HÀNH DC HƯNG YÊN' PROJECT_SCOPE.md
-grep -Fq 'Pick Pack 1291 là evidence/reference, không phải authority của VHDCHY.' PROJECT_SCOPE.md
-grep -Fq 'automation@supra.cc.cd' SERVICE_AUTHORITY.md
-grep -Fq 'vanhanhdchungyen@gmail.com' SERVICE_AUTHORITY.md
-grep -Fq 'DECOMMISSIONED' SERVICE_AUTHORITY.md
+grep -Fq 'tam95.supra@gmail.com' PROJECT_SCOPE.md
+grep -Fq 'nguyenvantam050595@gmail.com' PROJECT_SCOPE.md
+grep -Fq 'BACKUP PICK PACK 1291' PROJECT_SCOPE.md
+
+grep -Fq 'tam95.supra@gmail.com' SERVICE_AUTHORITY.md
+grep -Fq 'SUSPENDED_RECOVERY_CANDIDATE' SERVICE_AUTHORITY.md
+grep -Fq 'tamnv2/vanhanhsupradchungyen' SERVICE_AUTHORITY.md
+
 grep -Fq 'SERVICE_AUTHORITY.md' AI_BOOTSTRAP.md
 grep -Fq 'CURRENT_STATE.md' AI_BOOTSTRAP.md
 grep -Fq 'NEXT_ACTIONS.md' AI_BOOTSTRAP.md
 grep -Fq 'DECISIONS_INDEX.md' AI_BOOTSTRAP.md
-grep -Fq 'khoảng 20 phút' AI_OPERATING_CONTRACT.md
-grep -Fqi 'chạy song song' AI_OPERATING_CONTRACT.md
+grep -Fq 'SETUP-RESET-20260912-01' AI_BOOTSTRAP.md
+
+grep -Fqi 'parallel' AI_OPERATING_CONTRACT.md
 grep -Fq 'Checkpoint:' NEXT_ACTIONS.md
-grep -Fq 'Owner' NEXT_ACTIONS.md
 grep -Fq 'Checkpoint ID:' SESSION_CHECKPOINT.md
-grep -Fq 'Exact Owner actions required next' SESSION_CHECKPOINT.md
-grep -Fq 'D-014' DECISIONS_INDEX.md
-grep -Fq 'docs/changelog/' AI_OPERATING_CONTRACT.md
+grep -Fq 'D-030' DECISIONS_INDEX.md
+grep -Fq 'D-031' DECISIONS_INDEX.md
+
 grep -Fq 'Pick Pack 1291 is evidence, not authority.' docs/reference/pick-pack-1291/INDEX.md
 
-# Current identity/resource guard.
-grep -Fq 'Source authority repo hiện hành: GitHub `tamnv2/vanhanhsupradchungyen`.' PROJECT_SCOPE.md
-grep -Fq 'Google owner/runtime account hiện hành: `automation@supra.cc.cd`.' PROJECT_SCOPE.md
-grep -Fq 'BACKUP DỰ ÁN CŨ PICK PACK 1291' PROJECT_SCOPE.md
+# Current projection registry must start clean after reset.
+python3 - <<'PY'
+import json
+p='config/projections.beta.json'
+d=json.load(open(p, encoding='utf-8'))
+assert d['owner_account'] == 'tam95.supra@gmail.com'
+assert d['baseline'] == 'SETUP-RESET-20260912-01'
+assert len(d['registrations']) == 1
+r=d['registrations'][0]
+assert r['cluster_id'] == 'PICK_PACK_1291'
+assert r['spreadsheet_id'] is None
+assert r['status'] == 'NOT_PROVISIONED'
+PY
 
-# GAS runtime least-privilege guard: current foundation is Sheets + owner identity only.
+# Old workbook/provider IDs must not be reintroduced as current projection config.
+for forbidden in \
+  '17lvVEdBno0TelhuZl3gmn7-YmyJ4o6wZxpsoP1YB9XQ' \
+  '14gHSgWXP2QvtPmBD3CzFt3vQ6AED2hPSm_LxMGpXAKg'; do
+  if grep -Fq "$forbidden" config/projections.beta.json; then
+    echo "Historical Sheet ID reintroduced into current BETA projection registry: $forbidden" >&2
+    exit 1
+  fi
+done
+
+# GAS runtime least privilege.
 grep -Fq 'https://www.googleapis.com/auth/spreadsheets' gateway/appsscript.json
 grep -Fq 'https://www.googleapis.com/auth/userinfo.email' gateway/appsscript.json
 for forbidden in \
@@ -68,11 +92,4 @@ if grep -Eq 'POST.+/d1/database|Created D1 database' scripts/deploy-cloudflare.s
 fi
 grep -Fq 'Refusing to create replacement' scripts/deploy-cloudflare.sh
 
-# Projection registry must never point at the decommissioned-account workbook.
-if grep -Fq '14gHSgWXP2QvtPmBD3CzFt3vQ6AED2hPSm_LxMGpXAKg' config/projections.beta.json; then
-  echo 'Legacy Google Sheet ID reintroduced into current BETA projection registry.' >&2
-  exit 1
-fi
-grep -Fq '17lvVEdBno0TelhuZl3gmn7-YmyJ4o6wZxpsoP1YB9XQ' config/projections.beta.json
-
-echo 'Governance continuity and least-privilege validation PASS.'
+echo 'Governance baseline 2026-09-12 and least-privilege validation PASS.'
