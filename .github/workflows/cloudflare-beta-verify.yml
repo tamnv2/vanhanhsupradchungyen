@@ -1,0 +1,48 @@
+name: Cloudflare BETA verify
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/dispatch/cloudflare-beta-verify.json'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudflare-beta-verify
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    environment: beta
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+    steps:
+      - name: Require main branch
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main"
+
+      - name: Checkout source authority
+        uses: actions/checkout@v4
+
+      - name: Validate autonomous verification request
+        if: github.event_name == 'push'
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const cmd = JSON.parse(fs.readFileSync('.github/dispatch/cloudflare-beta-verify.json', 'utf8'));
+          if (cmd.enabled !== true) throw new Error('Dispatch must be enabled');
+          if (cmd.target !== 'beta') throw new Error('Dispatch target must be beta');
+          if (cmd.operation !== 'verify') throw new Error('Dispatch operation must be verify');
+          if (!cmd.request_id || typeof cmd.request_id !== 'string') throw new Error('Dispatch request_id is required');
+          console.log(`Authorized Cloudflare verification request: ${cmd.request_id}`);
+          NODE
+
+      - name: Verify Cloudflare BETA identity and expected resources
+        run: node .github/scripts/cloudflare-verify.mjs
