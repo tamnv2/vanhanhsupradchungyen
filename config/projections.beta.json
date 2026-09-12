@@ -1,0 +1,9 @@
+{
+  "environment": "beta",
+  "baseline": "REPO-RESET-20260912-01",
+  "cluster_id": "PICK_PACK_1291",
+  "quarter_key": "2026_Q3",
+  "spreadsheet_id": "1My2-jG6s8WCOAMox6DfGKKi9M0TBvSrfC2uE9xFNmmk",
+  "schema_version": "PP1291_SHEETS_BETA_V1",
+  "status": "PROVISIONED_NOT_LIVE"
+}
