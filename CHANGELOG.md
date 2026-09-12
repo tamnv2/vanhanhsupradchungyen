@@ -125,3 +125,14 @@ Lịch sử này là append-only.
 - Automated source/build/sign/version/package/release gates đã PASS; final LAN-PILOT PASS vẫn cần physical regression trên laptop công ty + đúng 2 MT90, gồm update thực tế, restart/resync, realtime/transfer, Wi-Fi-off queue recovery, background/battery/resource, load/soak và log analysis.
 - Không move cloud BETA/STABLE; không thay Worker/D1.
 - Chi tiết: `docs/changelog/2026-09-11-lan-pilot-0.8.0.md`.
+
+## 2026-09-12 — setup-reset-1.0.0
+
+- Owner reset current provider/setup state để setup lại từ mốc logic/kịch bản đã chốt.
+- Current Google owner đổi sang `tam95.supra@gmail.com` cho Drive/Sheets/GAS; Cloudflare/GitHub tiếp tục do `nguyenvantam050595@gmail.com` quản lý.
+- `automation@supra.cc.cd` chuyển thành `SUSPENDED_RECOVERY_CANDIDATE`, không còn là current runtime authority.
+- Giữ nguyên code/architecture/decisions/LAN evidence và toàn bộ lịch sử; tạo snapshot `archive/pre-setup-reset-20260912`.
+- Xác minh GitHub quyền admin/push và Drive root/BETA ownership; tái sử dụng BETA Drive skeleton thay vì tạo lại.
+- Reset BETA projection registry về `NOT_PROVISIONED`; old workbook/provider IDs không còn current authority.
+- Thêm runbook setup từ đầu, permission baseline mới, 5-file bootstrap, dependency-first parallel execution và checkpoint deterministic.
+- Chi tiết: `docs/changelog/2026-09-12-setup-reset-1.0.0.md`.
