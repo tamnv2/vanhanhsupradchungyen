@@ -38,10 +38,32 @@ Current project root:
 - ID: `19r3s_kTjzncRdzffNntcePW5YZQ5Dxuh`;
 - owner: `tam95.supra@gmail.com`.
 
-Current runtime skeleton được giữ lại nếu ownership/quyền vẫn PASS:
+Active environment roots:
 
-- BETA root: `10_RUNTIME_BETA` — `1EpUI49xbFUtgzR3mh3M0EQu7qYYsswB5`;
-- STABLE root: `20_RUNTIME_STABLE` — `1c6RNTOHOzaX6GrQFOEd64h9rndPoeiFI`.
+- BETA: `01_BETA` — ID `1EpUI49xbFUtgzR3mh3M0EQu7qYYsswB5`;
+- STABLE: `02_STABLE` — ID `1c6RNTOHOzaX6GrQFOEd64h9rndPoeiFI`.
+
+Mỗi environment dùng cùng contract cấp 1:
+
+- `00_SHARED`
+- `01_CLUSTERS`
+- `02_MEDIA`
+- `03_ARCHIVE`
+- `04_BACKUP`
+- `05_LOG`
+- `06_EXPORT`
+- `07_SYSTEM`
+
+BETA current cluster:
+
+- `01_BETA/01_CLUSTERS/PICK_PACK_1291`;
+- ID `1-Z4D2_ja1uFqJP659B3nU8S9-ObWR0zN`.
+
+Legacy setup 2026-09-08 đã được đưa ra ngoài project root:
+
+- `VHDCHY_LEGACY_SETUP_20260908`;
+- ID `1NysNtmsMAxFA5JgsYwEJNgMVvbogvf9R`;
+- `LEGACY_REFERENCE / NOT AUTHORITY / NOT RUNTIME`.
 
 Reference archive:
 
