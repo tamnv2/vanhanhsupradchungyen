@@ -1,8 +1,9 @@
 # SESSION CHECKPOINT
 
 Checkpoint ID: `SETUP-RESET-20260912-01`
-Timestamp: `2026-09-12T08:23+07:00` baseline; updated during reset tranche.
-Authority branch: `main` after reset commit.
+Timestamp: `2026-09-12T09:05+07:00`
+Authority branch: `main`.
+Authority baseline commit before this receipt: `b72bd53a19a4a46f6d8d38e791bc78f0e024f46d`.
 Pre-reset snapshot: `archive/pre-setup-reset-20260912` at `de4647c3b4ff1e562a24cdd410d21dd91d0f7101`.
 
 ## Why this checkpoint exists
@@ -26,6 +27,7 @@ Owner requested a clean restart of provider/setup permissions while retaining th
 - Reference folder `BACKUP PICK PACK 1291` ID `1dQ8dYH3zi3MlPsVjNdRd1ckKzoIfYa2h`, owner `tam95.supra@gmail.com`, reference-only.
 - Reference folder still has writer `vanhanhdchungyen@gmail.com`; no permission mutation performed because Owner did not request one.
 - No current BETA projection workbook has been adopted after reset.
+- Current authority/governance reset has been written to `main`; this receipt commit is intentionally made through the Contents API to trigger repository validation.
 
 ## Preserved evidence, not live claims
 
@@ -37,9 +39,9 @@ Owner requested a clean restart of provider/setup permissions while retaining th
 
 ## Exact next actions
 
-1. Finish/reset authority commit and validate `main`.
+1. Confirm `Validate public repo` PASS for the reset receipt commit.
 2. Provision current BETA Pick Pack 1291 projection workbook within the existing BETA Drive structure.
-3. In parallel after baseline commit:
+3. In parallel:
    - Owner configures BETA Google Cloud/OAuth under `tam95.supra@gmail.com`;
    - Owner verifies retained Cloudflare account/resources/token under `nguyenvantam050595@gmail.com`;
    - Owner verifies VHDCHY BETA keystore locally.
