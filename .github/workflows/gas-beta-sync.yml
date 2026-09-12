@@ -2,6 +2,10 @@ name: Google Gateway BETA sync
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/dispatch/gas-beta-sync.json'
 
 permissions:
   contents: read
@@ -31,6 +35,20 @@ jobs:
 
       - name: Checkout source authority
         uses: actions/checkout@v4
+
+      - name: Validate autonomous dispatch request
+        if: github.event_name == 'push'
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const path = '.github/dispatch/gas-beta-sync.json';
+          const cmd = JSON.parse(fs.readFileSync(path, 'utf8'));
+          if (cmd.enabled !== true) throw new Error('Dispatch must be enabled');
+          if (cmd.target !== 'beta') throw new Error('Dispatch target must be beta');
+          if (cmd.operation !== 'sync') throw new Error('Dispatch operation must be sync');
+          if (!cmd.request_id || typeof cmd.request_id !== 'string') throw new Error('Dispatch request_id is required');
+          console.log(`Authorized autonomous request: ${cmd.request_id}`);
+          NODE
 
       - name: Sync and verify Google Gateway HEAD
         run: node .github/scripts/gas-sync.mjs
