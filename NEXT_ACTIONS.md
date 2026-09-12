@@ -12,30 +12,45 @@ Canonical Google Gateway BETA authority:
 - Managed Web App URL: `https://script.google.com/macros/s/AKfycbzxRzxjeFyPpYQ39T3MJRL_sSKrhJhHXLY5LgGy16CnxuPEIFoJo8vr9XijrsxZttRtjQ/exec`
 - Verification run: `34696139468`
 
-Future Google Gateway changes must continue through GitHub source authority -> guarded sync -> immutable version -> managed deployment update -> `/exec` verification. Do not create new uncontrolled deployment identities.
-
 The Gateway remains foundation-only: `doPost()` does not yet accept business mutations and the BETA projection workbook remains `PROVISIONED_NOT_LIVE`.
 
-## Immediate priority — Cloudflare BETA
+## Cloudflare BETA — IDENTITY/RESOURCE PASS
 
-1. Verify current Cloudflare account identity under `nguyenvantam050595@gmail.com` and zone `supra.cc.cd`.
-2. Verify whether the expected BETA resources already exist:
-   - Worker: `vhdchy-beta`
-   - D1: `vhdchy-data-beta`
-3. Missing expected retained resources must fail closed and be reported; do not silently create replacements during verification.
-4. After identity verification, prepare the minimum BETA deployment credentials and configuration required by the current architecture.
-5. Add only verified Cloudflare BETA values to GitHub Environment `beta`.
-6. Add fresh provider deployment scripts/config for `service/worker/` using the reconciled `business_core_v2` / `BUSINESS_CORE_V2` contract.
-7. Apply the clean zero-baseline D1 schema only to the confirmed BETA D1 resource.
-8. Deploy Worker BETA and require D1 core health PASS.
-9. Bind the canonical Google Gateway URL to Worker BETA and require deep/integration health PASS. Google projection failure remains degradable/advisory; D1 core failure is critical.
+Verified by GitHub Actions run `34699120539`:
+- Account-owned API token: PASS.
+- Account ID: `1b1695e4f2a3abfe08dc475b352c7f42`.
+- Worker `vhdchy-beta`: FOUND.
+- D1 `vhdchy-data-beta`: FOUND.
+- D1 database ID: `37eb7d59-05c0-4ba2-8162-cb6a9fe5d492`.
+
+No resource was created or replaced during verification.
+
+## Immediate priority — D1 pre-migration inspection
+
+1. Inspect the confirmed BETA D1 before any migration write.
+2. Classify the database as exactly one of:
+   - `EMPTY`: safe candidate for clean zero-baseline migration;
+   - `BUSINESS_CORE_V2`: already on the current schema, then verify protected-table row counts and schema contract;
+   - `UNKNOWN_NONEMPTY` / schema mismatch: STOP and review, no migration.
+3. Do not apply `service/worker/migrations/0001_initial.sql` merely because the database name/ID match.
+4. After D1 inspection PASS, apply the clean schema only to database ID `37eb7d59-05c0-4ba2-8162-cb6a9fe5d492`.
+5. Add Worker BETA deployment configuration with:
+   - Worker name `vhdchy-beta`;
+   - D1 binding `DB` -> verified BETA D1;
+   - `APP_ENV=BETA`;
+   - build revision;
+   - canonical `GAS_EXEC_URL` from Google authority.
+6. Deploy `service/worker/src/index.js` only to the verified Worker `vhdchy-beta`.
+7. Require `/health` PASS with D1 schema `business_core_v2`.
+8. Require `/health/deep` PASS for D1 and verify Google Gateway integration; Google remains degradable/advisory while D1 core is critical.
+9. Only after these gates pass, mark Worker/D1 BETA foundation live.
 
 ## Autonomous execution model
 
 - After Owner approves a proposed plan/scope, AI executes all actions available through connected tools without delegating automatable clicks or runs back to Owner.
 - Owner interaction is requested only for unavoidable UI/consent/secret/physical steps not exposed by available tools.
-- Google Gateway synchronization/deployment is triggered through `.github/dispatch/gas-beta-sync.json`; manual `workflow_dispatch` is fallback only.
-- Do not manually paste source into OAuth Playground or Apps Script editor.
+- Provider verification/deployment must remain fail-closed and target only verified resource identities.
+- Do not silently create replacement provider resources.
 
 ## Android BETA signer
 
