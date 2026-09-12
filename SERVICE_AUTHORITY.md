@@ -56,14 +56,29 @@ Project root:
 - ID `19r3s_kTjzncRdzffNntcePW5YZQ5Dxuh`
 - Owner `tam95.supra@gmail.com`
 
-Runtime roots:
+Active environment roots:
 
-- BETA `10_RUNTIME_BETA` — `1EpUI49xbFUtgzR3mh3M0EQu7qYYsswB5` — `VERIFIED_CURRENT`, owner `tam95.supra@gmail.com`.
+- BETA `01_BETA` — `1EpUI49xbFUtgzR3mh3M0EQu7qYYsswB5` — `VERIFIED_CURRENT`, owner `tam95.supra@gmail.com`.
 - BETA `01_CLUSTERS` — `1ixxqKs8m0uN10z_S8M7rzSm2tT2GLbVF`.
 - BETA cluster `PICK_PACK_1291` — `1-Z4D2_ja1uFqJP659B3nU8S9-ObWR0zN` — `VERIFIED_CURRENT`.
-- STABLE root `20_RUNTIME_STABLE` — `1c6RNTOHOzaX6GrQFOEd64h9rndPoeiFI` — `VERIFIED_EXISTING_NOT_LIVE` until STABLE gate.
+- STABLE `02_STABLE` — `1c6RNTOHOzaX6GrQFOEd64h9rndPoeiFI` — `VERIFIED_EXISTING_NOT_LIVE` until STABLE gate.
 
-BETA skeleton includes `00_SHARED`, `01_CLUSTERS`, `02_MEDIA`, `03_ARCHIVE`, `04_BACKUP`, `05_LOG`, `06_EXPORT`, `07_SYSTEM`. Reuse; do not recreate unless missing/invalid.
+Both environment roots use the same level-1 contract:
+
+- `00_SHARED`
+- `01_CLUSTERS`
+- `02_MEDIA`
+- `03_ARCHIVE`
+- `04_BACKUP`
+- `05_LOG`
+- `06_EXPORT`
+- `07_SYSTEM`
+
+Previous setup-era folders were moved out of the project root into sibling folder:
+
+- `VHDCHY_LEGACY_SETUP_20260908`
+- ID `1NysNtmsMAxFA5JgsYwEJNgMVvbogvf9R`
+- status `LEGACY_REFERENCE / NOT AUTHORITY / NOT RUNTIME`.
 
 Reference:
 
