@@ -31,13 +31,29 @@ function bootstrapAuthorize() {
   };
 }
 
+function bootstrapHealth_() {
+  const props = PropertiesService.getScriptProperties();
+  const authorized = Boolean(props.getProperty("VHDCHY_BOOTSTRAP_AUTH_AT"));
+  const configMatch =
+    props.getProperty("VHDCHY_ENVIRONMENT") === BOOTSTRAP.environment &&
+    props.getProperty("VHDCHY_OWNER_EMAIL") === BOOTSTRAP.ownerEmail &&
+    props.getProperty("VHDCHY_PROJECTION_SPREADSHEET_ID") === BOOTSTRAP.projectionSpreadsheetId;
+
+  return {
+    authorized,
+    configMatch
+  };
+}
+
 function doGet() {
+  const bootstrap = bootstrapHealth_();
   return json_({
-    ok: true,
+    ok: bootstrap.authorized && bootstrap.configMatch,
     service: "VHDCHY_GOOGLE_GATEWAY",
     environment: BOOTSTRAP.environment,
     scriptId: ScriptApp.getScriptId(),
-    deployedUrl: ScriptApp.getService().getUrl() || null
+    deployedUrl: ScriptApp.getService().getUrl() || null,
+    bootstrap
   });
 }
 
