@@ -32,6 +32,7 @@ grep -Fq 'BACKUP PICK PACK 1291' PROJECT_SCOPE.md
 grep -Fq 'tam95.supra@gmail.com' SERVICE_AUTHORITY.md
 grep -Fq 'SUSPENDED_RECOVERY_CANDIDATE' SERVICE_AUTHORITY.md
 grep -Fq 'tamnv2/vanhanhsupradchungyen' SERVICE_AUTHORITY.md
+grep -Fq '1My2-jG6s8WCOAMox6DfGKKi9M0TBvSrfC2uE9xFNmmk' SERVICE_AUTHORITY.md
 
 grep -Fq 'SERVICE_AUTHORITY.md' AI_BOOTSTRAP.md
 grep -Fq 'CURRENT_STATE.md' AI_BOOTSTRAP.md
@@ -47,7 +48,7 @@ grep -Fq 'D-031' DECISIONS_INDEX.md
 
 grep -Fq 'Pick Pack 1291 is evidence, not authority.' docs/reference/pick-pack-1291/INDEX.md
 
-# Current projection registry must start clean after reset.
+# Current projection registry after Phase 1 must point only to the verified current-account workbook.
 python3 - <<'PY'
 import json
 p='config/projections.beta.json'
@@ -57,11 +58,13 @@ assert d['baseline'] == 'SETUP-RESET-20260912-01'
 assert len(d['registrations']) == 1
 r=d['registrations'][0]
 assert r['cluster_id'] == 'PICK_PACK_1291'
-assert r['spreadsheet_id'] is None
-assert r['status'] == 'NOT_PROVISIONED'
+assert r['spreadsheet_id'] == '1My2-jG6s8WCOAMox6DfGKKi9M0TBvSrfC2uE9xFNmmk'
+assert r['status'] == 'PROVISIONED_NOT_LIVE'
+assert r['schema_version'] == 'PP1291_SHEETS_BETA_V1'
+assert r['tab_map']['accounts'] == 'DANH SÁCH TÀI KHOẢN'
 PY
 
-# Old workbook/provider IDs must not be reintroduced as current projection config.
+# Historical workbook IDs must never become current projection config again.
 for forbidden in \
   '17lvVEdBno0TelhuZl3gmn7-YmyJ4o6wZxpsoP1YB9XQ' \
   '14gHSgWXP2QvtPmBD3CzFt3vQ6AED2hPSm_LxMGpXAKg'; do
@@ -92,4 +95,4 @@ if grep -Eq 'POST.+/d1/database|Created D1 database' scripts/deploy-cloudflare.s
 fi
 grep -Fq 'Refusing to create replacement' scripts/deploy-cloudflare.sh
 
-echo 'Governance baseline 2026-09-12 and least-privilege validation PASS.'
+echo 'Governance baseline 2026-09-12 Phase 1 + least-privilege validation PASS.'
