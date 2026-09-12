@@ -11,10 +11,24 @@ Baseline: `REPO-RESET-20260912-01`
 - All obsolete working/recovery/beta/stable branches were manually removed by Owner.
 - All old LAN tags were manually removed by Owner; current tag namespace is empty.
 - Releases: none.
-- GitHub Environments: none — Owner UI verified after cleanup.
-- Actions Environment secrets/variables: none — Owner UI verified after cleanup.
-- Actions Repository secrets/variables: none — Owner UI verified after cleanup.
-- Clean validation workflow remains the only active workflow required at this stage.
+- Actions Repository secrets/variables remain unused.
+- Clean validation workflow remains active.
+
+## GitHub BETA environment — GOOGLE READY
+
+- Environment `beta` exists.
+- Owner UI verified environment secret names:
+  - `GOOGLE_OAUTH_CLIENT_SECRET`
+  - `GOOGLE_OAUTH_REFRESH_TOKEN`
+- Owner UI verified environment variable names:
+  - `APP_ENV=BETA`
+  - `OWNER_EMAIL=tam95.supra@gmail.com`
+  - `GOOGLE_OAUTH_CLIENT_ID`
+  - `GAS_SCRIPT_ID`
+  - `GOOGLE_SHEETS_PROJECTION_ID`
+- No secret values are recorded in repository files.
+- Manual-only workflow `.github/workflows/gas-beta-sync.yml` is present and restricted to `main` + environment `beta`.
+- Sync implementation `.github/scripts/gas-sync.mjs` refreshes the OAuth access token, reads current Apps Script content, renders the BETA placeholders from GitHub source, replaces Apps Script HEAD through `projects.updateContent`, then reads back and verifies the complete file set/content.
 
 ## Drive / Sheet — VERIFIED CURRENT
 
@@ -29,7 +43,6 @@ Baseline: `REPO-RESET-20260912-01`
 - Google Gateway foundation: restored after least-privilege review.
 - Worker foundation: restored under `service/worker/` with reconciled contract `business_core_v2` / `BUSINESS_CORE_V2`.
 - D1 schema: consolidated into clean zero-baseline `service/worker/migrations/0001_initial.sql`; no legacy compatibility `resources` table and no historical business rows/credentials are seeded.
-- Provider deployment scripts/workflows: intentionally absent until current provider identities/resources are verified.
 - Android/LAN source and evidence: preserved only in `backup/pre-zero-20260912` pending later task-specific restoration.
 
 ## Provider state
@@ -41,13 +54,13 @@ Baseline: `REPO-RESET-20260912-01`
   - CI OAuth client exists with `script.projects` + `script.deployments` only.
   - Refresh token obtained.
   - Real `projects.create` API request succeeded under `tam95.supra@gmail.com`.
-- GAS BETA: `PROJECT_CREATED_NOT_SYNCED`.
+- GAS BETA: `SYNC_WORKFLOW_READY_NOT_RUN`.
   - `VHDCHY BETA - Google Gateway` exists and is linked to standard Cloud project `VHDCHY-BETA`.
   - GitHub source has not yet been synchronized to Apps Script HEAD.
+  - Next gate: manually run `Google Gateway BETA sync` from `main` and require PASS.
   - Runtime authorization, immutable version, versioned deployment and `/exec` health verification remain pending.
 - Cloudflare BETA resources: `VERIFY_REQUIRED`.
 - Android BETA signer: `VERIFY_REQUIRED`.
-- GitHub `beta` Environment: intentionally absent; next step is to create it using only verified Google values.
 - STABLE: blocked until BETA PASS + explicit Owner approval.
 
 ## LAN
