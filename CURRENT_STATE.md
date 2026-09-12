@@ -3,22 +3,29 @@
 Updated: 2026-09-12
 Baseline: `REPO-RESET-20260912-01`
 
-## PASS
+## GitHub baseline — PASS
 
-- GitHub active tree was cleared to a zero marker and is being rebuilt from the clean baseline.
 - Pre-zero snapshot preserved at `backup/pre-zero-20260912`.
-- Drive project root and environment roots are already verified and remain unchanged.
-- BETA projection workbook exists and remains `PROVISIONED_NOT_LIVE`.
+- Active `main` was cleared to a zero marker and rebuilt from the confirmed current scope.
+- Current `main` contains only the clean authority/config/docs, reviewed Google Gateway foundation and baseline validation workflow.
+- Clean validation run `34688473153`: SUCCESS at commit `d38be4b83aeed4f853c2ded281470a5163b25925`.
+- Old branches/tags remain historical only pending Owner manual deletion; connector cannot delete refs.
 
-## ACTIVE REBUILD
+## Drive / Sheet — VERIFIED
 
-- Governance/authority files: being rebuilt cleanly.
-- Google Gateway foundation: retained because current scopes match least-privilege design.
-- Worker/D1 source: not restored yet because the pre-reset Worker expected `business_core_v1` while later migrations advanced D1 metadata to `business_core_v2`; this inconsistency must be resolved before restoration.
-- Deploy scripts/workflows: not restored; they will be recreated only after provider identities/resources are verified.
-- Android/LAN source and evidence: preserved in the pre-zero snapshot, not yet restored to active tree.
+- Project root `VẬN HÀNH DC HƯNG YÊN` remains unchanged.
+- Active roots: `01_BETA` and `02_STABLE`.
+- BETA cluster `PICK_PACK_1291` remains current.
+- BETA projection workbook remains `PROVISIONED_NOT_LIVE`.
 
-## PROVIDER STATE
+## Source restoration
+
+- Google Gateway foundation: restored after least-privilege review.
+- Worker/D1 source: not restored yet because pre-reset Worker/deploy checks expected `business_core_v1` while later migrations advanced metadata to `business_core_v2`; reconcile before restoration.
+- Deploy scripts: not restored; rebuild after provider verification.
+- Android/LAN source and evidence: preserved in snapshot; restore later after task-specific review.
+
+## Provider state
 
 - Google Cloud/OAuth BETA: SETUP_REQUIRED
 - GAS BETA: SETUP_REQUIRED
@@ -29,4 +36,4 @@ Baseline: `REPO-RESET-20260912-01`
 
 ## LAN
 
-Physical regression is paused because Owner is off-site. Existing evidence remains valid reference. When Owner is at the company, LAN and Service work may proceed in parallel where dependencies allow.
+Physical regression is paused while Owner is off-site. Existing evidence remains reference. When Owner is at the company, LAN and Service may proceed in parallel where independent.
