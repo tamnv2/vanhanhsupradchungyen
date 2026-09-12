@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## 2026-09-12 — AI_AUTHORITY_RESUME_V2
+
+- Added `AI_ENTRYPOINT.md` as the single project bootstrap entry.
+- Added `CONTEXT_INDEX.md` with FAST / FOCUSED / FULL read routing to reduce unnecessary context/token use.
+- Added `CHECKPOINT.md` as the short resume ledger for interruption/chat handoff.
+- Upgraded `AI_OPERATING_CONTRACT.md` with a hard memory non-authority rule, Owner approval boundary, dependency/parallel execution model, checkpoint/interruption protocol, evidence-before-PASS and fail-closed resume behavior.
+- Standardized Owner resume aliases: `Tiếp tục VHDCHY`, `Tiếp tục việc đang làm`, `Tiếp tục việc đang dở`.
+- Standardized full-audit aliases: `Tiếp tục VHDCHY — full audit.`, `Rà soát toàn bộ dự án`, `Kiểm tra toàn bộ dự án`.
+- Extended baseline CI to validate protocol files and invariants.
+
 ## 2026-09-12 — REPO-RESET-20260912-01
 
 - Preserved the pre-zero state at `backup/pre-zero-20260912`.
