@@ -27,9 +27,10 @@ Baseline: `REPO-RESET-20260912-01`
   - `GAS_SCRIPT_ID`
   - `GOOGLE_SHEETS_PROJECTION_ID`
 - No secret values are recorded in repository files.
-- `.github/workflows/gas-beta-sync.yml` supports guarded autonomous dispatch from `main` by changes to `.github/dispatch/gas-beta-sync.json`; manual `workflow_dispatch` remains fallback only.
-- Sync implementation `.github/scripts/gas-sync.mjs` refreshes the OAuth access token, reads current Apps Script content, renders the BETA placeholders from GitHub source, replaces Apps Script HEAD through `projects.updateContent`, then reads back and verifies the complete file set/content.
-- First autonomous sync run `34693049129` completed SUCCESS on commit `4ef67539cc088b4a6fa0bc0765b9fba801bbff44`.
+- `.github/workflows/gas-beta-sync.yml` supports guarded dispatch from `main` by changes to `.github/dispatch/gas-beta-sync.json`; manual `workflow_dispatch` remains fallback only.
+- `.github/scripts/gas-sync.mjs` refreshes the OAuth access token, syncs/reads back Apps Script HEAD, and contains versioned deployment + `/exec` verification logic for the post-bootstrap gate.
+- Initial sync run `34693049129` completed SUCCESS.
+- Bootstrap-health source was synchronized in run `34695050157`, which also completed SUCCESS.
 
 ## Drive / Sheet — VERIFIED CURRENT
 
@@ -42,6 +43,7 @@ Baseline: `REPO-RESET-20260912-01`
 ## Source baseline
 
 - Google Gateway foundation: restored after least-privilege review and synchronized from GitHub to Apps Script HEAD.
+- Gateway `doGet()` now reports only non-secret bootstrap health booleans (`authorized`, `configMatch`) so deployment verification can prove that `bootstrapAuthorize()` successfully opened the designated workbook and stored the expected environment/owner/projection properties.
 - Worker foundation: restored under `service/worker/` with reconciled contract `business_core_v2` / `BUSINESS_CORE_V2`.
 - D1 schema: consolidated into clean zero-baseline `service/worker/migrations/0001_initial.sql`; no legacy compatibility `resources` table and no historical business rows/credentials are seeded.
 - Android/LAN source and evidence: preserved only in `backup/pre-zero-20260912` pending later task-specific restoration.
@@ -55,11 +57,12 @@ Baseline: `REPO-RESET-20260912-01`
   - CI OAuth client exists with `script.projects` + `script.deployments` only.
   - Refresh token obtained and successfully used by GitHub Actions.
   - Real `projects.create`, `projects.getContent` and `projects.updateContent` API operations succeeded under the BETA automation path.
-- GAS BETA: `SOURCE_SYNCED_RUNTIME_AUTH_PENDING`.
+- GAS BETA: `BOOTSTRAP_OWNER_REPORTED_PENDING_REMOTE_VERIFY`.
   - `VHDCHY BETA - Google Gateway` exists and is linked to standard Cloud project `VHDCHY-BETA`.
   - GitHub source is synchronized to Apps Script HEAD and read-back verification passed.
-  - Runtime authorization for Sheets + owner identity remains pending.
-  - Immutable version, versioned deployment and `/exec` health verification remain pending.
+  - Owner reports that interactive runtime authorization for `bootstrapAuthorize()` has completed under `tam95.supra@gmail.com`.
+  - This owner report is not yet treated as final PASS; the next versioned deployment must verify `/exec` with `bootstrap.authorized=true` and `bootstrap.configMatch=true`.
+  - Immutable version, active versioned deployment and `/exec` verification remain pending.
 - Cloudflare BETA resources: `VERIFY_REQUIRED`.
 - Android BETA signer: `VERIFY_REQUIRED`.
 - STABLE: blocked until BETA PASS + explicit Owner approval.
