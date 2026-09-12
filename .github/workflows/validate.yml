@@ -18,13 +18,34 @@ jobs:
       - name: Validate authority files
         run: |
           set -euo pipefail
+          test -s AI_ENTRYPOINT.md
+          test -s AI_OPERATING_CONTRACT.md
+          test -s CHECKPOINT.md
+          test -s CONTEXT_INDEX.md
           test -s PROJECT_SCOPE.md
           test -s SERVICE_AUTHORITY.md
           test -s CURRENT_STATE.md
           test -s NEXT_ACTIONS.md
           test -s DECISIONS.md
-          test -s AI_OPERATING_CONTRACT.md
           test -s SECURITY.md
+          test -s CHANGELOG.md
+
+      - name: Validate AI authority/resume invariants
+        run: |
+          set -euo pipefail
+          grep -Fq 'AI_AUTHORITY_RESUME_V2' AI_ENTRYPOINT.md
+          grep -Fq 'Tiếp tục VHDCHY' AI_ENTRYPOINT.md
+          grep -Fq 'Rà soát toàn bộ dự án' AI_ENTRYPOINT.md
+          grep -Fq 'NON_AUTHORITY' AI_OPERATING_CONTRACT.md
+          grep -Fq 'Evidence before PASS' AI_OPERATING_CONTRACT.md
+          grep -Fq 'Fail closed' AI_OPERATING_CONTRACT.md
+          grep -Fq 'checkpoint_version: 2' CHECKPOINT.md
+          grep -Fq 'reconciled_through_commit:' CHECKPOINT.md
+          grep -Fq 'do_not_repeat:' CHECKPOINT.md
+          if grep -Eq 'BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|Bearer [A-Za-z0-9._-]{12,}' CHECKPOINT.md; then
+            echo 'Sensitive-looking value found in CHECKPOINT.md'
+            exit 1
+          fi
 
       - name: Validate JSON configuration
         run: |
