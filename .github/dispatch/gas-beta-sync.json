@@ -2,5 +2,6 @@
   "enabled": true,
   "target": "beta",
   "operation": "sync",
-  "request_id": "sync-20260912-1917"
+  "deploy": true,
+  "request_id": "verify-20260912-2018"
 }
