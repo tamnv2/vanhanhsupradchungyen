@@ -34,11 +34,20 @@ Baseline: `REPO-RESET-20260912-01`
 
 ## Provider state
 
-- Google Cloud/OAuth BETA: `SETUP_REQUIRED`.
-- GAS BETA: `SETUP_REQUIRED`.
+- Google Cloud/OAuth BETA: `OAUTH_READY`.
+  - Standard Cloud project `VHDCHY-BETA` confirmed.
+  - Apps Script API enabled and account-level Apps Script API access enabled.
+  - OAuth app is External / In production; branding published.
+  - CI OAuth client exists with `script.projects` + `script.deployments` only.
+  - Refresh token obtained.
+  - Real `projects.create` API request succeeded under `tam95.supra@gmail.com`.
+- GAS BETA: `PROJECT_CREATED_NOT_SYNCED`.
+  - `VHDCHY BETA - Google Gateway` exists and is linked to standard Cloud project `VHDCHY-BETA`.
+  - GitHub source has not yet been synchronized to Apps Script HEAD.
+  - Runtime authorization, immutable version, versioned deployment and `/exec` health verification remain pending.
 - Cloudflare BETA resources: `VERIFY_REQUIRED`.
 - Android BETA signer: `VERIFY_REQUIRED`.
-- GitHub `beta` Environment: intentionally absent; rebuild only from verified provider outputs.
+- GitHub `beta` Environment: intentionally absent; next step is to create it using only verified Google values.
 - STABLE: blocked until BETA PASS + explicit Owner approval.
 
 ## LAN
