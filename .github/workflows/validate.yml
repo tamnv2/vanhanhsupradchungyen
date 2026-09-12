@@ -1,0 +1,14 @@
+name: Validate clean baseline
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: test -s PROJECT_SCOPE.md && test -s SERVICE_AUTHORITY.md && test -s CURRENT_STATE.md && test -s NEXT_ACTIONS.md && test -s DECISIONS.md
