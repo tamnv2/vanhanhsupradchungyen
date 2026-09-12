@@ -136,3 +136,13 @@ Lịch sử này là append-only.
 - Reset BETA projection registry về `NOT_PROVISIONED`; old workbook/provider IDs không còn current authority.
 - Thêm runbook setup từ đầu, permission baseline mới, 5-file bootstrap, dependency-first parallel execution và checkpoint deterministic.
 - Chi tiết: `docs/changelog/2026-09-12-setup-reset-1.0.0.md`.
+
+## 2026-09-12 — beta-sheet-reprovision-1.0.1
+
+- Hoàn tất Phase 1 của baseline reset trên current Google account.
+- Tạo `PICK_PACK_1291` trong BETA `01_CLUSTERS` với ID `1-Z4D2_ja1uFqJP659B3nU8S9-ObWR0zN`.
+- Tạo native BETA projection Sheet `VHDCHY BETA - PICK PACK 1291 - 2026 Q3`, ID `1My2-jG6s8WCOAMox6DfGKKi9M0TBvSrfC2uE9xFNmmk`, owner `tam95.supra@gmail.com`.
+- Xác minh đúng parent, 17 tab hiện hành, schema `PP1291_SHEETS_BETA_V1`, không migrate dữ liệu cũ/password verifier/LAN-emergency-fallback tabs.
+- Workbook được ghi `PROVISIONED_NOT_LIVE`; chưa được coi là runtime LIVE trước GAS + BETA integration gate.
+- Cập nhật authority/current state/task ledger/projection registry/runbook và CI guard theo workbook hiện hành.
+- Chi tiết: `docs/changelog/2026-09-12-beta-sheet-reprovision-1.0.1.md`.
