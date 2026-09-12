@@ -10,7 +10,6 @@ Baseline: `REPO-RESET-20260912-01`
 - Current managing identity: `tamnv2` / `nguyenvantam050595@gmail.com`
 - Default branch: `main`
 - Pre-zero snapshot: `backup/pre-zero-20260912`
-- Old branches/tags are historical only until manually removed.
 
 ## Google
 
@@ -56,17 +55,25 @@ Managing email: `nguyenvantam050595@gmail.com`.
 
 Intended zone/domain: `supra.cc.cd`.
 
-Expected environment names remain:
-- BETA Worker: `vhdchy-beta`
-- BETA D1: `vhdchy-data-beta`
+Verified BETA account/resource authority:
+- Account ID: `1b1695e4f2a3abfe08dc475b352c7f42`
+- API token form: account-owned API token stored only in GitHub Environment `beta`
+- BETA Worker: `vhdchy-beta` — FOUND
+- BETA D1: `vhdchy-data-beta` — FOUND
+- BETA D1 database ID: `37eb7d59-05c0-4ba2-8162-cb6a9fe5d492`
+- Verification run: GitHub Actions `34699120539` — PASS
+
+Expected STABLE names remain reserved only:
 - STABLE Worker: `vhdchy-stable`
 - STABLE D1: `vhdchy-data-stable`
 
-Cloudflare resources must be verified before any active source/deploy workflow is restored. Missing expected resources are recorded as a mismatch; no silent replacement.
+Cloudflare verification is fail-closed: missing expected retained resources must be reported and must not be silently recreated.
 
 Minimum intended deploy-token permissions from retained design:
 - Account: `Workers Scripts Write`
 - Account: `D1 Write`
+
+Current verified BETA resource identity does not yet prove that the existing D1 contents are safe for the clean zero-baseline migration. Inspect current D1 tables/schema/data state before applying `service/worker/migrations/0001_initial.sql`.
 
 ## Android signing
 
@@ -74,4 +81,4 @@ Existing signing material is reference until locally re-verified. Do not use ret
 
 ## Secrets
 
-Secret values live only in provider secret stores / GitHub Environments when those environments are rebuilt. Repository files may contain only secret names and status.
+Secret values live only in provider secret stores / GitHub Environments. Repository files may contain only secret names, non-secret resource IDs, and status.
