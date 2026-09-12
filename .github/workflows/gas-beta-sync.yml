@@ -45,9 +45,9 @@ jobs:
           const cmd = JSON.parse(fs.readFileSync(path, 'utf8'));
           if (cmd.enabled !== true) throw new Error('Dispatch must be enabled');
           if (cmd.target !== 'beta') throw new Error('Dispatch target must be beta');
-          if (cmd.operation !== 'sync') throw new Error('Dispatch operation must be sync');
+          if (!['sync', 'deploy'].includes(cmd.operation)) throw new Error('Dispatch operation must be sync or deploy');
           if (!cmd.request_id || typeof cmd.request_id !== 'string') throw new Error('Dispatch request_id is required');
-          console.log(`Authorized autonomous request: ${cmd.request_id}`);
+          console.log(`Authorized autonomous request: ${cmd.request_id} / ${cmd.operation}`);
           NODE
 
       - name: Sync and verify Google Gateway HEAD
