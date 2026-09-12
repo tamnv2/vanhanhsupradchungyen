@@ -13,19 +13,21 @@ This runbook rebuilds the authorization/provider chain while reusing already ver
 - Google suspended account: `automation@supra.cc.cd` — do not use.
 - Drive root: `VẬN HÀNH DC HƯNG YÊN` / `19r3s_kTjzncRdzffNntcePW5YZQ5Dxuh`.
 - BETA root: `10_RUNTIME_BETA` / `1EpUI49xbFUtgzR3mh3M0EQu7qYYsswB5`.
+- BETA cluster: `PICK_PACK_1291` / `1-Z4D2_ja1uFqJP659B3nU8S9-ObWR0zN`.
+- BETA projection Sheet: `VHDCHY BETA - PICK PACK 1291 - 2026 Q3` / `1My2-jG6s8WCOAMox6DfGKKi9M0TBvSrfC2uE9xFNmmk` / `PROVISIONED_NOT_LIVE`.
 - Reference: `BACKUP PICK PACK 1291` / `1dQ8dYH3zi3MlPsVjNdRd1ckKzoIfYa2h` / reference-only.
 
-## 1. GitHub baseline — AI/tool
+## 1. GitHub baseline — PASS
 
-PASS if:
+Verified:
 
-- connected user is `tamnv2`;
-- repo is current authority and admin/push is available;
+- connected user `tamnv2`;
+- repo current authority and admin/push available;
 - snapshot branch exists;
 - authority files contain current identity map;
-- `validate.yml` passes after reset commit.
+- `Validate public repo` run `34666033568` SUCCESS.
 
-Do not move `beta`/`stable` during this phase.
+Do not move `beta`/`stable` during setup.
 
 Links:
 
@@ -34,43 +36,44 @@ Links:
 - Actions settings: `https://github.com/tamnv2/vanhanhsupradchungyen/settings/actions`
 - Environments: `https://github.com/tamnv2/vanhanhsupradchungyen/settings/environments`
 
-## 2. Drive + BETA Sheet — AI/tool where possible
+## 2. Drive + BETA Sheet — PASS / NOT LIVE
 
-Already PASS:
+Verified/reused:
 
-- project root owner;
-- BETA runtime root owner;
-- existing BETA folder skeleton.
+- project root;
+- BETA runtime root + skeleton;
+- BETA cluster folder `PICK_PACK_1291`;
+- native current BETA workbook with 17 current tabs.
 
-Next:
-
-1. verify/create `PICK_PACK_1291` folder under BETA `01_CLUSTERS`;
-2. create fresh BETA workbook for current quarter/current adopted naming convention;
-3. build tabs according to `PP1291_SHEETS_BETA_V1`/latest adopted schema;
-4. no old business data migration and no password verifier;
-5. verify owner, folder location, tab schema;
-6. record spreadsheet ID in `SERVICE_AUTHORITY.md` + `config/projections.beta.json`.
-
-Links:
+Current links:
 
 - root: `https://drive.google.com/drive/folders/19r3s_kTjzncRdzffNntcePW5YZQ5Dxuh`
 - BETA: `https://drive.google.com/drive/folders/1EpUI49xbFUtgzR3mh3M0EQu7qYYsswB5`
+- cluster: `https://drive.google.com/drive/folders/1-Z4D2_ja1uFqJP659B3nU8S9-ObWR0zN`
+- BETA Sheet: `https://docs.google.com/spreadsheets/d/1My2-jG6s8WCOAMox6DfGKKi9M0TBvSrfC2uE9xFNmmk/edit`
 - reference: `https://drive.google.com/drive/folders/1dQ8dYH3zi3MlPsVjNdRd1ckKzoIfYa2h`
 
-## 3A. Google Cloud/OAuth BETA — Owner UI
+Rules:
 
-Can run in parallel with Cloudflare and signing.
+- no historical business rows migrated;
+- no password verifier/secret;
+- reference-only LAN/emergency/fallback tabs are excluded;
+- Sheet remains `PROVISIONED_NOT_LIVE` until GAS + BETA integration gate.
+
+## 3A. Google Cloud/OAuth BETA — NEXT / Owner UI
+
+Run in parallel with 3B/3C.
 
 Account: `tam95.supra@gmail.com`.
 
-1. Create/select dedicated standard project for BETA.
-   Link: `https://console.cloud.google.com/projectcreate`
+1. Create/select dedicated standard BETA project.
+   `https://console.cloud.google.com/projectcreate`
 2. Enable **Google Apps Script API**.
-   Link: `https://console.cloud.google.com/apis/library/script.googleapis.com`
+   `https://console.cloud.google.com/apis/library/script.googleapis.com`
 3. Enable Apps Script account API access.
-   Link: `https://script.google.com/home/usersettings`
+   `https://script.google.com/home/usersettings`
 4. Configure Google Auth Platform.
-   Link: `https://console.cloud.google.com/auth/overview`
+   `https://console.cloud.google.com/auth/overview`
 5. Create BETA OAuth client for CI.
 6. Authorize only:
 
@@ -79,15 +82,13 @@ https://www.googleapis.com/auth/script.projects
 https://www.googleapis.com/auth/script.deployments
 ```
 
-7. For durable CI use, set intended production publishing state before generating the final refresh token. Testing is only temporary for these scopes.
+7. For durable CI use, set intended production publishing state before generating the final refresh token; Testing tokens for these non-basic scopes are temporary.
 8. Store client ID/secret/refresh token privately; never paste them into chat.
 
 Optional token tool:
 `https://developers.google.com/oauthplayground/`
 
-Record only non-secret identifiers/status in checkpoint.
-
-## 3B. Cloudflare — Owner UI, parallel
+## 3B. Cloudflare — NEXT / Owner UI / parallel
 
 Account: `nguyenvantam050595@gmail.com`.
 
@@ -106,7 +107,7 @@ Links:
 
 PASS = current account/resource identity + token behavior verified.
 
-## 3C. Android BETA signing — Owner local, parallel
+## 3C. Android BETA signing — NEXT / Owner local / parallel
 
 1. Locate current VHDCHY BETA keystore backup.
 2. Verify alias and SHA256 fingerprint locally.
@@ -116,32 +117,27 @@ PASS = current account/resource identity + token behavior verified.
 
 PASS = signed build can be reproduced with expected current signer.
 
-## 4. GAS BETA — Owner UI + AI source
+## 4. GAS BETA — after 3A
 
-Depends on current BETA Sheet + BETA Google Cloud project.
+Sheet dependency is already satisfied.
 
 1. Open Apps Script: `https://script.google.com/home`.
 2. Create standalone `VHDCHY BETA Google Gateway` owned by `tam95.supra@gmail.com`.
 3. Link it to the standard BETA Cloud project.
 4. Use current `gateway/Code.gs` and `gateway/appsscript.json`.
-5. Manifest scopes must be exactly:
+5. Manifest scopes exactly:
 
 ```text
 https://www.googleapis.com/auth/spreadsheets
 https://www.googleapis.com/auth/userinfo.email
 ```
 
-6. Replace bootstrap placeholders through the controlled deploy path/current BETA values.
+6. Target current workbook ID `1My2-jG6s8WCOAMox6DfGKKi9M0TBvSrfC2uE9xFNmmk`.
 7. Run `bootstrapAuthorize()` once.
 8. Consent must not request Drive/Gmail/Calendar/Contacts/mail/external-request/trigger-management. If it does, STOP and audit source.
-9. Deploy Web App and record non-secret:
-   - Script ID
-   - Deployment ID
-   - `/exec` URL
+9. Deploy Web App and record non-secret Script ID, Deployment ID and `/exec` URL.
 
-PASS = `bootstrapAuthorize()` points to current workbook/account and `/exec` health identifies correct environment/script.
-
-## 5. GitHub `beta` Environment — Owner UI after provider outputs
+## 5. GitHub `beta` Environment — after verified provider outputs
 
 Variables:
 
@@ -153,7 +149,7 @@ PUBLIC_HOST=beta.supra.cc.cd
 GAS_SCRIPT_ID=<verified>
 GAS_DEPLOYMENT_ID=<verified>
 GAS_EXEC_URL=<verified>
-GOOGLE_SHEETS_PROJECTION_ID=<verified>
+GOOGLE_SHEETS_PROJECTION_ID=1My2-jG6s8WCOAMox6DfGKKi9M0TBvSrfC2uE9xFNmmk
 ANDROID_SIGNING_ALIAS=<verified>
 ```
 
@@ -183,12 +179,12 @@ Run verification without reading secret values:
 - Android signer/build;
 - BETA deploy/health.
 
-Record commit, workflow run IDs and provider resource IDs. Only then mark BETA PASS/move live pointer.
+Only then mark BETA PASS/move live pointer.
 
 ## 7. LAN V4 physical regression
 
-After foundation BETA PASS, resume corporate-laptop + exactly two MT90 tests. No admin/router/DNS/firewall bypass. Synthetic load is software capacity evidence only.
+After BETA foundation PASS, resume corporate-laptop + exactly two MT90 tests. No admin/router/DNS/firewall bypass. Synthetic load is software-capacity evidence only.
 
 ## 8. STABLE
 
-Requires explicit Owner approval after BETA PASS. Repeat the provider-first chain with isolated STABLE Google/OAuth/GAS/Sheet/secret state; never copy BETA credentials merely to save time.
+Requires explicit Owner approval after BETA PASS. Repeat provider-first chain with isolated STABLE Google/OAuth/GAS/Sheet/secret state; never copy BETA credentials merely to save time.

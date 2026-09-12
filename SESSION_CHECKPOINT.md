@@ -1,14 +1,10 @@
 # SESSION CHECKPOINT
 
-Checkpoint ID: `SETUP-RESET-20260912-01`
-Timestamp: `2026-09-12T09:05+07:00`
+Checkpoint ID: `SETUP-RESET-20260912-02`
+Timestamp: `2026-09-12T09:05+07:00` baseline tranche; Phase 1 completed after reset validation.
 Authority branch: `main`.
-Authority baseline commit before this receipt: `b72bd53a19a4a46f6d8d38e791bc78f0e024f46d`.
 Pre-reset snapshot: `archive/pre-setup-reset-20260912` at `de4647c3b4ff1e562a24cdd410d21dd91d0f7101`.
-
-## Why this checkpoint exists
-
-Owner requested a clean restart of provider/setup permissions while retaining the already-approved architecture, business logic, code and test evidence. Previous DONE/LIVE provider claims are therefore superseded as current state.
+Reset validation: run `34666033568` SUCCESS at `fede82f6486e294acf53ea97e60e0780540566c8`.
 
 ## Current identity authority
 
@@ -17,35 +13,43 @@ Owner requested a clean restart of provider/setup permissions while retaining th
 - GitHub: `tamnv2/vanhanhsupradchungyen`.
 - `automation@supra.cc.cd`: `SUSPENDED_RECOVERY_CANDIDATE`; not current runtime.
 
-## Verified during reset
+## Verified current resources
 
-- GitHub connection = `tamnv2`, admin/maintain/push/pull/triage PASS.
-- Repo is PUBLIC, default branch `main`.
-- Drive root `VẬN HÀNH DC HƯNG YÊN` ID `19r3s_kTjzncRdzffNntcePW5YZQ5Dxuh`, owner `tam95.supra@gmail.com`.
-- BETA root `10_RUNTIME_BETA` ID `1EpUI49xbFUtgzR3mh3M0EQu7qYYsswB5`, owner `tam95.supra@gmail.com`.
-- BETA skeleton folders exist and may be reused.
-- Reference folder `BACKUP PICK PACK 1291` ID `1dQ8dYH3zi3MlPsVjNdRd1ckKzoIfYa2h`, owner `tam95.supra@gmail.com`, reference-only.
-- Reference folder still has writer `vanhanhdchungyen@gmail.com`; no permission mutation performed because Owner did not request one.
-- No current BETA projection workbook has been adopted after reset.
-- Current authority/governance reset has been written to `main`; this receipt commit is intentionally made through the Contents API to trigger repository validation.
+- Drive root: `19r3s_kTjzncRdzffNntcePW5YZQ5Dxuh`.
+- BETA root: `1EpUI49xbFUtgzR3mh3M0EQu7qYYsswB5`.
+- BETA `01_CLUSTERS`: `1ixxqKs8m0uN10z_S8M7rzSm2tT2GLbVF`.
+- BETA `PICK_PACK_1291`: `1-Z4D2_ja1uFqJP659B3nU8S9-ObWR0zN`.
+- BETA projection Sheet: `1My2-jG6s8WCOAMox6DfGKKi9M0TBvSrfC2uE9xFNmmk` — owner `tam95.supra@gmail.com`, 17 tabs, schema `PP1291_SHEETS_BETA_V1`, `PROVISIONED_NOT_LIVE`.
+- Reference folder: `1dQ8dYH3zi3MlPsVjNdRd1ckKzoIfYa2h` — reference-only; writer `vanhanhdchungyen@gmail.com` retained, no permission mutation.
+
+## Sheet verification receipt
+
+- native Google Sheet in correct current folder;
+- owner current Google account;
+- `00_CONTROL` records baseline/authority/reference policy;
+- no old data migrated;
+- no password verifier/secret column;
+- duplicate legacy USER PACK header normalized;
+- old LAN/emergency/fallback tabs excluded;
+- not live until GAS + BETA integration gate.
 
 ## Preserved evidence, not live claims
 
-- Decisions/architecture/business schema history.
-- Worker/D1 source/migrations.
-- GAS gateway source/manifest.
-- LAN Pilot V4 source/build evidence and prior two-MT90 evidence.
-- Changelog/history.
+- decisions/architecture/business schema history;
+- Worker/D1 source/migrations;
+- GAS gateway source/manifest;
+- LAN Pilot V4 source/build evidence and prior two-MT90 evidence;
+- append-only changelog/history.
 
-## Exact next actions
+## Exact next actions — parallel lanes
 
-1. Confirm `Validate public repo` PASS for the reset receipt commit.
-2. Provision current BETA Pick Pack 1291 projection workbook within the existing BETA Drive structure.
-3. In parallel:
-   - Owner configures BETA Google Cloud/OAuth under `tam95.supra@gmail.com`;
-   - Owner verifies retained Cloudflare account/resources/token under `nguyenvantam050595@gmail.com`;
-   - Owner verifies VHDCHY BETA keystore locally.
-4. GAS BETA after current Sheet + GCP project exist.
+A. Google Cloud/OAuth BETA under `tam95.supra@gmail.com`.
+B. Cloudflare retained resource/token verification under `nguyenvantam050595@gmail.com`.
+C. VHDCHY BETA keystore verification locally.
+
+Then:
+
+4. GAS BETA after lane A; current Sheet already exists.
 5. GitHub beta Environment only after verified outputs exist.
 6. BETA CI/deploy/health gate.
 7. LAN physical V4 regression.

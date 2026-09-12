@@ -7,7 +7,7 @@ Purpose: authority duy nhất cho identity/provider/resource hiện hành.
 
 - `VERIFIED_CURRENT`: tool/provider evidence xác minh tại baseline hiện hành.
 - `OWNER_CONFIRMED_NOT_TOOL_VERIFIED`: Owner chốt nhưng tool hiện tại chưa xác minh provider.
-- `VERIFIED_EXISTING_NOT_LIVE`: resource đúng owner và tồn tại, nhưng chưa được chọn/đưa live sau reset.
+- `VERIFIED_EXISTING_NOT_LIVE`: resource đúng owner, đúng vị trí và tồn tại nhưng chưa được đưa live sau reset.
 - `NOT_PROVISIONED`: chưa có resource hiện hành.
 - `SETUP_REQUIRED`: phải thực hiện setup/consent/config.
 - `SUSPENDED_RECOVERY_CANDIDATE`: không dùng hiện tại; chỉ xem xét migration nếu khôi phục.
@@ -25,9 +25,10 @@ Không tuyên bố DONE/LIVE/PASS cho `NOT_PROVISIONED`, `SETUP_REQUIRED`, `UNKN
 - Connection rights verified: admin, maintain, push, pull, triage.
 - Default branch: `main`.
 - Snapshot trước reset: `archive/pre-setup-reset-20260912`.
+- Reset validation run `34666033568`: SUCCESS at commit `fede82f6486e294acf53ea97e60e0780540566c8`.
 - `beta`/`stable` không được move trong setup baseline cho tới gate tương ứng.
 
-GitHub Environment secret values không thể đọc qua connector hiện hành; chúng phải được coi là stale/unknown sau reset cho tới khi owner/provider setup được hoàn tất và CI verify behavior.
+GitHub Environment secret values không thể đọc qua connector hiện hành; chúng phải được coi là stale/unknown sau reset cho tới khi provider chain mới được verify.
 
 ## Google identity
 
@@ -57,10 +58,12 @@ Project root:
 
 Runtime roots:
 
-- BETA `10_RUNTIME_BETA` — `1EpUI49xbFUtgzR3mh3M0EQu7qYYsswB5` — `VERIFIED_CURRENT` owner `tam95.supra@gmail.com`.
-- STABLE `20_RUNTIME_STABLE` — `1c6RNTOHOzaX6GrQFOEd64h9rndPoeiFI` — discovered under current root; `VERIFIED_EXISTING_NOT_LIVE` until the STABLE setup gate.
+- BETA `10_RUNTIME_BETA` — `1EpUI49xbFUtgzR3mh3M0EQu7qYYsswB5` — `VERIFIED_CURRENT`, owner `tam95.supra@gmail.com`.
+- BETA `01_CLUSTERS` — `1ixxqKs8m0uN10z_S8M7rzSm2tT2GLbVF`.
+- BETA cluster `PICK_PACK_1291` — `1-Z4D2_ja1uFqJP659B3nU8S9-ObWR0zN` — `VERIFIED_CURRENT`.
+- STABLE root `20_RUNTIME_STABLE` — `1c6RNTOHOzaX6GrQFOEd64h9rndPoeiFI` — `VERIFIED_EXISTING_NOT_LIVE` until STABLE gate.
 
-BETA skeleton already exists with `00_SHARED`, `01_CLUSTERS`, `02_MEDIA`, `03_ARCHIVE`, `04_BACKUP`, `05_LOG`, `06_EXPORT`, `07_SYSTEM`. Reuse; do not recreate unless a folder is missing or invalid.
+BETA skeleton includes `00_SHARED`, `01_CLUSTERS`, `02_MEDIA`, `03_ARCHIVE`, `04_BACKUP`, `05_LOG`, `06_EXPORT`, `07_SYSTEM`. Reuse; do not recreate unless missing/invalid.
 
 Reference:
 
@@ -69,13 +72,27 @@ Reference:
 - owner `tam95.supra@gmail.com`
 - `LEGACY_REFERENCE / REFERENCE ONLY`.
 
-## Google Sheets — NOT_PROVISIONED after reset
+## Google Sheets — VERIFIED_EXISTING_NOT_LIVE
 
-No BETA projection workbook is trusted as current at baseline 2026-09-12.
+Current BETA projection workbook:
 
-- Old workbook IDs in Git history are historical only.
-- `config/projections.beta.json` is intentionally reset to `NOT_PROVISIONED`.
-- New/current workbook must be created or explicitly verified under `tam95.supra@gmail.com`, placed in BETA structure, schema checked, then recorded here before use.
+- title: `VHDCHY BETA - PICK PACK 1291 - 2026 Q3`;
+- ID: `1My2-jG6s8WCOAMox6DfGKKi9M0TBvSrfC2uE9xFNmmk`;
+- owner: `tam95.supra@gmail.com`;
+- parent cluster folder: `1-Z4D2_ja1uFqJP659B3nU8S9-ObWR0zN`;
+- schema: `PP1291_SHEETS_BETA_V1`;
+- status: `PROVISIONED_NOT_LIVE` until GAS + CI/BETA integration gate passes.
+
+Verification 2026-09-12:
+
+- native Google Sheet, 17 current tabs, header row frozen;
+- locale `vi_VN`, timezone `Asia/Saigon`;
+- no historical business rows migrated;
+- no `Password verifier` or secret field in `DANH SÁCH TÀI KHOẢN`;
+- duplicate legacy `User pack`/`User Pack` was ADAPTED to one `User Pack` field;
+- legacy LAN/emergency/fallback tabs were not recreated.
+
+Old workbook IDs in Git history remain historical only.
 
 ## GAS / Google Cloud / OAuth — SETUP_REQUIRED
 
