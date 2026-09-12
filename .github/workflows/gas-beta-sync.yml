@@ -1,0 +1,36 @@
+name: Google Gateway BETA sync
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gas-beta-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    environment: beta
+    env:
+      APP_ENV: ${{ vars.APP_ENV }}
+      OWNER_EMAIL: ${{ vars.OWNER_EMAIL }}
+      GOOGLE_SHEETS_PROJECTION_ID: ${{ vars.GOOGLE_SHEETS_PROJECTION_ID }}
+      GAS_SCRIPT_ID: ${{ vars.GAS_SCRIPT_ID }}
+      GOOGLE_OAUTH_CLIENT_ID: ${{ vars.GOOGLE_OAUTH_CLIENT_ID }}
+      GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}
+      GOOGLE_OAUTH_REFRESH_TOKEN: ${{ secrets.GOOGLE_OAUTH_REFRESH_TOKEN }}
+
+    steps:
+      - name: Require main branch
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main"
+
+      - name: Checkout source authority
+        uses: actions/checkout@v4
+
+      - name: Sync and verify Google Gateway HEAD
+        run: node .github/scripts/gas-sync.mjs
