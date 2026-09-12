@@ -2,43 +2,43 @@
 
 Baseline: `REPO-RESET-20260912-01`
 
-## Immediate priority — Service/BETA
+## Immediate priority — Google Gateway BETA
 
-Run these independent lanes in parallel where tools permit:
+Google Cloud/OAuth prerequisites are now verified. Execute this sequence without changing flow:
 
-1. Google Cloud/OAuth BETA under `tam95.supra@gmail.com`.
-   - verify/create intended BETA GCP project;
-   - enable required Apps Script API;
-   - create current OAuth client;
-   - CI OAuth scopes only: `script.projects` + `script.deployments`.
+1. Create GitHub Environment `beta`.
+2. Add only the verified Google BETA values:
+   - secrets: `GOOGLE_OAUTH_CLIENT_SECRET`, `GOOGLE_OAUTH_REFRESH_TOKEN`;
+   - variables: `APP_ENV=BETA`, `OWNER_EMAIL=tam95.supra@gmail.com`, `GOOGLE_OAUTH_CLIENT_ID`, `GAS_SCRIPT_ID`, `GOOGLE_SHEETS_PROJECTION_ID=1My2-jG6s8WCOAMox6DfGKKi9M0TBvSrfC2uE9xFNmmk`.
+3. Add a manual-only sync workflow. Source authority is `service/google-gateway/`; do not paste source through OAuth Playground or maintain code in the Apps Script editor.
+4. Sync GitHub source to Apps Script HEAD through `projects.updateContent`, then read back and verify the complete Apps Script content against the rendered GitHub source.
+5. Owner runs `bootstrapAuthorize()` once in the Apps Script editor. This is the runtime authorization gate for Sheets + owner identity.
+6. Only after bootstrap PASS, create an immutable Apps Script version and a versioned Web App deployment.
+7. Verify the `/exec` endpoint reports the intended Google Gateway identity, environment `BETA`, and Script ID.
+8. Record `GAS_DEPLOYMENT_ID` and `GAS_EXEC_URL` as BETA environment variables only after deployment PASS.
 
-2. Cloudflare under `nguyenvantam050595@gmail.com`.
+## Independent Service lanes
+
+9. Cloudflare under `nguyenvantam050595@gmail.com`:
    - verify account + zone `supra.cc.cd`;
    - verify expected BETA Worker/D1 identity;
    - minimum deploy-token permissions: Workers Scripts Write + D1 Write;
    - missing expected retained resource must fail closed; do not silently create a replacement.
 
-3. Android BETA signer.
+10. Android BETA signer:
    - verify keystore/alias/fingerprint locally;
    - do not expose keystore bytes/passwords in chat or repository.
 
-## After Google OAuth PASS
-
-4. Create/link GAS BETA from `service/google-gateway/` and bind the current BETA projection workbook.
-5. Run bootstrap authorization and deploy the BETA Web App.
-6. Record verified script/deployment/exec outputs in authority files only; no secret values in source.
-
 ## After Cloudflare identity PASS
 
-7. Add fresh provider deployment scripts/config for `service/worker/` using the reconciled `business_core_v2` schema contract.
-8. Do not create or bind STABLE resources.
+11. Add fresh provider deployment scripts/config for `service/worker/` using the reconciled `business_core_v2` schema contract.
+12. Do not create or bind STABLE resources.
 
 ## Integration gate
 
-9. Recreate GitHub `beta` Environment only from verified provider outputs.
-10. Add only the minimum required BETA secrets/variables.
-11. Create a fresh `beta` live branch from the approved `main` baseline only when provider gate is ready.
-12. Run BETA deploy/health checks; D1 core health is critical, Google projection integration is advisory/degraded-capable.
+13. Add Cloudflare/signer values to GitHub `beta` only after those outputs are independently verified.
+14. Create a fresh `beta` live branch from the approved `main` baseline only when the full provider gate is ready.
+15. Run BETA deploy/health checks; D1 core health is critical, Google projection integration is advisory/degraded-capable.
 
 ## LAN
 
