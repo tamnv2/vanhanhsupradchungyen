@@ -1,4 +1,4 @@
-name: Validate LAN authority snapshot atomicity
+name: Validate LAN snapshot and local-command atomicity
 
 on:
   push:
@@ -66,12 +66,13 @@ jobs:
           trap - EXIT
           test -s "$data_root/edge.db"
 
-      - name: Run authority and local-command atomicity vectors
+      - name: Run snapshot and local-command atomicity vectors
         shell: bash
         run: |
           set -euo pipefail
           dotnet run --project lan-service-harness/Vhdchy.LanService.Harness.csproj -c Release --no-build -- "$DATA_ROOT/edge.db" | tee "$RUNNER_TEMP/authority-harness.log"
           grep -Fq 'LAN_AUTHORITY_SNAPSHOT_HARNESS_PASS' "$RUNNER_TEMP/authority-harness.log"
+          grep -Fq 'LAN_OPERATIONAL_SNAPSHOT_HARNESS_PASS' "$RUNNER_TEMP/authority-harness.log"
           grep -Fq 'LAN_LOCAL_COMMAND_TRANSACTION_PASS' "$RUNNER_TEMP/authority-harness.log"
 
           test "$(sqlite3 "$DATA_ROOT/edge.db" "SELECT count(*) FROM authority_snapshots WHERE status='ACTIVE';")" = "1"
@@ -79,6 +80,15 @@ jobs:
           test "$(sqlite3 "$DATA_ROOT/edge.db" "SELECT status FROM authority_snapshots WHERE authority_version='AUTH-TEST-1';")" = "REPLACED"
           test "$(sqlite3 "$DATA_ROOT/edge.db" "SELECT meta_value FROM edge_meta WHERE meta_key='authority_snapshot_version';")" = "AUTH-TEST-2"
           test "$(sqlite3 "$DATA_ROOT/edge.db" "SELECT count(*) FROM sqlite_master WHERE type='index' AND name='ux_authority_snapshot_active';")" = "1"
+
+          test "$(sqlite3 "$DATA_ROOT/edge.db" "SELECT count(*) FROM operational_snapshot_state WHERE status='ACTIVE';")" = "1"
+          test "$(sqlite3 "$DATA_ROOT/edge.db" "SELECT snapshot_version FROM operational_snapshot_state WHERE status='ACTIVE';")" = "OP-TEST-2"
+          test "$(sqlite3 "$DATA_ROOT/edge.db" "SELECT status FROM operational_snapshot_state WHERE snapshot_version='OP-TEST-1';")" = "REPLACED"
+          test "$(sqlite3 "$DATA_ROOT/edge.db" "SELECT count(*) FROM operational_snapshot_state WHERE snapshot_version IN ('OP-TEST-PRE-AUTH','OP-TEST-BAD-JSON','OP-TEST-MISSING-MODULE','OP-TEST-INCOMPATIBLE','OP-TEST-WRONG-ENV');")" = "0"
+          test "$(sqlite3 "$DATA_ROOT/edge.db" "SELECT meta_value FROM edge_meta WHERE meta_key='operational_snapshot_version';")" = "OP-TEST-2"
+          test "$(sqlite3 "$DATA_ROOT/edge.db" "SELECT meta_value FROM edge_meta WHERE meta_key='operational_snapshot_authority_version';")" = "AUTH-TEST-2"
+          test "$(sqlite3 "$DATA_ROOT/edge.db" "SELECT count(*) FROM sqlite_master WHERE type='index' AND name='ux_operational_snapshot_active';")" = "1"
+          test "$(sqlite3 "$DATA_ROOT/edge.db" "SELECT meta_value FROM edge_meta WHERE meta_key='readiness';")" = "EDGE_EMPTY"
 
           test "$(sqlite3 "$DATA_ROOT/edge.db" "SELECT entity_version FROM module_current_state WHERE state_key='employee:EMP-HARNESS-001';")" = "2"
           test "$(sqlite3 "$DATA_ROOT/edge.db" "SELECT count(*) FROM module_current_state WHERE state_key='employee:EMP-HARNESS-ROLLBACK';")" = "0"
@@ -92,7 +102,7 @@ jobs:
           test "$(sqlite3 "$DATA_ROOT/edge.db" "PRAGMA foreign_key_check;")" = ""
           test "$(sqlite3 "$DATA_ROOT/edge.db" "PRAGMA quick_check;")" = "ok"
 
-      - name: Verify restart sees active authority but stays fail-closed
+      - name: Verify restart sees snapshots but stays fail-closed
         shell: bash
         run: |
           set -euo pipefail
@@ -115,7 +125,7 @@ jobs:
             sleep 0.5
           done
           test "$ok" = "true"
-          jq -e '.authoritySnapshotVersion == "AUTH-TEST-2" and .readiness == "EDGE_EMPTY" and .pendingCloudSync == 2 and .pendingGoogleWork == 1' "$RUNNER_TEMP/sync.json" >/dev/null
+          jq -e '.authoritySnapshotVersion == "AUTH-TEST-2" and .operationalSnapshotVersion == "OP-TEST-2" and .readiness == "EDGE_EMPTY" and .pendingCloudSync == 2 and .pendingGoogleWork == 1' "$RUNNER_TEMP/sync.json" >/dev/null
           code=$(curl --noproxy '*' -sS -o "$RUNNER_TEMP/mutation.json" -w '%{http_code}' -X POST http://127.0.0.1:17911/api/v1/data/test)
           test "$code" = "503"
           jq -e '.error.code == "RUNTIME_DEPENDENCY_UNAVAILABLE"' "$RUNNER_TEMP/mutation.json" >/dev/null
