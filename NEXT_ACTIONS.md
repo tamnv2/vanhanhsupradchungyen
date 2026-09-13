@@ -20,19 +20,31 @@ Automated GitHub Actions run `34748247818` verified:
 
 Classification: `BUSINESS_CORE_V1 / ZERO_BUSINESS_ROWS / SCHEMA_MISMATCH`.
 
-## Immediate priority — Owner target schema reconciliation
+## Target schema — SOURCE + CI PASS
 
-1. Treat the existing `service/worker/migrations/0001_initial.sql` as `STALE_TARGET`; do not apply it.
-2. Reconcile the 2026-09-13 Owner-approved business/data authority in `DECISIONS.md` into a complete D1 target schema covering cluster/shift/position versioning, employee-code history, auth/permission/grant lineage and ROOT security, attendance/presence/work sessions/tasks, resources/mappings/assignments/reissue/cross-cluster borrowing, labor, dropped goods, documents/media, immutable events/corrections/audit, projection outbox/catalog/checkpoints, archive/snapshot/quota health, and future device/offline compatibility fields.
-3. Review schema invariants/indexes/triggers and assign the new schema version explicitly; validate the migration locally with SQLite before any provider write.
-4. Because BETA D1 has zero business rows, prepare a deterministic zero-business-data rebuild/reset migration for exact D1 ID `37eb7d59-05c0-4ba2-8162-cb6a9fe5d492`. Preserve/fail-closed on unexpected business rows if provider state changes before execution.
-5. Immediately before the first D1 write, rerun automated read-only inspection and require the same zero-business-row condition. If it changes, stop and redesign as a forward migration.
-6. Apply the reviewed BETA migration through the GitHub Actions/Environment bridge; never expose the Cloudflare token to source/chat.
-7. Verify post-migration table/schema contract and row invariants automatically.
-8. Reconcile Worker runtime to the new schema/domain contract, then deploy only to `vhdchy-beta` with binding `DB` -> verified BETA D1, `APP_ENV=BETA`, build revision, and canonical `GAS_EXEC_URL`.
-9. Require `/health` and `/health/deep` PASS, with D1 critical and Google integration degradable/advisory where designed.
-10. Implement Google projection/outbox processing, then Web same-origin business flows and automated BETA acceptance scenarios from `DECISIONS.md`.
-11. Mark Worker/D1/Google/Web BETA business-live only after the complete BETA gate passes.
+The 2026-09-13 Owner-approved target is implemented on branch `schema/business-core-v3` as `business_core_v3`.
+
+Validation run `34748883606` on branch head `d65f07e33b714de10a1a2a1052a5f941253ddf42` completed SUCCESS. The ordered migration set builds cleanly in SQLite, required tables and key invariants pass, `PRAGMA foreign_key_check` is clean, Worker constants match V3, and legacy table `resources` is absent.
+
+The branch covers cluster/shift/position versioning, employee-code history, account retention/uniqueness, direct permissions/grant lineage, ROOT MFA/recovery structures, attendance/presence, main/extra work sessions and tasks, Pack mapping, resource assignment/reissue/cross-cluster borrowing, labor, dropped goods, documents/media, immutable events/audit, projection outbox/checkpoints, archive/snapshot/quota health and compatibility telemetry.
+
+No Cloudflare D1 mutation or Worker deployment has occurred during schema reconciliation.
+
+## Immediate priority — V3 promotion and BETA pre-write gate
+
+1. Promote the validated `schema/business-core-v3` source to `main` through a supported GitHub path. Do not use lower-level Git object/ref operations to bypass a blocked PR/action-safety path.
+2. After V3 source is authoritative on `main`, rerun the automated D1 read-only inspection immediately before any provider write.
+3. Require exact D1 ID `37eb7d59-05c0-4ba2-8162-cb6a9fe5d492`, current schema `business_core_v1`, the expected inspected V1 table set, and zero business rows. If any condition changes, stop and redesign as a forward migration.
+4. Execute only a reviewed guarded zero-business-data reconciliation to `business_core_v3` through GitHub Actions/Environment `beta`; never expose Cloudflare credentials in source or chat.
+5. Verify post-migration schema/table contract, required baseline catalogs and row invariants automatically.
+6. Deploy the V3 Worker only to `vhdchy-beta` with binding `DB` -> verified BETA D1, `APP_ENV=BETA`, build revision, and canonical `GAS_EXEC_URL`.
+7. Require `/health` and `/health/deep` PASS, with D1 critical and Google integration degradable/advisory where designed.
+8. Implement Google projection/outbox processing, then Web same-origin business flows and automated BETA acceptance scenarios from `DECISIONS.md`.
+9. Mark Worker/D1/Google/Web BETA business-live only after the complete BETA gate passes.
+
+## Execution-channel constraint
+
+The connected platform allowed schema source writes and CI validation, but rejected PR creation and rejected the proposed provider-mutation helper update through its action-safety guard. Those blocks must not be bypassed. Read-only Cloudflare/D1 automation remains operational.
 
 ## Autonomous execution model
 
