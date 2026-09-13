@@ -101,23 +101,19 @@ Reference boundary:
 - use fixed V4 comparison commit `7b4488a89f585812c1bccba5d07d86049482bf4c`, not moving `main`;
 - restoration analysis is in `docs/LAN_SOURCE_REVIEW_20260913.md`.
 
-Confirmed reusable legacy patterns:
-- no-admin portable Windows Agent;
-- cached endpoint -> UDP discovery -> manual recovery;
-- health validation and two-sample anti-flapping hysteresis;
-- durable local queue with stable `event_id`, monotonic `device_seq`, ACK-driven removal and deterministic duplicate handling;
-- `streamEpoch + sequence` restart/buffer-gap resync;
-- diagnostics, transfer/load measurement and safe export;
-- foreground-only realtime plus bounded finish-only background work.
+Completed from the legacy reference:
+- verified prior two-MT90 LAN evidence and V4 source/build checkpoint;
+- directly reviewed Agent `PilotV4.cs`, Android `MainActivityV4.java` and `PilotRepository.java` patterns;
+- confirmed no-admin Agent, cached -> UDP -> manual endpoint selection, health/hysteresis, durable `event_id + device_seq` queue, ACK removal, epoch/sequence resync, diagnostics/load/transfer and bounded background work;
+- created current authoritative design `docs/LAN_TRANSPORT_BETA_V1.md`, aligned with the shared Service API and D1 canonical authority.
 
 Next executable work without physical devices:
-1. define current `VHDCHY_LAN_TRANSPORT_BETA_V1` command envelope aligned with the Service API: request ID/idempotency key, device ID/sequence, actor/session context, command type, entity/version precondition and payload hash;
-2. define Agent/PDA pairing and authenticated channel requirements so old service/protocol string matching is never treated as business authentication;
-3. define a transport-neutral durable queue contract usable by later Android and optional LAN Agent relaying without changing D1 canonical authority;
-4. adapt discovery/health/hysteresis/reconnect state semantics into current BETA design;
-5. define realtime/status use of `streamEpoch + sequence` separately from canonical business mutation ordering;
-6. add LAN source-level acceptance cases to the BETA matrix: discovery identity, anti-flap, queue order, idempotent retry, epoch resync, bounded background work and no cleartext business-secret path;
-7. prepare current source structure only where it does not require Android signing or physical network evidence.
+1. design the authenticated Agent/PDA pairing and channel binding that sits underneath `LAN_TRANSPORT_BETA_V1`; old service/protocol strings remain locator/identity hints only;
+2. define the exact current durable queue schema/state transitions and authoritative ACK mapping (`RECEIVED_BY_AGENT`, `ACCEPTED_CANONICAL`, `REJECTED_FINAL`, `RETRY_LATER`);
+3. extend `docs/BETA_ACCEPTANCE_MATRIX.md` with LAN source-level cases for retry identity preservation, queue ordering, anti-flap, epoch resync, bounded background work and secret exclusion;
+4. prepare current LAN source structure/adapters where writes are allowed, without connecting pilot endpoints to canonical business data prematurely;
+5. map later Android implementation to the same queue/transport contract without requiring current signing material;
+6. preserve a separate physical regression checklist for the real company laptop/network and MT90 devices.
 
 Physical LAN/PDA PASS remains pending the real company laptop/network and MT90 devices. Do not report old 0.3.36 physical evidence as current-production PASS.
 
