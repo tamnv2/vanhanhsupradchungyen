@@ -1,169 +1,64 @@
 # CHECKPOINT — VHDCHY
 
-checkpoint_version: 14
+checkpoint_version: 15
 protocol: AI_AUTHORITY_RESUME_V2
-status: EXECUTING_PRODUCT_V2_BETA
+status: EXECUTING_PRODUCT_V3_BETA
 action_mode: AUTONOMOUS_PARALLEL
-active_lanes: SHARED_DOMAIN / CLOUD_SERVICE / LAN_SERVICE / SERVICE_AUTH / PROJECTION_OUTBOX / WEB / ANDROID_APK / GOOGLE_DRIVE_SHEETS
+active_lanes: SHARED_DOMAIN / CLOUD_SERVICE / LAN_FULL_SERVICE / GOOGLE_SYNC / WEB / ANDROID_APK / RECONCILIATION
 paused_lanes: PHYSICAL_CORPORATE_LAN_REGRESSION
-approved_scope: Build one VHDCHY product with Website + PDA-optimized APK + Cloud Service + LAN Service in parallel. LAN must substitute for Cloud Service during site Internet loss, Cloud Service failure/degradation, and support per-client forced-LAN routing. Legacy repo and the pre-clarification transport-only APK/Agent prototype are NON_AUTHORITY reference only. Do not extend diagnostic/pilot architecture as the product. Overall Owner interaction remains limited to OWNER_PERMISSION_REQUIRED or OWNER_DECISION_REQUIRED. STABLE remains separately gated by explicit Owner approval after full BETA PASS.
-reconciled_through_commit: 3bd2e438f65c6da0b5084192f6ba97aa0f772046
-active_work_ref: NEXT_ACTIONS.md
-current_state_ref: CURRENT_STATE.md
+approved_scope: Build one VHDCHY product with Website + PDA-optimized APK + Cloud Service + full LAN Service in parallel. LAN Service executes the same approved business model locally, may project/upload to Google directly when Internet/Google is reachable, queues/stages Google work when offline, and synchronizes its immutable local events to Cloud/D1 whenever Cloud becomes reachable. Offline login remains available from the latest synchronized local authority snapshot without a time-based expiry solely because the outage is long. Only SUPERADMIN/ROOT may deliberately force LAN while Cloud is healthy. Unresolved business/data synchronization conflicts are decided by ADMIN or higher after automatic retry/deduplication/reconciliation has been exhausted.
+product_architecture_ref: docs/TARGET_PRODUCT_ARCHITECTURE_V3.md
+delivery_plan_ref: docs/DELIVERY_PLAN_V3.md
 authority_ref: DECISIONS.md
-service_authority_ref: SERVICE_AUTHORITY.md
-product_architecture_ref: docs/TARGET_PRODUCT_ARCHITECTURE_V2.md
-delivery_plan_ref: docs/DELIVERY_PLAN_V2.md
 service_contract_ref: docs/SERVICE_API_CONTRACT.md
-beta_acceptance_ref: docs/BETA_ACCEPTANCE_MATRIX.md
-canonical_mutation_plan_ref: docs/CANONICAL_MUTATION_PLAN.md
 lan_edge_state_ref: docs/LAN_EDGE_STATE_V1.md
-projection_auth_plan_ref: docs/PROJECTION_AUTH_PLAN.md
-worker_packaging_plan_ref: docs/WORKER_PACKAGING_PLAN.md
 legacy_lan_reference_repo: tamnv2supra/vanhanhdchungyen
 legacy_lan_reference_commit: 7b4488a89f585812c1bccba5d07d86049482bf4c
 
-## Owner clarification reconciled
+## V3 clarification
 
-The previous interpretation was too narrow. The Owner does NOT want:
-- a standalone LAN diagnostics APK as the product;
-- LAN only as a transport/relay proof;
-- wholesale copying of the legacy repo;
-- sequential completion of Cloud/Web first and Android/LAN later.
+- LAN is a full local Service substitute, not transport-only.
+- Client route and background synchronization are separate concerns: users may remain on LAN while LAN synchronizes to Cloud in the background whenever possible.
+- If Internet/Google is available, LAN may write controlled Sheets projection and Drive media directly.
+- Cloud reconciliation consumes LAN event/outbox records, not Sheets/Drive as a business source.
+- Existing Google output receipts are carried into reconciliation to prevent duplicate rows/files.
+- If Internet is unavailable, LAN continues local business operation and queues Google work.
+- Offline operation uses the most recently synchronized authority/configuration state; reconnect refresh applies new state to later operations while preserving already-accepted local event evidence.
+- SUPERADMIN/ROOT-only manual LAN activation is audited.
+- Technical/provider retries are automatic; unresolved business conflicts go to ADMIN+.
 
-Current locked product direction:
-1. Website and APK are clients of the same VHDCHY business/domain platform.
-2. APK is a compact PDA-oriented business client, not separate business logic.
-3. Cloudflare Worker + D1 is the normal online Service runtime.
-4. LAN Service is a real substitute runtime when Internet/Cloud Service is unavailable.
-5. Forced-LAN per client is supported; when Cloud is reachable, LAN relay is preferred to avoid unnecessary split-brain.
-6. True Cloud/upstream loss uses LAN autonomous local edge execution for reviewed offline-capable commands, followed by D1 reconciliation.
-7. Google Sheets/Drive remain downstream/deferred, never LAN fallback databases.
-8. Legacy/prototype mechanics are selectively adapted only after review.
+## Technical constraints accepted
 
-## Architecture/contract correction completed
+- A fully disconnected LAN cannot immediately know remote permission/account changes made after its last sync.
+- Independent Cloud/LAN writes during a partition can conflict.
+- Therefore V3 requires immutable IDs/versions, explicit reconciliation and conflict evidence; silent overwrite/drop is prohibited.
 
-Created/updated:
-- `docs/TARGET_PRODUCT_ARCHITECTURE_V2.md` — product topology/failover semantics;
-- `docs/DELIVERY_PLAN_V2.md` — parallel vertical-slice delivery;
-- `DECISIONS.md` D-042..D-048 — Owner clarification persisted;
-- `PROJECT_SCOPE.md`, `docs/ARCHITECTURE.md`, `SERVICE_AUTHORITY.md` — four-deliverable/dual-runtime authority;
-- `docs/SERVICE_API_CONTRACT.md` V2 — Cloud direct / LAN relay / LAN autonomous / commit-status/reconciliation semantics;
-- `docs/CANONICAL_MUTATION_PLAN.md` V2 — Cloud D1 transaction + LAN edge transaction + reconciliation model;
-- `docs/LAN_EDGE_STATE_V1.md` — edge snapshot/current-state/event/outbox/conflict/staged-media contract;
-- `docs/BETA_ACCEPTANCE_MATRIX.md` — Cloud/LAN/Web/APK/failover/split-brain acceptance;
-- `docs/LAN_TRANSPORT_BETA_V1.md` — transport-only product authority superseded;
-- `docs/LAN_DEV_BUILD_STATUS.md` — earlier green paired build reclassified as disposable prototype evidence;
-- `CHANGELOG.md` — V2 architecture correction recorded.
-
-Validation run `34757604568` for the latest edge-state contract commit: SUCCESS.
-
-## Current exact implementation position
-
-Phase 0 architecture correction is complete.
-
-Phase 1 shared dual-runtime contract is substantially defined at design level:
-- Service API V2: defined;
-- Cloud/LAN mutation/reconciliation semantics: defined;
-- LAN edge state/snapshot/event/outbox model: defined;
-- acceptance matrix: defined.
-
-Next implementation work:
-1. materialize provider-neutral domain-core source boundary and shared business acceptance vectors;
-2. materialize Cloud D1 adapter interface/source around the existing D1 model;
-3. materialize LAN edge adapter/interface/source around `LAN_EDGE_STATE_V1`;
-4. then start real vertical Slice 1 identity/employee/attendance/presence across Cloud + LAN + Web + APK.
-
-Android/LAN lanes remain active. Their next work is product/domain integration, not transport-test APK polishing.
-
-## Provider foundation — retained PASS
+## Provider foundation retained
 
 - D1 BETA `business_core_v3`: PASS.
-- Worker BETA foundation/public health: PASS.
-- Google Gateway immutable version 3 with fail-closed `VHDCHY_PROJECTION_V1`: PASS.
-- Projection workbook remains intentionally `PROVISIONED_NOT_LIVE`.
-- Fresh Cloudflare read-only verification run `34754968801`: SUCCESS.
+- Worker BETA health/foundation: PASS; business routes remain fail-closed.
+- Google Gateway v3: deployed fail-closed; projection currently NOT_LIVE.
+- Worker multi-module deployment remains blocked until the reviewed deploy workflow can safely package the module set.
 
-## Cloud Worker packaging blocker
+## Current implementation position
 
-- `service/worker/deploy.beta.json` contains reviewed seven-module manifest.
-- Manifest validation `34754738074`: SUCCESS.
-- Active provider-mutating deploy workflow still uploads only `index.js`.
-- Connected write-safety blocks the sensitive workflow/runtime write path.
-- Do NOT bypass through lower-level Git/API methods.
-- Continue shared-domain/LAN/Web/APK/acceptance/design/source lanes independent of this blocker.
+1. Architecture/product scope is now V3.
+2. Shared domain/event contract remains the common dependency.
+3. Cloud adapter and LAN edge adapter must implement the same business rules.
+4. LAN edge design must now add synchronized authority state, Google projection/upload receipts and continuous Cloud-sync behavior.
+5. Website/APK client foundations must consume the same runtime/status contract.
+6. Vertical business slices then proceed across Cloud + LAN + Web + APK + Google outputs.
 
-## Cloud source foundation
+## Immediate execution order
 
-Source/CI foundation exists for:
-- password/hash/bearer/TOTP;
-- session expiry/revocation/device-security epoch;
-- scoped permissions + DENY precedence;
-- normal login/session issuance;
-- ROOT password-only fail-closed to MFA;
-- projection outbox retry/dead-letter.
-
-Not yet runtime-live:
-- integrated protected Worker routes;
-- provider-neutral domain core + D1 adapter implementation;
-- business APIs;
-- projection sender/auth;
-- Drive flow;
-- Web business UI.
-
-## LAN runtime target
-
-Required modes:
-- `LAN_RELAY`: client -> LAN -> Cloud/D1, preserving command identity;
-- `LAN_AUTONOMOUS`: local edge current state + immutable edge event + sync outbox while Cloud unavailable;
-- recovery/reconciliation into D1 exactly once where non-conflicting;
-- explicit `SYNC_CONFLICT` for real partition conflicts;
-- locally served compatible Web bundle for complete Internet outage;
-- no-admin/user-mode constraints preserved.
-
-A hard partition cannot provide both global strict single-writer consistency and uninterrupted local writes. The design therefore retains evidence and reconciles conflicts; silent overwrite/drop is prohibited.
-
-## Android target
-
-APK is the real PDA operational client:
-- same user/permission/domain contract as Web;
-- PDA-optimized UI only;
-- same Cloud/LAN runtime state model;
-- scanner/QR input through domain commands;
-- client-local durable queue only where explicitly allowed;
-- no direct D1/Sheets shortcut.
-
-The current `android-pilot/` is NON_AUTHORITY prototype/reference only.
-
-## Unresolved policy — do_not_invent
-
-The Owner has not yet locked:
-- exact offline authentication/capability mechanism;
-- exact offline authorization TTL/staleness;
-- which privileged/security admin operations are allowed offline;
-- who may explicitly activate/deactivate emergency autonomous mode.
-
-Do not hide assumptions for these in code. Keep unresolved privileged cases fail-closed and surface `OWNER_DECISION_REQUIRED` only when implementation reaches a point where one choice is unavoidable.
-
-## Next execution order
-
-1. Implement shared domain-core source boundary and runtime-neutral acceptance vectors.
-2. Implement LAN edge schema/adapter/source from `LAN_EDGE_STATE_V1` while preserving no-admin constraints.
-3. Implement Cloud D1 adapter/canonical helper through allowed source path; continue packaging/auth/projection work independently.
-4. Build Web/APK endpoint/runtime-state foundation against the shared contract.
-5. Implement vertical Slice 1 identity/employee/attendance/presence across Cloud + LAN + Web + APK.
-6. Continue Slice 2 resources/PICK/PACK, Slice 3 labor/dropped goods, Slice 4 documents/media.
-7. Run failover/recovery/split-brain acceptance.
-8. Run final company-network/PDA physical regression when environment is available.
-9. No STABLE promotion before full BETA PASS + explicit Owner approval.
-
-## Owner stop conditions
-
-- `OWNER_PERMISSION_REQUIRED`: exact Owner-controlled permission/access/consent/secret-store action is required and no safe connected/CI alternative exists.
-- `OWNER_DECISION_REQUIRED`: a material unresolved business/security policy must be chosen before safe implementation can proceed.
-
-Neither condition is currently established for shared-domain/LAN edge source work. Continue.
+1. Extend shared Service/API contract for LAN local acceptance, Google receipts and sync status.
+2. Extend LAN edge schema/design for local authority snapshot, Google receipts and Cloud sync cursors.
+3. Define provider-neutral domain-core interfaces and shared acceptance vectors.
+4. Continue independent Cloud packaging/auth/projection work where allowed.
+5. Build real LAN Service skeleton against the shared contract, not the earlier transport prototype.
+6. Build Website/APK foundations against the same contract.
+7. Start Slice 1 only after Cloud/LAN parity boundaries are explicit.
 
 ## do_not_repeat:
 
-Do not rerun V1->V3 migration. Do not recreate verified provider resources. Do not trigger Worker deploy while active deploy workflow is single-module. Do not open business APIs anonymously. Do not make Sheets canonical or use Sheets as LAN fallback storage. Do not expose secrets in source/chat. Do not bypass platform safety guards. Do not treat legacy repo or temporary transport prototype as product authority. Do not build APK as merely a LAN test app. Do not build LAN as merely discovery/echo/transport relay. Do not create separate Cloud/LAN business-rule implementations that can drift. Do not report LAN local acceptance as D1/Cloud commit. Do not silently drop/overwrite split-brain conflicts. Do not invent unresolved offline-auth TTL/privileged policy. Do not claim physical corporate-LAN PASS from legacy/CI evidence. Do not promote STABLE before full BETA PASS plus explicit Owner approval.
+Do not treat the old repo or transport-only prototype as product authority. Do not build LAN as only relay/discovery. Do not make Sheets/Drive the business source. Do not wait for a client route switch before LAN syncs Cloud. Do not silently recreate Cloud truth from Google outputs. Do not make Cloud/LAN business rules diverge. Do not silently overwrite split-brain conflicts. Do not send ordinary transient errors to ADMIN for manual handling. Do not promote STABLE before full BETA PASS plus explicit Owner approval.
