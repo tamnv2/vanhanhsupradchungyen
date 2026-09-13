@@ -2,5 +2,5 @@
   "enabled": true,
   "target": "beta",
   "operation": "deploy_worker_multimodule_business_core_v3",
-  "reason": "Verify reviewed multi-module packaging without opening protected business routes"
+  "reason": "Retry reviewed multi-module packaging with bounded edge-propagation verification v2"
 }
