@@ -45,6 +45,6 @@ Before any D1 mutation:
 
 Continue from `NEXT_ACTIONS.md`: target schema design/reconciliation -> local validation -> pre-write D1 reinspection -> reviewed BETA migration -> post-migration verification -> Worker/API integration.
 
-## do_not_repeat
+## do_not_repeat:
 
 Do not recreate verified Cloudflare resources. Do not apply the stale v2 migration. Do not treat bookkeeping rows as business data. Do not repeat manual D1 console inspection while the automated GitHub Actions bridge is healthy. Do not promote STABLE before BETA PASS plus explicit Owner approval.
