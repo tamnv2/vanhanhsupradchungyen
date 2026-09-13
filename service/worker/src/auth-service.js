@@ -29,10 +29,11 @@ export async function loadLoginRecord(db, username) {
       c.hash_algorithm,
       c.must_change
     FROM auth_users u
-    JOIN auth_credentials c ON c.user_id = u.user_id
-    WHERE u.username = ? COLLATE NOCASE
+    LEFT JOIN auth_credentials c
+      ON c.user_id = u.user_id
       AND c.credential_type = 'PASSWORD'
       AND c.status = 'ACTIVE'
+    WHERE u.username = ? COLLATE NOCASE
     LIMIT 1
   `).bind(normalized).first();
 }
@@ -43,21 +44,24 @@ export async function verifyPrimaryLogin(db, username, password) {
     return { ok: false, code: 'INVALID_CREDENTIALS' };
   }
 
-  const passwordOk = await verifyPasswordRecord(password, row.hash_algorithm, row.secret_hash);
-  if (!passwordOk) return { ok: false, code: 'INVALID_CREDENTIALS' };
-
   const securityLevel = String(row.security_level || 'NORMAL').toUpperCase();
   if (securityLevel === ROOT_LEVEL) {
     return {
       ok: false,
-      code: 'ROOT_MFA_REQUIRED',
+      code: 'ROOT_EMAIL_OTP_REQUIRED',
       challenge: {
         userId: row.user_id,
         username: row.username,
-        requiredMethod: 'TOTP'
+        requiredMethod: 'EMAIL_OTP'
       }
     };
   }
+
+  if (!row.secret_hash || !row.hash_algorithm) {
+    return { ok: false, code: 'INVALID_CREDENTIALS' };
+  }
+  const passwordOk = await verifyPasswordRecord(password, row.hash_algorithm, row.secret_hash);
+  if (!passwordOk) return { ok: false, code: 'INVALID_CREDENTIALS' };
 
   return {
     ok: true,

@@ -56,15 +56,20 @@ test('wrong password and inactive account return generic invalid credentials', a
   assert.equal(inactive.code, 'INVALID_CREDENTIALS');
 });
 
-test('ROOT password stage fails closed into TOTP challenge', async () => {
-  const record = await createPasswordRecord('Root-Valid-2026');
+test('ROOT primary login bypasses permanent password and requires email OTP', async () => {
   const result = await verifyPrimaryLogin(loginDb({
-    user_id: 'ROOT1', username: 'root', user_status: 'ACTIVE', security_level: 'ROOT',
-    secret_hash: record.secretHash, hash_algorithm: record.hashAlgorithm, must_change: 0
-  }), 'root', 'Root-Valid-2026');
+    user_id: 'ROOT1',
+    username: 'root',
+    user_status: 'ACTIVE',
+    security_level: 'ROOT',
+    secret_hash: null,
+    hash_algorithm: null,
+    must_change: null
+  }), 'root', 'ignored-root-password');
   assert.equal(result.ok, false);
-  assert.equal(result.code, 'ROOT_MFA_REQUIRED');
-  assert.equal(result.challenge.requiredMethod, 'TOTP');
+  assert.equal(result.code, 'ROOT_EMAIL_OTP_REQUIRED');
+  assert.equal(result.challenge.requiredMethod, 'EMAIL_OTP');
+  assert.equal(result.challenge.userId, 'ROOT1');
 });
 
 test('session issuance stores only token hash and returns raw token once', async () => {
