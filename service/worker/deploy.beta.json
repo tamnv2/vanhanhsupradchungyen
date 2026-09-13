@@ -5,6 +5,7 @@
     "index.js",
     "auth.js",
     "auth-service.js",
+    "email-otp.js",
     "authorization.js",
     "session.js",
     "permission-store.js",
