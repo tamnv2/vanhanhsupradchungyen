@@ -1,0 +1,6 @@
+{
+  "enabled": false,
+  "target": "beta",
+  "operation": "migrate_business_core_v3",
+  "request_id": "pending-ci-migration-workflow"
+}
