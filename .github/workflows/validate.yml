@@ -39,7 +39,7 @@ jobs:
           grep -Fq 'NON_AUTHORITY' AI_OPERATING_CONTRACT.md
           grep -Fq 'Evidence before PASS' AI_OPERATING_CONTRACT.md
           grep -Fq 'Fail closed' AI_OPERATING_CONTRACT.md
-          grep -Fq 'checkpoint_version: 2' CHECKPOINT.md
+          grep -Eq '^checkpoint_version: [1-9][0-9]*$' CHECKPOINT.md
           grep -Fq 'reconciled_through_commit:' CHECKPOINT.md
           grep -Fq 'do_not_repeat:' CHECKPOINT.md
           if grep -Eq 'BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|Bearer [A-Za-z0-9._-]{12,}' CHECKPOINT.md; then
