@@ -64,7 +64,13 @@ jobs:
           PY
 
       - name: Validate Worker source syntax
-        run: node --input-type=module --check < service/worker/src/index.js
+        run: |
+          set -euo pipefail
+          node --input-type=module --check < service/worker/src/index.js
+          node --input-type=module --check < service/worker/src/auth.js
+
+      - name: Validate auth crypto contract
+        run: node .github/scripts/auth-contract-test.mjs
 
       - name: Validate clean D1 schema
         run: |
