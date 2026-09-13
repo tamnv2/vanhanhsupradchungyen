@@ -68,13 +68,31 @@ jobs:
           node .github/scripts/domain-parity-test.mjs
           dotnet build lan-service/Vhdchy.LanService.csproj -c Release
           VHDCHY_ENV=BETA VHDCHY_CLUSTER_ID=PICK_PACK_1291 VHDCHY_LAN_PORT=17901 \
-            dotnet run --project lan-service/Vhdchy.LanService.csproj -c Release --no-build > "$RUNNER_TEMP/lan-service.log" 2>&1 &
+            dotnet lan-service/bin/Release/net8.0/VHDCHY.LanService.dll > "$RUNNER_TEMP/lan-service.log" 2>&1 &
           pid=$!
           trap 'kill $pid 2>/dev/null || true' EXIT
-          for i in $(seq 1 20); do
-            if curl -fsS http://127.0.0.1:17901/health > "$RUNNER_TEMP/health.json"; then break; fi
+          health_ok=false
+          for i in $(seq 1 30); do
+            if ! kill -0 "$pid" 2>/dev/null; then
+              echo 'LAN Service exited before health became ready'
+              cat "$RUNNER_TEMP/lan-service.log" || true
+              exit 1
+            fi
+            code=$(curl --noproxy '*' -sS -o "$RUNNER_TEMP/health.json" -w '%{http_code}' http://127.0.0.1:17901/health || true)
+            if [ "$code" = "200" ]; then
+              health_ok=true
+              break
+            fi
             sleep 0.5
           done
+          if [ "$health_ok" != "true" ]; then
+            echo 'LAN /health did not become HTTP 200'
+            echo '--- service log ---'
+            cat "$RUNNER_TEMP/lan-service.log" || true
+            echo '--- health body ---'
+            cat "$RUNNER_TEMP/health.json" || true
+            exit 1
+          fi
           jq -e '
             .ok == true and
             .service == "VHDCHY_LAN_SERVICE" and
@@ -83,13 +101,13 @@ jobs:
             .readiness == "EDGE_EMPTY" and
             .businessMutationEnabled == false
           ' "$RUNNER_TEMP/health.json" >/dev/null
-          curl -fsS http://127.0.0.1:17901/api/v1/meta | jq -e '.runtime == "LAN" and .domainContractVersion == "VHDCHY_DOMAIN_V1"' >/dev/null
-          curl -fsS http://127.0.0.1:17901/ | grep -Fq 'VẬN HÀNH DC HƯNG YÊN'
-          code=$(curl -sS -o "$RUNNER_TEMP/mutation.json" -w '%{http_code}' -X POST http://127.0.0.1:17901/api/v1/data/test)
+          curl --noproxy '*' -fsS http://127.0.0.1:17901/api/v1/meta | jq -e '.runtime == "LAN" and .domainContractVersion == "VHDCHY_DOMAIN_V1"' >/dev/null
+          curl --noproxy '*' -fsS http://127.0.0.1:17901/ | grep -Fq 'VẬN HÀNH DC HƯNG YÊN'
+          code=$(curl --noproxy '*' -sS -o "$RUNNER_TEMP/mutation.json" -w '%{http_code}' -X POST http://127.0.0.1:17901/api/v1/data/test)
           test "$code" = "503"
           jq -e '.ok == false and .error.code == "RUNTIME_DEPENDENCY_UNAVAILABLE"' "$RUNNER_TEMP/mutation.json" >/dev/null
-          kill $pid
-          wait $pid || true
+          kill "$pid"
+          wait "$pid" || true
           trap - EXIT
 
       - name: Publish portable no-admin Windows package
