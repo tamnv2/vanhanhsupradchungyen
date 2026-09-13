@@ -59,7 +59,25 @@ Request Owner interaction only when a required action is genuinely unavailable t
 
 If execution would materially expand or change the approved scope, mark the plan as needing re-approval before that expansion.
 
-## 5. Dependency and parallel execution
+## 5. Autonomous execution and no-local-install default
+
+Owner does not want project execution to depend on installing CLI tools, SDKs, runtimes, repositories or provider software on a laptop merely to let AI operate cloud resources.
+
+Default execution order:
+1. use a directly connected tool/API when available;
+2. otherwise use a reviewed GitHub Actions/CI bridge running on hosted runners with provider credentials stored in GitHub Environments/Secrets;
+3. otherwise request only the minimum Owner UI/consent/permission step needed to establish that bridge or grant the missing permission;
+4. use Owner-local execution only when the task is inherently local/physical, the Owner explicitly requests it, or no safe remote/CI path exists after review.
+
+Do not ask Owner to install Wrangler, Git, Node, Python, SDKs or similar tooling merely because a provider action cannot be invoked directly from the current chat tool. Prefer GitHub-hosted CI.
+
+When a permission is missing, identify the exact least-privilege permission/resource/environment required and ask Owner to grant only that permission. After permission is granted, resume autonomous execution without delegating routine commands back to Owner.
+
+Provider secrets must remain in provider/GitHub secret stores. Do not ask Owner to paste raw secrets into chat or commit them to source.
+
+CI mutation workflows must be fail-closed: verify environment, account/resource identity and required preconditions before write; perform only the reviewed operation; verify the post-state before PASS; never accept arbitrary provider commands/SQL from an untrusted dispatch payload when a fixed operation can be encoded instead.
+
+## 6. Dependency and parallel execution
 
 Build a dependency graph before substantial execution.
 
@@ -74,7 +92,7 @@ Execute independent nodes in parallel when tools and safety permit. Execute depe
 
 Do not block Service work merely because physical LAN testing is unavailable. When Owner is at the company, independent LAN and Service work may proceed in parallel.
 
-## 6. Checkpoint and interruption protocol
+## 7. Checkpoint and interruption protocol
 
 `CHECKPOINT.md` is the short-lived resume ledger. It is overwritten with current truth; it is not a historical log.
 
@@ -91,7 +109,7 @@ Because exact tool lifetime may not always be observable, milestone checkpoints 
 
 A checkpoint records at minimum: protocol version, active lane, status/gate, approved scope or approval state, reconciled commit, completed items, in-progress/blocked items, next actions, direct evidence references, and `do_not_repeat` safeguards.
 
-## 7. Resume protocol
+## 8. Resume protocol
 
 On resume:
 1. read `AI_ENTRYPOINT.md`, `AI_OPERATING_CONTRACT.md`, `CHECKPOINT.md`, `CONTEXT_INDEX.md`;
@@ -104,19 +122,19 @@ If only unrelated documentation changed, use focused reconciliation. If relevant
 
 Never repeat a migration/deploy/provider mutation merely because a previous session ended before reporting the result. Inspect evidence first.
 
-## 8. Evidence before PASS
+## 9. Evidence before PASS
 
 A requested or automated action is not `PASS` merely because the command was issued. PASS requires observable evidence such as a successful API response, provider state, GitHub Actions result, remote health result, or other task-appropriate verification.
 
 If outcome is uncertain, record `UNKNOWN`/`VERIFY_REQUIRED`, not PASS.
 
-## 9. Fail closed
+## 10. Fail closed
 
 Before provider changes, verify the current account, environment and exact resource identity. Missing or mismatched expected resources must stop the affected operation unless Owner explicitly approves a reviewed replacement plan.
 
 Do not silently recreate provider resources, overwrite unknown databases, broaden permissions, promote STABLE, or infer current remote state from old history.
 
-## 10. Repository discipline
+## 11. Repository discipline
 
 - `main` is the active source/authority baseline.
 - `beta` and `stable`, when used, are deployment pointers rather than scratch branches.
@@ -129,10 +147,10 @@ Do not silently recreate provider resources, overwrite unknown databases, broade
 - `CHANGELOG.md` holds history and is not a default FAST read.
 - Avoid duplicating the same detailed ledger across files.
 
-## 11. Source restoration and history
+## 12. Source restoration and history
 
 `backup/pre-zero-20260912` is evidence/reference, not current authority. Restore a component only after reviewing it against current scope and correcting stale assumptions.
 
-## 12. Security
+## 13. Security
 
 Sensitive access/signing material stays outside source history. Repository documentation records only identifiers, ownership, secret names where necessary, and verification state; never secret values.
