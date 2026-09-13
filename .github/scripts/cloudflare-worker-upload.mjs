@@ -13,21 +13,28 @@ async function main() {
   const specPath = process.argv[2] || 'service/worker/deploy.beta.json';
   const spec = JSON.parse(fs.readFileSync(specPath, 'utf8'));
 
-  if (!spec?.target_worker || !spec?.source_dir || !spec?.main_module) {
-    throw new Error('Deployment spec must define target_worker, source_dir and main_module');
+  if (!spec?.target_worker || !spec?.source || !Array.isArray(spec?.modules) || spec.modules.length < 1) {
+    throw new Error('Deployment spec must define target_worker, source and a non-empty modules list');
   }
 
-  const sourceDir = path.resolve(spec.source_dir);
-  const modules = fs.readdirSync(sourceDir)
-    .filter((name) => name.endsWith('.js'))
-    .sort();
+  const mainModule = path.basename(spec.source);
+  const sourceDir = path.dirname(path.resolve(spec.source));
+  const modules = [...new Set(spec.modules)].sort();
 
-  if (!modules.includes(spec.main_module)) {
-    throw new Error(`Main module ${spec.main_module} not found in ${spec.source_dir}`);
+  if (!modules.includes(mainModule)) {
+    throw new Error(`Main module ${mainModule} is not listed in deployment modules`);
+  }
+
+  for (const moduleName of modules) {
+    if (path.basename(moduleName) !== moduleName || !moduleName.endsWith('.js')) {
+      throw new Error(`Invalid Worker module name ${moduleName}`);
+    }
+    const modulePath = path.join(sourceDir, moduleName);
+    if (!fs.existsSync(modulePath)) throw new Error(`Missing Worker module ${modulePath}`);
   }
 
   const metadata = {
-    main_module: spec.main_module,
+    main_module: mainModule,
     compatibility_date: spec.compatibility_date,
     bindings: [
       { type: 'd1', name: spec.d1_binding.name, database_id: spec.d1_binding.database_id },
