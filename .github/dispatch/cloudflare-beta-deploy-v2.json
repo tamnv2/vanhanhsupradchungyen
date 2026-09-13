@@ -1,6 +1,6 @@
 {
-  "enabled": true,
+  "enabled": false,
   "target": "beta",
   "operation": "deploy_worker_multimodule_business_core_v3",
-  "reason": "Verify fixed module verifier and reviewed BETA multi-module packaging"
+  "reason": "C1 multi-module deployment verified; return dispatcher to safe idle state"
 }
