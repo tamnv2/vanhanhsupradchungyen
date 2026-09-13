@@ -80,7 +80,7 @@ Baseline: `REPO-RESET-20260912-01`
 - Reusable canonical mutation helper remains to be implemented/tested when sensitive runtime-source write is available.
 - No Web business surface is live yet.
 
-## Android + LAN build lane — ACTIVE
+## Android + LAN build lane — ACTIVE / FIRST BUILD PASS
 
 - Current LAN restoration review: `docs/LAN_SOURCE_REVIEW_20260913.md`.
 - Current transport contract: `docs/LAN_TRANSPORT_BETA_V1.md`.
@@ -93,7 +93,9 @@ Baseline: `REPO-RESET-20260912-01`
 - DEV Agent ACK is intentionally `TEST_ACCEPTED_AGENT_ONLY`; it is not a canonical D1 business ACK.
 - Current cleartext DEV endpoints are transport-test only and must not carry business credentials, employee PII or canonical business mutations.
 - `.github/workflows/build-lan-dev.yml` builds the Android APK and portable win-x64 Agent in two independent parallel jobs with no provider mutation and no release-signing secret.
-- First parallel build run: `34756569016` (started from commit `bd3e3f379fc954c781f37ede958bed53b961c0a8`; verify final result before claiming BUILD PASS).
+- First parallel build run `34756569016`: SUCCESS for both `android-pilot` and `lan-agent`.
+- APK file SHA256: `bf311b44ae1d514f897678aeac97c23e34a366762a94d82d410a1f4f6a5f7629`.
+- Agent ZIP file SHA256: `6681d7beec406cad34366074b998c5be70f046d1dc2d99db14c7c4a21a94b2a0`.
 
 ## Target architecture
 
@@ -106,7 +108,8 @@ Baseline: `REPO-RESET-20260912-01`
 
 ## Remaining physical dependencies / STABLE
 
-- Android source/build is active and APK installation testing may proceed on the available device once the current artifact is green.
+- APK build is green and installation/open/basic local-queue testing may proceed on the available Android device.
+- LAN discovery/echo/end-to-end transport testing additionally requires a machine running the matching Agent.
 - Final corporate-network LAN regression still requires the intended company laptop/network and PDA environment; this remains a physical evidence gate only.
 - LAN business traffic remains disabled until pairing/authenticated-channel design is implemented and accepted.
 - STABLE remains blocked until full BETA PASS plus explicit Owner approval.
