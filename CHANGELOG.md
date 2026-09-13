@@ -2,6 +2,17 @@
 
 ## 2026-09-13
 
+### Product architecture V2 — Web + APK + Cloud Service + LAN Service
+- Owner clarified the final product target: Website and PDA-optimized APK are clients of one VHDCHY business platform; Cloudflare Worker/D1 is the normal Cloud Service runtime; LAN Service is a real substitute runtime for site Internet loss, Cloud Service failure/degradation and per-client forced-LAN routing.
+- Reclassified the immediately prior transport-only APK/Agent build as disposable prototype/reference evidence, not product authority.
+- Persisted D-042..D-048 covering APK role, LAN substitution semantics, shared Cloud/LAN business model, offline reconciliation/conflict evidence, Google downstream behavior and legacy/prototype NON_AUTHORITY boundary.
+- Added `docs/TARGET_PRODUCT_ARCHITECTURE_V2.md` and `docs/DELIVERY_PLAN_V2.md`.
+- Reworked `docs/ARCHITECTURE.md`, `docs/SERVICE_API_CONTRACT.md`, `docs/BETA_ACCEPTANCE_MATRIX.md`, `PROJECT_SCOPE.md`, `SERVICE_AUTHORITY.md`, `CURRENT_STATE.md`, `NEXT_ACTIONS.md`, and `CHECKPOINT.md` around one shared domain contract and dual Cloud/LAN runtimes.
+- Superseded transport-only product authority in `docs/LAN_TRANSPORT_BETA_V1.md` while retaining reviewed low-level mechanics as reference.
+- LAN autonomous mode is now defined as durable local edge state + immutable event + sync outbox with later D1 reconciliation; split-brain conflicts must be explicit and may not be silently overwritten/dropped.
+- Google Sheets/Drive remain downstream/deferred during LAN autonomous operation; Sheets is never a LAN fallback database.
+- Current exact implementation position moved to shared domain/API + Cloud/LAN adapter boundary before real vertical business Slice 1.
+
 ### Cloudflare D1 inspection automation
 - Extended the retained Cloudflare verification script to inspect the exact verified BETA D1 read-only through Cloudflare API using the GitHub Environment `beta` secret at runner runtime.
 - Inspection logs table names, `vhdchy_meta.schema_version`, and per-table row counts only; it does not read business row contents or issue INSERT/UPDATE/DELETE/DDL.
