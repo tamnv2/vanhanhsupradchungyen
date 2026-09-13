@@ -1,6 +1,6 @@
 {
-  "enabled": false,
+  "enabled": true,
   "target": "beta",
   "operation": "deploy_worker_multimodule_business_core_v3",
-  "reason": "C1 multi-module deployment verified; return dispatcher to safe idle state"
+  "reason": "Deploy verified C2 session boundary and auth context route; OTP delivery remains fail-closed"
 }
