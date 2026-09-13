@@ -11,80 +11,112 @@ Overall progress requests Owner interaction only for:
 - `OWNER_PERMISSION_REQUIRED`: an Owner-controlled permission/access/consent/secret-store action is required to continue the affected operation; or
 - `OWNER_DECISION_REQUIRED`: a material business/authority contradiction has multiple valid outcomes and cannot be resolved from current Owner instruction, provider evidence or GitHub authority.
 
-A technical error, failed CI, tool limitation, unavailable local tooling, physical-lane pause or blocked single lane does not stop independent safe work.
+Current Owner scope pauses Android/PDA build and physical LAN/model work. Concentrate execution on Worker/Service, Projection, D1, Google Sheets/Drive and the later Web path.
 
 ## Provider baseline — PASS
 
 Cloudflare BETA:
-- D1 `vhdchy-data-beta` is `business_core_v3`; migration/integrity/independent verification PASS.
-- Worker `vhdchy-beta` is deployed at `https://beta.supra.cc.cd`; public health and independent provider verification PASS.
-- Existing deployed business/admin APIs remain fail-closed, which is intentional until auth/runtime enforcement passes.
+- D1 `vhdchy-data-beta` is `business_core_v3`.
+- Worker `vhdchy-beta` remains at `https://beta.supra.cc.cd` with `workers.dev` disabled.
+- Fresh read-only verification run `34754968801` PASS: exact Worker/D1 identity, expected bindings and zero business rows reconfirmed.
+- Fresh baseline validation run `34754968807` PASS.
+- Existing deployed business/admin APIs remain intentionally fail-closed.
 
 Google BETA:
 - Projection workbook remains `PP1291_SHEETS_BETA_V1` / `PROVISIONED_NOT_LIVE`.
-- Managed Apps Script deployment is immutable version `3`; run `34753872034` PASS.
-- Version 3 contains fail-closed `VHDCHY_PROJECTION_V1` batch/upsert handling. Projection writes remain disabled until secure cross-service authentication + enable gate + end-to-end tests pass.
+- Managed Apps Script deployment version `3`; run `34753872034` PASS.
+- Gateway retains fail-closed verifier + enable gates.
 
-## Parallel Lane A — Auth / session / permission
+## Gate 1 — Worker multi-module packaging
+
+Completed:
+- `service/worker/deploy.beta.json` now contains an exact reviewed seven-module manifest.
+- Manifest validation run `34754738074` PASS.
+- Reviewed implementation contract persisted in `docs/WORKER_PACKAGING_PLAN.md`.
+
+Next:
+1. apply the reviewed multi-module change to `.github/workflows/cloudflare-beta-deploy.yml` using an allowed high-level repository write path;
+2. validate exact module allowlist, syntax and provider preconditions;
+3. perform a packaging-only BETA deployment while leaving `index.js` business/admin behavior fail-closed;
+4. verify domain/bindings/health plus anonymous business-route rejection after deploy;
+5. only then integrate runtime imports/routes.
+
+Do not trigger Worker deployment while the active workflow still uploads only `index.js`.
+
+Current connected write path blocks the provider-mutating workflow/source changes by platform safety. Do not bypass that guard through lower-level Git/API methods.
+
+## Gate 2 — Auth / session / permission
 
 Completed foundation:
 - password policy/hash, bearer utilities and TOTP verifier;
 - session token resolution, expiry/revocation/device-security-epoch checks;
 - scoped role/direct permission loading;
 - ROOT/SUPERADMIN boundary and explicit DENY precedence;
-- password login/session issuance foundation for non-ROOT accounts;
-- ROOT password stage fails closed to `ROOT_MFA_REQUIRED` rather than issuing a password-only session;
-- automated Worker unit/contract validation PASS through run `34754126291`.
+- non-ROOT password login/session issuance;
+- ROOT password stage fails closed to `ROOT_MFA_REQUIRED`;
+- unit/contract validation PASS.
 
-Next executable work:
-1. implement remaining ROOT MFA/recovery state machine only to the extent already resolved by authority; do not invent unresolved recovery/login semantics;
-2. integrate authenticated context into protected Worker routes once deploy packaging supports the reviewed module set;
-3. add login/logout/me/change-password route acceptance tests;
+Next after sensitive-source write is available:
+1. complete ROOT TOTP/recovery only where current authority is explicit;
+2. integrate authenticated context into protected Worker routes after packaging PASS;
+3. add login/logout/me/change-password acceptance tests;
 4. add account-administration grantor/self-protection enforcement and tests;
-5. provision BETA bootstrap identities only after exact locked identity inputs are authoritative.
+5. provision exact BETA bootstrap identities only when locked identity inputs are authoritative.
 
-## Parallel Lane B — Projection / outbox
-
-Completed foundation:
-- `projection.js` outbox envelope, bounded reads, PROCESSING/ACK/PENDING/DEAD transitions and retry backoff;
-- GAS version 3 fixed allowed-sheet mapping, key-based idempotent upsert, unknown-column rejection, bounded batch and ScriptLock serialization;
-- live workbook `00_CONTROL` records projection protocol/version/deploy evidence while keeping `projection_status=PROVISIONED_NOT_LIVE`.
-
-Next executable work:
-1. establish a coordinated secret/authentication design for Worker -> GAS that keeps raw secret values outside source/chat;
-2. prefer an automated coordinated rotation/provisioning bridge using existing GitHub Environment/provider credentials where safe, rather than requiring laptop-local tooling;
-3. implement Worker outbox send/ACK/failure behavior against the Gateway;
-4. test Google unavailable/retry/dead-letter and prove no rollback of canonical D1 state;
-5. only then change projection status from `PROVISIONED_NOT_LIVE`.
-
-## Parallel Lane C — Shared Service API / mutation model
+## Gate 3 — Projection / outbox authentication
 
 Completed foundation:
-- `docs/SERVICE_API_CONTRACT.md` defines bearer/session rules, effective permissions, idempotency, same-origin boundary, errors, and required canonical state + immutable event + outbox transaction behavior.
+- Worker outbox envelope/retry/dead-letter source;
+- GAS version 3 allowed-sheet/key upsert contract;
+- Gateway verifier + enable fail-closed checks;
+- secure provisioning design persisted in `docs/PROJECTION_AUTH_PLAN.md`.
 
-Next executable work:
-1. implement/test the reusable D1 mutation transaction helper;
-2. implement business commands in dependency order after Auth enforcement is executable;
-3. cover BETA scenarios from `DECISIONS.md`: IN/OUT/repeated IN, MNV reuse, PICK/PACK mixed tasks, resource changes/reissue/borrow, labor, dropped goods, documents and degraded projection.
+Next:
+1. add a management-plane Apps Script API-executable path restricted to the deploying identity and verify `scripts.run` with the existing BETA OAuth identity;
+2. use GitHub Environment `beta` secret `VHDCHY_PROJECTION_SHARED_TOKEN` as the raw-token authority; compute only its SHA-256 verifier for GAS Script Properties;
+3. bind the raw token to Worker as a secret, not plain text;
+4. verify Gateway `authConfigured=true` while `enabled=false`;
+5. implement Worker sender/ACK/failure behavior;
+6. test wrong token, Google unavailable, retry/dead-letter and no rollback of canonical D1 state;
+7. enable projection only as a separate evidenced gate.
 
-## Parallel Lane D — LAN / Android review
+If the Environment secret cannot be created through an approved connected provider action, request only the minimum Owner secret-store action at that point; never request the raw token in chat.
 
-- Physical regression remains paused until actual company network/PDA access is available.
-- Source review is not paused: retained pilot transport concepts were reviewed in `docs/LAN_SOURCE_REVIEW_20260913.md`.
-- Reusable queue/device-sequence/discovery/hysteresis/diagnostic concepts may be restored behind BETA transport boundaries.
-- Cleartext `VHDCHY_LAN_PILOT_V1` remains test-only and must not carry business credentials/PII/canonical mutations.
-- Business LAN requires reviewed pairing/authentication and the same Service command/event/idempotency semantics before activation.
+## Gate 4 — Shared Service API / canonical mutation model
 
-## Known packaging constraint
+Completed foundation:
+- `docs/SERVICE_API_CONTRACT.md` defines authentication, permissions, idempotency and required state + immutable event + outbox semantics.
 
-The current Cloudflare deploy bridge uploads the single foundation `index.js`. Auth/session/permission/projection modules on `main` are source/CI PASS but are not yet deployed runtime. Do not import them into deployed `index.js` until the packaging path is reconciled and independently verifiable. Preserve current fail-closed business routes meanwhile.
+Next:
+1. implement and test a reusable D1 atomic mutation helper;
+2. prove guarded state change + `domain_events` + `projection_outbox` rollback together on conflict/failure;
+3. implement business commands in dependency order after Auth enforcement is executable;
+4. cover BETA scenarios from `DECISIONS.md`: IN/OUT/repeated IN, MNV reuse, PICK/PACK mixed tasks, resource changes/reissue/borrow, labor, dropped goods, documents and degraded projection.
 
-If platform write-safety blocks one implementation path, do not bypass it through lower-level Git/API tricks. Continue independent lanes and use another reviewed high-level execution path when available. Such a platform block is not itself an Owner permission blocker.
+## Gate 5 — Drive media/documents
 
-## Android signing
+After initial business API primitives are executable:
+1. implement durable upload flow;
+2. retain Drive file identity/checksum/metadata in D1;
+3. enforce document DRAFT -> FINAL and replacement history;
+4. implement employee portrait replacement semantics;
+5. test upload failure/duplicate/retry and durable-readback gates.
 
-Signing material verification remains device/key-material dependent. Never expose keystore bytes/passwords in chat or repository. This does not block Service/Projection work.
+## Gate 6 — Web
+
+Do not start a mock-heavy frontend before the Auth/runtime and initial business API are usable.
+
+Then:
+1. create same-origin Web shell/login;
+2. integrate session and permission-aware navigation;
+3. add business modules against real BETA APIs;
+4. add Drive/media flows;
+5. run Web -> Service -> D1 -> Projection/Drive E2E acceptance.
+
+## Paused — Android / LAN
+
+Android/PDA build and physical LAN/model work are paused by current Owner instruction until Android and company-laptop/network environments are available. They are not on the current critical path and must not block Service/Web/Google progress.
 
 ## STABLE
 
-STABLE remains a lane-specific gate: no promotion until full BETA PASS plus explicit Owner approval. Reaching that gate does not stop unrelated BETA/LAN/Android work that is still actionable.
+No promotion until full BETA PASS plus explicit Owner approval.
