@@ -1,0 +1,197 @@
+name: Cloudflare Worker BETA deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/dispatch/cloudflare-beta-deploy.json'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudflare-worker-beta-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: beta
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+    steps:
+      - name: Checkout authoritative main
+        uses: actions/checkout@v4
+
+      - name: Validate fixed dispatch and target contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main"
+          jq -e '
+            .enabled == true and
+            .target == "beta" and
+            .operation == "deploy_worker_business_core_v3"
+          ' .github/dispatch/cloudflare-beta-deploy.json >/dev/null
+          jq -e '
+            .target_worker == "vhdchy-beta" and
+            .public_origin == "https://beta.supra.cc.cd" and
+            .workers_dev_expected == false and
+            .d1_binding.name == "DB" and
+            .d1_binding.database_name == "vhdchy-data-beta" and
+            .d1_binding.database_id == "37eb7d59-05c0-4ba2-8162-cb6a9fe5d492" and
+            .vars.APP_ENV == "BETA" and
+            .expected_runtime.schema_version == "business_core_v3" and
+            .expected_runtime.runtime_state == "BUSINESS_CORE_V3"
+          ' service/worker/deploy.beta.json >/dev/null
+          node --input-type=module --check < service/worker/src/index.js
+
+      - name: Read-only provider preflight
+        shell: bash
+        run: |
+          set -euo pipefail
+          node .github/scripts/cloudflare-verify.mjs | tee "$RUNNER_TEMP/provider-preflight.log"
+
+      - name: Enforce exact BETA precondition
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('fs');
+          const log = fs.readFileSync(`${process.env.RUNNER_TEMP}/provider-preflight.log`, 'utf8');
+          const lines = log.split(/\r?\n/);
+          const value = (prefix) => {
+            const line = lines.find(x => x.startsWith(prefix));
+            if (!line) throw new Error(`Missing preflight evidence: ${prefix}`);
+            return line.slice(prefix.length);
+          };
+          if (value('WORKER_FOUND=') !== 'yes') throw new Error('BETA Worker missing');
+          if (value('D1_DATABASE_ID=') !== '37eb7d59-05c0-4ba2-8162-cb6a9fe5d492') throw new Error('D1 identity mismatch');
+          if (value('D1_SCHEMA_VERSION=') !== 'business_core_v3') throw new Error('D1 schema is not business_core_v3');
+          if (value('WORKERS_DEV_ENABLED=') !== 'no') throw new Error('Unexpected workers.dev state');
+          const domains = JSON.parse(value('WORKER_CUSTOM_DOMAINS='));
+          if (domains.length !== 1 || domains[0]?.hostname !== 'beta.supra.cc.cd' || domains[0]?.zone_name !== 'supra.cc.cd') {
+            throw new Error(`Unexpected Worker custom domain state: ${JSON.stringify(domains)}`);
+          }
+          const bindings = JSON.parse(value('WORKER_BINDING_NAMES_TYPES='));
+          const expected = [
+            { name: 'APP_ENV', type: 'plain_text' },
+            { name: 'BUILD_SHA', type: 'plain_text' },
+            { name: 'DB', type: 'd1' },
+            { name: 'GAS_EXEC_URL', type: 'plain_text' }
+          ];
+          if (JSON.stringify(bindings) !== JSON.stringify(expected)) {
+            throw new Error(`Unexpected Worker bindings: ${JSON.stringify(bindings)}`);
+          }
+          console.log('WORKER_BETA_PRECHECK_PASS');
+          NODE
+
+      - name: Upload reviewed Worker module
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('fs');
+          const spec = JSON.parse(fs.readFileSync('service/worker/deploy.beta.json', 'utf8'));
+          const source = fs.readFileSync(spec.source, 'utf8');
+          const metadata = {
+            main_module: 'index.js',
+            compatibility_date: spec.compatibility_date,
+            bindings: [
+              { type: 'd1', name: spec.d1_binding.name, database_id: spec.d1_binding.database_id },
+              { type: 'plain_text', name: 'APP_ENV', text: spec.vars.APP_ENV },
+              { type: 'plain_text', name: 'BUILD_SHA', text: process.env.GITHUB_SHA },
+              { type: 'plain_text', name: 'GAS_EXEC_URL', text: spec.vars.GAS_EXEC_URL }
+            ]
+          };
+          const form = new FormData();
+          form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }), 'metadata.json');
+          form.append('index.js', new Blob([source], { type: 'application/javascript+module' }), 'index.js');
+          const url = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(process.env.CLOUDFLARE_ACCOUNT_ID)}/workers/scripts/${encodeURIComponent(spec.target_worker)}`;
+          const response = await fetch(url, {
+            method: 'PUT',
+            headers: { authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}` },
+            body: form
+          });
+          let payload;
+          try { payload = await response.json(); }
+          catch { throw new Error(`Worker upload returned non-JSON HTTP ${response.status}`); }
+          if (!response.ok || payload?.success !== true) {
+            throw new Error(`Worker upload failed HTTP ${response.status}: ${JSON.stringify(payload?.errors || []).slice(0, 1500)}`);
+          }
+          console.log(`WORKER_UPLOAD_PASS id=${payload?.result?.id || spec.target_worker}`);
+          NODE
+
+      - name: Read-only provider postflight
+        shell: bash
+        run: |
+          set -euo pipefail
+          node .github/scripts/cloudflare-verify.mjs | tee "$RUNNER_TEMP/provider-postflight.log"
+
+      - name: Enforce routing and binding post-state
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('fs');
+          const log = fs.readFileSync(`${process.env.RUNNER_TEMP}/provider-postflight.log`, 'utf8');
+          const lines = log.split(/\r?\n/);
+          const value = (prefix) => {
+            const line = lines.find(x => x.startsWith(prefix));
+            if (!line) throw new Error(`Missing postflight evidence: ${prefix}`);
+            return line.slice(prefix.length);
+          };
+          if (value('D1_SCHEMA_VERSION=') !== 'business_core_v3') throw new Error('Postflight D1 schema mismatch');
+          if (value('WORKERS_DEV_ENABLED=') !== 'no') throw new Error('workers.dev routing changed unexpectedly');
+          const domains = JSON.parse(value('WORKER_CUSTOM_DOMAINS='));
+          if (domains.length !== 1 || domains[0]?.hostname !== 'beta.supra.cc.cd') {
+            throw new Error(`Custom domain changed unexpectedly: ${JSON.stringify(domains)}`);
+          }
+          const bindings = JSON.parse(value('WORKER_BINDING_NAMES_TYPES='));
+          const expected = [
+            { name: 'APP_ENV', type: 'plain_text' },
+            { name: 'BUILD_SHA', type: 'plain_text' },
+            { name: 'DB', type: 'd1' },
+            { name: 'GAS_EXEC_URL', type: 'plain_text' }
+          ];
+          if (JSON.stringify(bindings) !== JSON.stringify(expected)) throw new Error(`Binding post-state mismatch: ${JSON.stringify(bindings)}`);
+          console.log('WORKER_BETA_POSTCHECK_PASS');
+          NODE
+
+      - name: Verify public BETA health contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('fs');
+          const spec = JSON.parse(fs.readFileSync('service/worker/deploy.beta.json', 'utf8'));
+          const expectedBuild = process.env.GITHUB_SHA;
+          async function get(path) {
+            const response = await fetch(`${spec.public_origin}${path}`, { cache: 'no-store', redirect: 'follow' });
+            const text = await response.text();
+            let payload;
+            try { payload = JSON.parse(text); }
+            catch { throw new Error(`${path} returned non-JSON HTTP ${response.status}`); }
+            if (!response.ok) throw new Error(`${path} failed HTTP ${response.status}: ${text.slice(0, 800)}`);
+            return payload;
+          }
+          const health = await get('/health');
+          if (health?.ok !== true || health?.service !== 'VHDCHY_WORKER' || health?.environment !== 'BETA' || health?.build !== expectedBuild || health?.d1?.schemaVersion !== 'business_core_v3') {
+            throw new Error(`/health contract mismatch: ${JSON.stringify(health).slice(0, 1200)}`);
+          }
+          const deep = await get('/health/deep');
+          if (deep?.ok !== true || deep?.service !== 'VHDCHY_WORKER' || deep?.environment !== 'BETA' || deep?.build !== expectedBuild || deep?.d1?.schemaVersion !== 'business_core_v3') {
+            throw new Error(`/health/deep contract mismatch: ${JSON.stringify(deep).slice(0, 1200)}`);
+          }
+          const meta = await get('/api/v1/meta');
+          if (meta?.ok !== true || meta?.runtimeState !== 'BUSINESS_CORE_V3' || meta?.schemaVersion !== 'business_core_v3' || meta?.environment !== 'BETA' || meta?.build !== expectedBuild) {
+            throw new Error(`/api/v1/meta contract mismatch: ${JSON.stringify(meta).slice(0, 1200)}`);
+          }
+          const capabilities = await get('/api/v1/capabilities');
+          if (capabilities?.ok !== true || capabilities?.runtime !== 'BUSINESS_CORE_V3' || capabilities?.authority !== 'D1' || capabilities?.anonymousMutationAllowed !== false) {
+            throw new Error(`/api/v1/capabilities contract mismatch: ${JSON.stringify(capabilities).slice(0, 1200)}`);
+          }
+          console.log(`WORKER_BETA_HEALTH_PASS origin=${spec.public_origin} google_degraded=${deep?.degraded === true ? 'yes' : 'no'}`);
+          NODE
