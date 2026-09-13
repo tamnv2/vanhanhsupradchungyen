@@ -39,6 +39,9 @@ jobs:
           grep -Fq 'NON_AUTHORITY' AI_OPERATING_CONTRACT.md
           grep -Fq 'Evidence before PASS' AI_OPERATING_CONTRACT.md
           grep -Fq 'Fail closed' AI_OPERATING_CONTRACT.md
+          grep -Fq 'OWNER_PERMISSION_REQUIRED' AI_OPERATING_CONTRACT.md
+          grep -Fq 'OWNER_DECISION_REQUIRED' AI_OPERATING_CONTRACT.md
+          grep -Fq 'D-041' DECISIONS.md
           grep -Eq '^checkpoint_version: [1-9][0-9]*$' CHECKPOINT.md
           grep -Fq 'reconciled_through_commit:' CHECKPOINT.md
           grep -Fq 'do_not_repeat:' CHECKPOINT.md
@@ -66,11 +69,16 @@ jobs:
       - name: Validate Worker source syntax
         run: |
           set -euo pipefail
-          node --input-type=module --check < service/worker/src/index.js
-          node --input-type=module --check < service/worker/src/auth.js
+          for source in service/worker/src/*.js; do
+            echo "Checking ${source}"
+            node --input-type=module --check < "${source}"
+          done
 
       - name: Validate auth crypto contract
         run: node .github/scripts/auth-contract-test.mjs
+
+      - name: Run Worker unit tests
+        run: node --test service/worker/tests/*.test.mjs
 
       - name: Validate clean D1 schema
         run: |
