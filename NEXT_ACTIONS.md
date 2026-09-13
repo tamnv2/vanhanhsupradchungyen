@@ -93,7 +93,7 @@ Next:
 3. implement business commands in dependency order after Auth enforcement is executable;
 4. cover BETA scenarios from `DECISIONS.md`: IN/OUT/repeated IN, MNV reuse, PICK/PACK mixed tasks, resource changes/reissue/borrow, labor, dropped goods, documents and degraded projection.
 
-## Gate 5 — Android APK + LAN Agent/model — ACTIVE
+## Gate 5 — Android APK + LAN Agent/model — ACTIVE / FIRST BUILD PASS
 
 Reference boundary:
 - current authority remains this repository;
@@ -111,15 +111,17 @@ Completed in the current repository:
 - Agent persists its instance ID, rotates `streamEpoch` on restart, stores test-event receipt metadata and rejects idempotency-payload or device-sequence collisions;
 - cleartext endpoints are explicitly transport-test only; business credentials/PII/canonical mutations remain prohibited;
 - `.github/workflows/build-lan-dev.yml` builds Android and Agent in independent parallel CI jobs without provider mutation/release signing secrets;
-- first build run is `34756569016`; final result must be read before BUILD PASS is claimed.
+- first build run `34756569016`: SUCCESS for both jobs;
+- APK SHA256 `bf311b44ae1d514f897678aeac97c23e34a366762a94d82d410a1f4f6a5f7629`;
+- Agent ZIP SHA256 `6681d7beec406cad34366074b998c5be70f046d1dc2d99db14c7c4a21a94b2a0`.
 
 Next Android/LAN work, in parallel with Service work:
-1. resolve any failures from build run `34756569016` until both Android and Agent jobs are green;
-2. publish/retain the green DEV APK + Agent ZIP artifacts and SHA256 evidence;
-3. use the Owner's available Android device for APK install/open/basic offline queue behavior once the APK is green;
-4. continue pairing/authenticated-channel design so transport discovery/health identity is upgraded before any business LAN payload is enabled;
-5. add realtime `streamEpoch + sequence` resync and bounded background-finish behavior from the proven legacy V4 patterns;
-6. add transport source-level tests/acceptance for duplicate retry, idempotency collision, device-sequence collision, queue ordering and restart/resync;
+1. install/open the green DEV APK on the Owner's available Android device and verify app launch, displayed version/state and durable local queue behavior even without an Agent;
+2. when any suitable Windows machine is available, run the matching portable Agent and verify cached/UDP discovery -> two-sample `LAN_ACTIVE` -> echo -> transport-test queue flush;
+3. continue pairing/authenticated-channel design so transport discovery/health identity is upgraded before any business LAN payload is enabled;
+4. add realtime `streamEpoch + sequence` resync and bounded background-finish behavior from the proven legacy V4 patterns;
+5. add transport source-level tests/acceptance for duplicate retry, idempotency collision, device-sequence collision, queue ordering and restart/resync;
+6. move from debug-only artifact to reviewed BETA signing/update packaging only after the transport source/build behavior is stable;
 7. later run the final company-network/laptop/PDA regression without assuming Administrator/router/DNS/firewall changes.
 
 A DEV Agent response `TEST_ACCEPTED_AGENT_ONLY` is transport-test evidence only. Future business commands must remain queued until `ACCEPTED_CANONICAL` from the Service/D1 authority.
@@ -146,7 +148,7 @@ Then:
 
 ## Physical dependencies
 
-- Android APK installation/testing can proceed on the currently available test device once CI produces a green APK.
+- Android APK installation/testing can proceed now on the currently available test device.
 - Final corporate LAN PASS still depends on the real company laptop/network and intended PDA environment.
 - Lack of that final physical environment does not pause Android source/build, LAN Agent source/build, LAN protocol/model work or independent Service/Web/Google work.
 
