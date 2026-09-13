@@ -45,9 +45,7 @@ public sealed class LanReadinessEvaluator
         _authorizationEvaluator = new LanAuthorizationEvaluator(databasePath, expectedDomainContractVersion);
     }
 
-    public async Task<LanReadinessReport> EvaluateAsync(
-        LanBusinessAdapterEvidence? adapterEvidence = null,
-        CancellationToken cancellationToken = default)
+    public async Task<LanReadinessReport> EvaluateAsync(CancellationToken cancellationToken = default)
     {
         var blockers = new List<LanReadinessBlocker>();
         string? authorityVersion = null;
@@ -56,7 +54,6 @@ public sealed class LanReadinessEvaluator
 
         await using var connection = await OpenAsync(cancellationToken);
         var meta = await ReadMetaAsync(connection, cancellationToken);
-
         ValidateRuntimeMeta(meta, blockers);
 
         LanAuthoritySnapshotInspection authorityInspection;
@@ -77,12 +74,24 @@ public sealed class LanReadinessEvaluator
                 "Synchronized authority snapshot is missing, incompatible, or invalid."));
         }
 
-        var operational = await ReadActiveOperationalAsync(connection, cancellationToken);
+        ActiveOperationalSnapshot? operational = null;
+        try
+        {
+            operational = await ReadActiveOperationalAsync(connection, cancellationToken);
+        }
+        catch (LanReadinessException error)
+        {
+            blockers.Add(new LanReadinessBlocker(error.Code, error.Message));
+        }
+
         if (operational is null)
         {
-            blockers.Add(new LanReadinessBlocker(
-                "OPERATIONAL_SNAPSHOT_REQUIRED",
-                "No active operational snapshot is available."));
+            if (!blockers.Any(blocker => blocker.Code == "OPERATIONAL_ACTIVE_SET_INVALID"))
+            {
+                blockers.Add(new LanReadinessBlocker(
+                    "OPERATIONAL_SNAPSHOT_REQUIRED",
+                    "No active operational snapshot is available."));
+            }
         }
         else
         {
@@ -132,25 +141,19 @@ public sealed class LanReadinessEvaluator
 
         var snapshotPrerequisitesReady = blockers.Count == 0;
 
-        if (adapterEvidence is null)
-        {
-            blockers.Add(new LanReadinessBlocker(
-                "SLICE_ADAPTER_REQUIRED",
-                "A reviewed business/domain adapter proof is required before LAN business mutations may open."));
-        }
-        else
-        {
-            ValidateAdapterEvidence(adapterEvidence, blockers);
-        }
+        // This gate is deliberately not caller-overridable. A future reviewed Slice-1 business
+        // adapter must be linked here by code and CI evidence before EDGE_READY can ever be returned.
+        blockers.Add(new LanReadinessBlocker(
+            "SLICE_ADAPTER_REQUIRED",
+            "A reviewed Slice-1 business/domain adapter is not yet linked to the readiness gate."));
 
         return new LanReadinessReport(
-            Ready: blockers.Count == 0,
-            Readiness: blockers.Count == 0 ? "EDGE_READY" : "EDGE_NOT_READY",
+            Ready: false,
+            Readiness: "EDGE_NOT_READY",
             SnapshotPrerequisitesReady: snapshotPrerequisitesReady,
             AuthoritySnapshotVersion: authorityVersion,
             OperationalSnapshotVersion: operationalVersion,
             OperationalAuthoritySnapshotVersion: operationalAuthorityVersion,
-            AdapterVersion: adapterEvidence?.AdapterVersion,
             RequiredModules: _requiredModules,
             Blockers: blockers);
     }
@@ -180,52 +183,6 @@ public sealed class LanReadinessEvaluator
         if (!meta.TryGetValue("domain_contract_version", out var domain) || !string.Equals(domain, _expectedDomainContractVersion, StringComparison.Ordinal))
         {
             blockers.Add(new LanReadinessBlocker("RUNTIME_DOMAIN_INCOMPATIBLE", "Edge domain contract metadata is incompatible."));
-        }
-    }
-
-    private void ValidateAdapterEvidence(
-        LanBusinessAdapterEvidence evidence,
-        ICollection<LanReadinessBlocker> blockers)
-    {
-        if (string.IsNullOrWhiteSpace(evidence.AdapterVersion))
-        {
-            blockers.Add(new LanReadinessBlocker("SLICE_ADAPTER_VERSION_REQUIRED", "Business adapter version is required."));
-        }
-        if (!string.Equals(evidence.DomainContractVersion, _expectedDomainContractVersion, StringComparison.Ordinal))
-        {
-            blockers.Add(new LanReadinessBlocker("SLICE_ADAPTER_DOMAIN_INCOMPATIBLE", "Business adapter domain contract version is incompatible."));
-        }
-
-        var covered = evidence.CoveredModules
-            .Where(value => !string.IsNullOrWhiteSpace(value))
-            .Select(value => value.Trim())
-            .Distinct(StringComparer.Ordinal)
-            .ToArray();
-        foreach (var requiredModule in _requiredModules)
-        {
-            if (!covered.Contains(requiredModule, StringComparer.Ordinal))
-            {
-                blockers.Add(new LanReadinessBlocker(
-                    "SLICE_ADAPTER_MODULE_MISSING",
-                    $"Business adapter does not cover required module: {requiredModule}."));
-            }
-        }
-
-        if (!evidence.AuthorizationValidated)
-        {
-            blockers.Add(new LanReadinessBlocker("SLICE_ADAPTER_AUTHZ_UNPROVEN", "Business adapter has no reviewed authorization proof."));
-        }
-        if (!evidence.CommandContractValidated)
-        {
-            blockers.Add(new LanReadinessBlocker("SLICE_ADAPTER_COMMAND_CONTRACT_UNPROVEN", "Business adapter has no reviewed command-contract proof."));
-        }
-        if (!evidence.BusinessValidationValidated)
-        {
-            blockers.Add(new LanReadinessBlocker("SLICE_ADAPTER_BUSINESS_RULES_UNPROVEN", "Business adapter has no reviewed business-rule validation proof."));
-        }
-        if (!evidence.AtomicCommitValidated)
-        {
-            blockers.Add(new LanReadinessBlocker("SLICE_ADAPTER_ATOMIC_COMMIT_UNPROVEN", "Business adapter has no reviewed atomic-commit proof."));
         }
     }
 
@@ -319,15 +276,6 @@ public sealed class LanReadinessEvaluator
         string PayloadJson);
 }
 
-public sealed record LanBusinessAdapterEvidence(
-    string AdapterVersion,
-    string DomainContractVersion,
-    IReadOnlyCollection<string> CoveredModules,
-    bool AuthorizationValidated,
-    bool CommandContractValidated,
-    bool BusinessValidationValidated,
-    bool AtomicCommitValidated);
-
 public sealed record LanReadinessReport(
     bool Ready,
     string Readiness,
@@ -335,7 +283,6 @@ public sealed record LanReadinessReport(
     string? AuthoritySnapshotVersion,
     string? OperationalSnapshotVersion,
     string? OperationalAuthoritySnapshotVersion,
-    string? AdapterVersion,
     IReadOnlyList<string> RequiredModules,
     IReadOnlyList<LanReadinessBlocker> Blockers);
 
