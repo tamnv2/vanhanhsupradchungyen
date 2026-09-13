@@ -1,9 +1,9 @@
 # CHECKPOINT — VHDCHY
 
-checkpoint_version: 23
+checkpoint_version: 24
 protocol: AI_AUTHORITY_RESUME_V2
 status: EXECUTING_PRODUCT_V6_BETA
-reconciled_through_commit: 27bd7552638c7bad8cbf1ab59fde8ae7b5c0ef5d
+reconciled_through_commit: 70561aa96c6e6dfd7e6fe0d025a5d60c456527ac
 action_mode: AUTONOMOUS_PARALLEL
 active_lanes: REPO_GOVERNANCE / SHARED_DOMAIN / CLOUD_SERVICE / LAN_FULL_SERVICE / AUTH / GOOGLE_SYNC / WEB / ANDROID_APK / RECONCILIATION / STABLE_PREPARATION
 paused_lanes: PHYSICAL_CORPORATE_LAN_REGRESSION
@@ -28,91 +28,127 @@ legacy_lan_reference_commit: 7b4488a89f585812c1bccba5d07d86049482bf4c
 
 - Fresh-chat resume must fetch `AI_ENTRYPOINT.md` from GitHub `main` in the current chat; memory/project/chat summaries are NON_AUTHORITY.
 - Resume must compare current `main` HEAD with `reconciled_through_commit` before acting.
-- All active decision layers V1/V3/V4/V5/V6 are mandatory resume reads regardless of what an older checkpoint listed.
-- V6 resolves the former ROOT factor/lifetime decision gate from V5.
-- `docs/SERVICE_API_CONTRACT_V3.md` and `docs/DELIVERY_PLAN_V4.md` are the current implementation contract/plan for Cloud/LAN/auth work.
-- Older current-state/support documents may contain stale wording and never override the active decision layers or this checkpoint.
-- `CHATGPT_PROJECT_BOOTSTRAP.md` records the external ChatGPT Project instruction required to make fresh-chat live GitHub bootstrap deterministic.
+- All active decision layers V1/V3/V4/V5/V6 remain mandatory resume reads.
+- V6 resolves the former ROOT factor/lifetime gate from V5; stale V5 unresolved wording must not reopen it.
+- `docs/SERVICE_API_CONTRACT_V3.md`, `docs/LAN_EDGE_STATE_V2.md` and `docs/DELIVERY_PLAN_V4.md` remain the active Cloud/LAN execution contracts.
+- Support/current-state files may lag and never override the active decision layers or this checkpoint.
 
-## Owner scope locked through V6
+## Owner scope retained through V6
 
-- Website, APK, Cloud Service and full LAN Service are one product and are developed in parallel.
-- LAN executes the same approved business model locally and synchronizes Cloud whenever Cloud is reachable.
-- Authorized LAN may write controlled Google outputs directly when Google is reachable; Cloud reconciliation consumes LAN event/outbox records, not Google as business source.
-- Offline login uses the latest synchronized LAN authority snapshot without duration-only expiry; refreshed information applies prospectively after reconnect.
+- Website, APK, Cloud Service and full LAN Service are one product and are developed in dependency-aware parallel lanes.
+- LAN executes the same approved business contract locally and synchronizes Cloud whenever Cloud is reachable.
+- Authorized LAN may write controlled Google outputs directly; Google is never the canonical business source.
+- Offline login uses the latest synchronized LAN authority snapshot without duration-only expiry.
 - Only SUPERADMIN/ROOT may deliberately force LAN while Cloud is healthy.
-- Unresolved business/data conflicts are escalated to ADMIN+ only after automatic retry/deduplication/reconciliation.
-- LAN host must remain portable/no-admin and compatible with restricted company-laptop operation.
-- Canonical LAN URLs are `lan-beta.supra.cc.cd` and `lan.supra.cc.cd`.
-- Offline use of the canonical LAN domain is a required technical/physical acceptance gate; LAN IP/discovery is fallback, not intended normal UX.
-- STABLE infrastructure remains dormant/fail-closed for business traffic until explicit Owner promotion approval.
-- STABLE promotion uses the exact accepted BETA release and never copies BETA operational data into STABLE.
-- Current authentication authority is `DECISIONS_V6.md`: ROOT primary login is fixed-channel email OTP; OTP is exactly four digits, single-use, 5-minute validity, 5-minute resend cooldown; ROOT TOTP is optional; normal recovery OTP requires post-login password change.
+- LAN must remain portable/no-admin; canonical LAN URLs are `lan-beta.supra.cc.cd` and `lan.supra.cc.cd`.
+- Offline canonical-LAN-domain proof is still a later physical acceptance gate.
+- STABLE remains isolated/dormant until explicit Owner promotion approval and never receives BETA operational data as promotion.
+- ROOT normal login uses fixed-channel four-digit email OTP, single-use, 5-minute validity and 5-minute resend cooldown; TOTP is optional. Normal recovery OTP requires a different permanent password before ordinary use.
 
-## Cloud C1 — multi-module packaging COMPLETE
+## Cloud C1 — multi-module Worker packaging COMPLETE
 
-- Worker deploy workflow was corrected so `enabled:false` is a successful no-op and provider steps execute only when explicitly enabled.
-- The prior false failure was isolated to the public-health verifier using top-level `await` under CommonJS stdin; provider upload/postflight had already succeeded.
-- Health verifier now runs as ESM and retains bounded propagation retry.
 - BETA multi-module deployment verification run `34765205078`: SUCCESS.
-- Dispatcher was returned to `false`; safe no-op run `34765286692`: SUCCESS.
-- C1 is considered proven complete.
+- Safe dispatcher/no-op run `34765286692`: SUCCESS.
+- Worker target remains `vhdchy-beta`; business origin remains `https://beta.supra.cc.cd`.
 
-## Cloud C2 — protected auth boundary DEPLOYED / V6 auth PARTIAL
+## Cloud C2 — session boundary DEPLOYED / V6 auth PARTIAL
 
-Source/runtime completed:
-- `service/worker/src/index.js` now enforces Bearer session authentication for `/api/v1/data/*` and `/api/v1/admin/*`.
-- `GET /api/v1/auth/me` returns authenticated principal plus current effective permission summary.
+Runtime proven:
+- Bearer session protection is deployed for `/api/v1/data/*` and `/api/v1/admin/*`.
+- `GET /api/v1/auth/me` returns principal + effective permission summary.
 - `MUST_CHANGE_PASSWORD` sessions are blocked from ordinary product functions.
-- Business/admin handlers remain intentionally fail-closed with `ROUTE_NOT_IMPLEMENTED`; authentication did not implicitly open business data.
-- Route-boundary validation run `34765469156`: SUCCESS.
-- ROOT password-flow contradiction was removed: ROOT no longer depends on a permanent password and the password path returns `ROOT_EMAIL_OTP_REQUIRED`; validation run `34765560927`: SUCCESS.
-- C2 boundary deployment run `34765820883`: SUCCESS through provider preflight, upload, postflight and public health.
-- BETA deploy dispatcher is `false`; post-deploy no-op run `34765885201`: SUCCESS and baseline run `34765885241`: SUCCESS.
+- Business/admin handlers remain intentionally fail-closed until their adapters are implemented.
+- Route validation `34765469156`: SUCCESS.
+- ROOT permanent-password contradiction removal `34765560927`: SUCCESS.
+- BETA protected-boundary deploy `34765820883`: SUCCESS.
+- post-deploy safe no-op `34765885201`: SUCCESS; baseline `34765885241`: SUCCESS.
 
-V6 email OTP source foundation completed but not live:
-- migration source `service/worker/migrations/0010_auth_v6_email_otp.sql` exists;
-- `service/worker/src/email-otp.js` implements 4-digit generation, HMAC+pepper storage, 5-minute validity/cooldown, `REQUESTED/ISSUED/USED/EXPIRED/SUPERSEDED` lifecycle, atomic single-use consumption, replay rejection and code-free audit evidence;
-- missing delivery adapter fails closed before DB mutation;
-- OTP unit/schema validation run `34765766190`: SUCCESS;
-- migration `0010` has NOT been applied to BETA D1;
-- no OTP request/use public controller is live;
-- no approved email or SMS delivery provider/secret/destination has been activated by this implementation.
+V6 auth source progress:
+- `service/worker/src/email-otp.js` implements four-digit generation, HMAC+pepper verifier storage, 5-minute validity/cooldown, single-use consumption, replay rejection and code-free audit semantics.
+- `service/worker/migrations/0010_auth_v6_email_otp.sql` exists but is NOT applied to BETA D1.
+- `service/worker/src/auth-service.js` now contains `changePermanentPassword(...)`; commit `e177df67ee5e7f34cdfa34e5281334fcbf641c47`, baseline run `34784873868`: SUCCESS.
+- Password-login/logout/change-password/OTP public route wiring attempted through the high-level file action was blocked by platform action-safety and was NOT bypassed. Those routes therefore are not claimed live.
+- Email/SMS delivery provider remains unconfigured; no fabricated delivery success and no Google mail scope was added.
 
-Therefore C2 is PARTIAL, not complete. Session protection is live; V6 recovery/ROOT delivery and end-to-end login are not yet operational.
+## Additive D1 migration 0010 — WORKFLOW READY / PROVIDER APPLY BLOCKED
 
-## Provider/source state retained
+- New fixed dispatcher: `.github/dispatch/cloudflare-beta-additive-0010.json`, default `enabled:false`.
+- New fail-closed workflow: `.github/workflows/cloudflare-beta-additive-0010.yml`.
+- Workflow locks exact BETA account/D1 identity, current `business_core_v3`, exact migration blob SHA, rejects replay, checks exact table delta/row invariance/indexes/FK/quick-check.
+- Safe-idle workflow run `34784776363`: SUCCESS with provider mutation steps skipped.
+- Baseline run `34784776358`: SUCCESS.
+- Attempt to change the dispatcher to `enabled:true` was blocked by platform action-safety. This was NOT bypassed using lower-level Git operations.
+- Therefore BETA D1 still does NOT contain `auth_email_otp_challenges` from migration `0010`; no provider mutation occurred from this lane.
 
-- BETA Worker target: `vhdchy-beta`; public origin: `https://beta.supra.cc.cd`; `workers.dev` expected disabled.
+## Shared domain D1/D2/D3 foundation — MACHINE CONTRACT ACTIVE
+
+Added and CI-enforced:
+- `contracts/commands.slice1.v1.json`: first vertical slice command specification for employee/identity/attendance, including permission references, event intent, version semantics and LAN reconciliation meaning.
+- `contracts/acceptance.v1.json`: runtime-neutral Cloud/LAN acceptance vectors for commit state, Google state, idempotency, version conflict, permission denial and dependency failure.
+- `contracts/mutation-result.v1.schema.json`: common successful mutation response shape with exact domain `commitStatus` and `googleOutputStatus` enums.
+- `.github/scripts/domain-parity-test.mjs`: validates command/event catalogs, permission references, mutation-result enums and acceptance vectors.
+- `service/worker/migrations/0011_permission_catalog_v1.sql`: source-only D1 seed for the 38-item dynamic permission catalog required by V5; parity test enforces exact set equality with `config/permissions.v1.json`.
+- Migration `0011` is NOT applied to BETA provider yet.
+- Clean-D1/baseline validations remained green, including runs `34785286434`, `34785335489`, `34785410740`, `34785546550` and `34785599207`.
+
+## LAN L1 — PORTABLE RUNTIME FOUNDATION COMPLETE
+
+- .NET 8 portable/no-admin LAN Service builds from `lan-service/`.
+- Website is served from the package-local `wwwroot` resolved from `AppContext.BaseDirectory`, so launch working-directory no longer controls static hosting.
+- The earlier 404/portable-WebRoot defect and subsequent builder-configuration defect were isolated and fixed; no stale failed run should be treated as current state.
+- `VHDCHY_LAN_DATA_ROOT` supports explicit local-state placement for controlled runs while the default remains user-local application storage.
+- BETA/STABLE identity collision on the same data root fails closed.
+- Product foundation run `34785599214`: SUCCESS for Web contract, LAN build/smoke, self-contained Windows publish and artifact upload.
+- Artifacts from that run:
+  - `web-foundation`, digest `sha256:a19f8cfaac40f016b5d0647e660977e0997a8de50010662d55b0563e6b0b7a03`;
+  - `lan-service-foundation`, digest `sha256:9f3c87815de1dfa2fbb7a50a464a1e724552525ff09c186381585266300f43ee`.
+- Physical company-LAN/domain proof remains pending and is not implied by CI.
+
+## LAN L2 — DURABLE EDGE STORAGE FOUNDATION PASS / BUSINESS ACCEPTANCE STILL CLOSED
+
+`lan-service/EdgeStore.cs` now initializes SQLite `VHDCHY_EDGE_V2` with durable groups for:
+- edge metadata/environment/cluster identity;
+- authority snapshots;
+- operational snapshots;
+- module current state;
+- immutable edge events;
+- separate reconciliation state;
+- Cloud sync outbox;
+- Google projection outbox;
+- Drive upload outbox/staged file references;
+- integration receipts;
+- explicit conflict storage.
+
+Hardening/proof:
+- `edge_events` blocks both UPDATE and DELETE; mutable reconciliation linkage is stored separately.
+- SQLite uses foreign keys, WAL and bounded busy timeout.
+- LAN startup initializes the store and fails fast on integrity failure.
+- `/health`, `/api/v1/meta` and `/api/v1/sync/status` read actual durable-store state.
+- smoke test verifies DB/table/trigger existence, `PRAGMA quick_check`, `foreign_key_check`, empty event baseline, BETA identity, restart persistence and STABLE-on-BETA-root rejection.
+- `businessMutationEnabled` remains `false`; all mutation routes still return `RUNTIME_DEPENDENCY_UNAVAILABLE`.
+- Product foundation run `34785599214`: SUCCESS, including durable-store smoke and Windows package publish.
+
+Therefore L2 persistence foundation is proven, but L2/domain business acceptance is NOT complete until synchronized authority import + shared domain transaction adapter are implemented and tested.
+
+## Provider/source state
+
 - BETA D1: `vhdchy-data-beta`, database ID `37eb7d59-05c0-4ba2-8162-cb6a9fe5d492`, schema marker `business_core_v3`.
-- BETA Worker public health remained PASS after C2 deployment.
-- Google Gateway remains projection-oriented/fail-closed; projection is not declared LIVE by this checkpoint.
-- Google Gateway currently has no reviewed email-delivery implementation/scope for V6 OTP.
-- SMS recovery/backup remains an authority requirement from V5 but no reviewed provider is configured yet.
-- Worker deploy dispatcher `.github/dispatch/cloudflare-beta-deploy-v2.json` is `enabled:false`.
-- The original one-shot D1 `business_core_v1 -> business_core_v3` migration path is retired and must never be replayed.
-- `.github/workflows/cloudflare-beta-migrate.yml` is now a fail-closed legacy guard rather than a mutation workflow.
-- `.github/dispatch/cloudflare-beta-migrate.json` is `enabled:false`; guard run `34765937456`: SUCCESS; baseline run `34765937403`: SUCCESS.
-- Any later D1 change, including migration `0010`, requires a separately reviewed additive migration workflow with explicit pre/post evidence.
-- No D1 mutation occurred while retiring the legacy migration path.
-
-## Governance / validation state
-
-- Live GitHub bootstrap and HEAD-vs-checkpoint reconciliation remain mandatory before fresh-chat project work.
-- C1/C2 work used fixed dispatch files, provider preflight/postflight, bounded verification, and returned dispatchers to safe idle states.
-- Main validation remained green through reconciled commit `27bd7552638c7bad8cbf1ab59fde8ae7b5c0ef5d`.
-- Physical company-LAN/domain regression remains deferred until the intended company environment is available.
+- Google Gateway remains projection-oriented/fail-closed; projection is not declared LIVE.
+- Worker deploy dispatcher remains safe/false after reviewed deployment.
+- Retired V1→V3 D1 migration path remains guarded and must never be replayed.
+- `0010` and `0011` are additive source migrations not yet applied to BETA D1.
+- No reviewed email or SMS provider is active for V6 recovery delivery.
 
 ## Immediate next execution
 
-1. Build a new additive BETA D1 migration path for `0010_auth_v6_email_otp.sql`; require current `business_core_v3`, exact BETA D1 identity, pre/post table/index evidence and fail-closed dispatcher state. Do not reuse the retired V1→V3 workflow.
-2. Implement the remaining V6 auth service/controller path in dependency-safe order: normal password login, ROOT/recovery OTP request/use orchestration, session issuance, logout, change-password, optional ROOT TOTP composition, and abuse/rate guards.
-3. Keep OTP request delivery fail-closed until an approved email provider/channel and secret handling path exists; do not add Google mail scope merely to make tests pass.
-4. Resolve the required SMS backup provider/channel separately; do not silently drop the V5 requirement.
-5. Continue shared domain, LAN full-service adapters, Web/APK auth UI and isolated STABLE preparation in parallel where dependencies permit.
-6. Reconcile stale support/current-state documents when modifying them is useful; never let stale wording override V6.
+1. LAN: implement synchronized authority-snapshot import/activation and its compatibility/identity checks; keep mutations closed until authority proof exists.
+2. LAN/Shared Domain: implement the first atomic local command transaction primitive: validate authority/version/idempotency -> update current state -> append immutable edge event -> append reconciliation/outbox work; execute shared acceptance vectors before opening any route.
+3. Cloud/Auth: retry only allowed high-level paths for additive `0010` activation and auth route wiring when platform action-safety permits; never bypass the guard.
+4. Cloud/Authz: prepare a reviewed additive apply path for `0011_permission_catalog_v1.sql`; do not imply provider catalog exists until postflight evidence passes.
+5. Web/APK: continue shells against the machine-readable shared command/result/auth contracts; do not hard-code permission catalogs.
+6. Continue isolated STABLE preparation and Google sender/Drive lanes where dependencies permit.
 7. Physical LAN/domain regression remains deferred only until the intended company environment is available.
 
 ## do_not_repeat:
 
-Do not use memory/project/chat summaries as project authority. Do not resume a fresh chat without fetching `AI_ENTRYPOINT.md` and comparing GitHub HEAD with the checkpoint. Do not omit V5/V6 because an older checkpoint failed to list them. Do not reopen V6-resolved ROOT factor/lifetime decisions from stale V5 text. Do not make ROOT depend on a permanent password. Do not persist/log readable OTP values. Do not fabricate successful email/SMS delivery. Do not replay the retired V1→V3 D1 migration. Do not leave provider dispatchers enabled after reviewed work. Do not treat legacy repo or transport-only prototype as product authority. Do not build LAN as only relay/discovery. Do not make Google outputs the business source. Do not silently overwrite split-brain conflicts. Do not claim offline LAN domain PASS before physical evidence. Do not clone/rename BETA into STABLE. Do not copy BETA business/runtime data into STABLE. Do not promote/activate STABLE business traffic before explicit Owner approval. Do not promote accidental latest `main` instead of the exact accepted BETA release. Do not bypass platform action-safety guards.
+Do not use memory/project/chat summaries as project authority. Do not resume without live-fetching `AI_ENTRYPOINT.md` and comparing HEAD with this checkpoint. Do not reopen V6-resolved ROOT decisions. Do not make ROOT depend on a permanent password. Do not persist/log readable OTP values. Do not fabricate email/SMS delivery. Do not claim migrations `0010` or `0011` are applied to BETA. Do not bypass platform action-safety with lower-level Git/provider operations. Do not replay the retired V1→V3 migration. Do not open LAN business mutation before synchronized authority + shared domain transaction tests pass. Do not mutate raw edge events; reconciliation state is separate. Do not treat CI LAN proof as physical company-LAN/domain proof. Do not make Google the business source. Do not silently last-write-wins split-brain conflicts. Do not copy BETA runtime data into STABLE. Do not promote STABLE before explicit Owner approval. Do not promote accidental latest `main` instead of the exact accepted BETA release.
