@@ -3,15 +3,21 @@ import fs from 'node:fs';
 const domain = JSON.parse(fs.readFileSync('contracts/domain.v1.json', 'utf8'));
 const slice = JSON.parse(fs.readFileSync('contracts/commands.slice1.v1.json', 'utf8'));
 const acceptance = JSON.parse(fs.readFileSync('contracts/acceptance.v1.json', 'utf8'));
+const mutationResult = JSON.parse(fs.readFileSync('contracts/mutation-result.v1.schema.json', 'utf8'));
 const permissionCatalog = JSON.parse(fs.readFileSync('config/permissions.v1.json', 'utf8'));
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
 
+function sameSet(left, right) {
+  return JSON.stringify([...left].sort()) === JSON.stringify([...right].sort());
+}
+
 assert(domain.contractVersion === 'VHDCHY_DOMAIN_V1', 'Unexpected domain contract version');
 assert(slice.domainContractVersion === domain.contractVersion, 'Slice/domain version mismatch');
 assert(acceptance.domainContractVersion === domain.contractVersion, 'Acceptance/domain version mismatch');
+assert(mutationResult.$id === 'VHDCHY_MUTATION_RESULT_V1', 'Unexpected mutation result schema id');
 assert(permissionCatalog.schemaVersion === 'VHDCHY_PERMISSION_CATALOG_V1', 'Unexpected permission catalog version');
 
 const commandCodes = new Set(Object.values(domain.commandFamilies || {}).flat());
@@ -22,6 +28,14 @@ const permissionKeys = new Set(
 const commitStatuses = new Set(domain.commitStatuses || []);
 const googleStatuses = new Set(domain.googleOutputStatuses || []);
 const stableErrors = new Set(domain.stableErrors || []);
+
+const resultCommitStatuses = new Set(mutationResult.properties?.commitStatus?.enum || []);
+const resultGoogleStatuses = new Set(mutationResult.properties?.googleOutputStatus?.enum || []);
+assert(sameSet(commitStatuses, resultCommitStatuses), 'Mutation result commitStatus enum differs from domain contract');
+assert(sameSet(googleStatuses, resultGoogleStatuses), 'Mutation result googleOutputStatus enum differs from domain contract');
+for (const required of ['ok', 'requestId', 'commitStatus', 'googleOutputStatus']) {
+  assert((mutationResult.required || []).includes(required), `Mutation result required field missing: ${required}`);
+}
 
 assert(Array.isArray(slice.commands) && slice.commands.length > 0, 'Slice command list is empty');
 for (const command of slice.commands) {
@@ -52,4 +66,4 @@ for (const vector of acceptance.vectors) {
   }
 }
 
-console.log(`DOMAIN_PARITY_PASS commands=${slice.commands.length} vectors=${acceptance.vectors.length}`);
+console.log(`DOMAIN_PARITY_PASS commands=${slice.commands.length} vectors=${acceptance.vectors.length} resultSchema=PASS`);
