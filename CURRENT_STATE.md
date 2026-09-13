@@ -9,7 +9,8 @@ Baseline: `REPO-RESET-20260912-01`
 - Pre-zero snapshot retained temporarily at `backup/pre-zero-20260912`.
 - `AI_AUTHORITY_RESUME_V2` is active.
 - Owner-approved 2026-09-13 business/data decisions are persisted in `DECISIONS.md`.
-- Owner execution policy is active: direct connected action first; otherwise GitHub-hosted CI; request only exact missing permission/consent; do not require laptop-local tooling for routine cloud/provider operations.
+- `D-041` is active: after approved scope is established, overall execution continues by default. Owner interaction is reserved for `OWNER_PERMISSION_REQUIRED` or `OWNER_DECISION_REQUIRED`; a blocked single lane does not stop independent safe lanes.
+- Execution preference remains direct connected action -> GitHub-hosted CI -> minimum exact Owner permission/consent -> local/physical only when inherently required.
 - Secret values remain outside repository source.
 
 ## GitHub BETA environment
@@ -24,10 +25,12 @@ Baseline: `REPO-RESET-20260912-01`
 - Current Google authority: `tam95.supra@gmail.com`.
 - Project root: `VẬN HÀNH DC HƯNG YÊN` with `01_BETA` and `02_STABLE` environment roots.
 - BETA cluster: `PICK_PACK_1291`.
-- BETA projection workbook remains `PROVISIONED_NOT_LIVE`.
+- BETA projection workbook `VHDCHY BETA - PICK PACK 1291 - 2026 Q3` was re-inspected against live Sheets metadata and headers.
+- Workbook schema remains `PP1291_SHEETS_BETA_V1`; canonical authority remains D1; projection status remains `PROVISIONED_NOT_LIVE`.
 - Google Cloud/OAuth BETA: PASS.
-- GAS BETA foundation: PASS.
-- Business `doPost()` remains foundation-only; Google projection is not yet business-live.
+- GAS managed deployment was updated in place to immutable version `3` by run `34753872034` — PASS.
+- Version 3 implements fail-closed `VHDCHY_PROJECTION_V1`: fixed allowed-sheet/key mapping, bounded batches, unknown-column rejection, per-sheet key upsert and ScriptLock serialization.
+- Projection writes remain intentionally disabled until the cross-service projection authentication verifier/enable state is safely provisioned and end-to-end retry/idempotency tests pass.
 
 ## Cloudflare D1 BETA — BUSINESS_CORE_V3 PASS
 
@@ -49,19 +52,31 @@ Baseline: `REPO-RESET-20260912-01`
 - Binding names/types verified before and after deploy: `DB`/D1, `APP_ENV`/plain text, `BUILD_SHA`/plain text, `GAS_EXEC_URL`/plain text.
 - Guarded deploy run `34752917714` — SUCCESS.
 - Deployed build SHA: `6b23f7134e02c7b53571c0a151f97f27a86bcb2e`.
-- `/health`: PASS, environment `BETA`, D1 schema `business_core_v3`.
-- `/health/deep`: PASS; Google Gateway was healthy at verification time.
-- `/api/v1/meta`: PASS, runtime `BUSINESS_CORE_V3`.
-- `/api/v1/capabilities`: PASS, authority `D1`, anonymous mutation disabled.
-- Independent post-deploy provider inspection run `34752966242` — SUCCESS; routing, binding names/types and D1 V3 state remained correct.
+- `/health`, `/health/deep`, `/api/v1/meta`, `/api/v1/capabilities`: PASS at deployment verification.
+- Independent post-deploy provider inspection run `34752966242` — SUCCESS.
 
-## Service implementation state
+## Parallel Service implementation state
 
-- D1 schema and Worker foundation are now live in BETA.
-- Business data/admin API paths intentionally remain closed with `AUTH_REQUIRED` until authenticated session and effective-permission enforcement are implemented.
-- Google projection/outbox processing is not business-live yet.
-- Web business flows are not business-live yet.
-- Next Service implementation gate is authentication/session/permission enforcement, followed by projection/outbox processing and business APIs/acceptance scenarios.
+### Auth/session/permission lane
+- `service/worker/src/auth.js`: password policy/hash, bearer-token utilities and TOTP verification foundation.
+- `service/worker/src/authorization.js`: scoped effective permission evaluator with explicit DENY precedence and ROOT/SUPERADMIN boundary.
+- `service/worker/src/session.js`: bearer session resolution, account/session expiry/revocation checks and device security-epoch validation.
+- `service/worker/src/permission-store.js`: active role/direct grant loading with effective-time and cluster/module scope.
+- Unit/contract validation run `34753672108` — SUCCESS.
+- Protected business/admin endpoints remain fail-closed until these modules are integrated into the deployed Worker and runtime acceptance passes.
+
+### Projection/outbox lane
+- `service/worker/src/projection.js`: `VHDCHY_PROJECTION_V1` envelope, bounded pending-outbox reads, processing/ACK/failure states, exponential retry and DEAD transition foundation.
+- GAS projection batch contract version 3 is deployed but not write-live.
+- D1 remains canonical if Google is degraded; no committed business mutation may be rolled back because projection fails.
+
+### Shared API contract lane
+- `docs/SERVICE_API_CONTRACT.md` defines bearer/session rules, permission/scope enforcement, same-origin boundary, idempotency requirements, standard errors and the required D1 state + immutable event + outbox transaction contract.
+- No Web business surface is treated as live yet.
+
+## Known implementation constraint
+
+The currently deployed Worker bridge uploads the single foundation module `index.js`. New auth/session/permission/projection modules are validated source on `main` but are not yet part of deployed runtime. The multi-module deployment path must be reconciled before importing them into `index.js`; until then, existing fail-closed business route behavior is preserved.
 
 ## Target architecture
 
@@ -74,5 +89,5 @@ Baseline: `REPO-RESET-20260912-01`
 ## Android / LAN / STABLE
 
 - Android BETA signer: `VERIFY_REQUIRED` when signing material/machine is available.
-- Physical LAN regression remains paused while Owner is off-site; Service work continues independently.
-- STABLE remains blocked until BETA PASS and explicit Owner approval.
+- Physical LAN regression remains paused while Owner is off-site; source review/restoration work may continue independently.
+- STABLE remains blocked until BETA PASS and explicit Owner approval; that gate does not block independent BETA work.
