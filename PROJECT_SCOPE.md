@@ -1,6 +1,6 @@
 # PROJECT SCOPE — VHDCHY
 
-Status: ACTIVE / PRODUCT TARGET RECONCILED 2026-09-13
+Status: ACTIVE / PRODUCT TARGET RECONCILED V3 2026-09-13
 Baseline: `REPO-RESET-20260912-01`
 
 ## Scope
@@ -33,44 +33,56 @@ Reference-only siblings:
 
 ## Final product deliverables
 
-The VHDCHY product is developed as one platform with four first-class deliverables:
+The VHDCHY product is one platform with four first-class deliverables:
 
 1. Website — full browser business/administration client.
-2. Android APK — PDA-optimized client using the same domain/API and permission model as Web.
-3. Cloud Service — Cloudflare Worker + D1 as the normal online service runtime.
-4. LAN Service — local substitute runtime for approved business continuity when Internet/Cloud Service is unavailable, plus a local relay/front door for forced-LAN clients when Cloud remains reachable.
+2. Android APK — PDA-optimized business client using the same domain/API and permission semantics as Website.
+3. Cloud Service — Cloudflare Worker + D1 as the normal central online runtime.
+4. LAN Service — full local substitute Service able to execute the same approved warehouse business model locally.
 
-Google Sheets and Google Drive remain downstream storage/projection integrations, not separate business authorities.
+## LAN Service scope
 
-## Architecture retained and expanded
+LAN must support:
+- normal local operation when Internet is unavailable but local Wi-Fi/LAN remains usable;
+- normal local operation when Cloud Service is unavailable/degraded;
+- deliberate forced-LAN routing while Cloud is healthy, controlled by SUPERADMIN/ROOT;
+- continuous/opportunistic synchronization to Cloud/D1 whenever Cloud is reachable, even if users remain routed through LAN;
+- direct controlled Google Sheets projection and Drive upload whenever Internet/Google is reachable;
+- queued/staged Google work when Internet/Google is unavailable;
+- later Cloud reconciliation from the LAN immutable event journal/outbox rather than reconstruction from Sheets/Drive;
+- explicit conflict evidence and ADMIN+ decision for unresolved business/data conflicts.
 
-- D1 is the global canonical structured authority after normal Cloud commit/reconciliation.
-- Google Sheets is projection / human-readable / reconciliation / DR surface, never canonical authority.
-- Projection uses controlled writer + outbox + idempotency + retry + ACK + checkpoint.
-- BETA and STABLE are isolated in provider resources, credentials and runtime data.
-- Web and APK use one business/domain contract; APK is a compact PDA-oriented surface rather than a separate application logic branch.
-- Cloud and LAN must share one business command/event model and acceptance semantics.
-- LAN must work without admin/router/firewall/internal-DNS dependency.
-- LAN autonomous mode uses a local edge state/event/outbox model and later reconciles to D1; conflicts are explicit and never silently overwritten.
-- During Internet/Cloud loss, Sheets/Drive work is deferred rather than becoming a parallel authority.
-- Physical LAN evidence currently covers exactly two real Newland MT90 from the legacy reference; synthetic clients are capacity evidence only and legacy evidence is not current-product PASS.
+## Offline operation scope
 
-Detailed authority: `docs/TARGET_PRODUCT_ARCHITECTURE_V2.md`.
-Execution plan: `docs/DELIVERY_PLAN_V2.md`.
+LAN maintains the latest synchronized local authority/configuration state required for business operation.
+
+Offline login is not time-expired merely because the outage is long under the current Owner requirement. Remote changes made during a hard partition are necessarily unknown until reconnect; after refresh, new authority/configuration applies to future operations while prior accepted local events remain auditable/reconcilable evidence.
+
+## Data authority
+
+- D1 is the central consolidated structured store after synchronization.
+- LAN edge state/event journal is the local operational authority for events accepted during LAN operation.
+- Google Sheets remains projection/reconciliation/DR only.
+- Google Drive remains media/document/archive storage.
+- Google output may be produced by either authorized Cloud or LAN Service but must carry stable identities/receipts to prevent duplicates.
+- Web and APK never write D1/Sheets/Drive directly around the Service contract.
+
+Detailed architecture: `docs/TARGET_PRODUCT_ARCHITECTURE_V3.md`.
+Execution plan: `docs/DELIVERY_PLAN_V3.md`.
 
 ## Legacy/reference boundary
 
 - Legacy repository `tamnv2supra/vanhanhdchungyen` is read-only NON_AUTHORITY reference.
 - Fixed comparison commit: `7b4488a89f585812c1bccba5d07d86049482bf4c`.
-- The pre-clarification transport-only APK/Agent prototype in the current repo is also NON_AUTHORITY and may contribute only deliberately re-adopted low-level mechanics.
+- The pre-clarification transport-only APK/Agent prototype is NON_AUTHORITY reference only.
 - No legacy schema/data/UI/protocol becomes current product authority by inheritance.
 
 ## Current execution mode
 
-Build Service, LAN Service, Web and APK in parallel by shared vertical business slices rather than completing disconnected products sequentially.
+Build shared domain core, Cloud Service, LAN Service, Website, APK and Google integration in parallel by vertical business slices.
 
-Unavailable final company-network hardware may delay physical regression only. It must not pause source/contracts/build work in Android/LAN or independent Cloud/Web/Google work.
+Unavailable final company-network hardware may delay physical regression only; it must not pause source/contracts/build work.
 
 ## Reset rule
 
-The pre-reset repository is evidence/reference only. Source is restored or reused in the active tree only after review against current authority. Old provider IDs, deployment claims, historical branch/tag state and legacy behavior never become current authority by inheritance.
+The pre-reset repository is evidence/reference only. Source is restored/reused only after review against current authority. Historical behavior never becomes current product authority automatically.
