@@ -28,7 +28,7 @@ final class TransportRepository extends SQLiteOpenHelper {
 
     synchronized String deviceId() {
         String id = prefs.getString("device_id", "");
-        if (id == null || id.isBlank()) {
+        if (id == null || id.trim().isEmpty()) {
             id = "pda-" + UUID.randomUUID();
             prefs.edit().putString("device_id", id).commit();
         }
