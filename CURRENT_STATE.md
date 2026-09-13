@@ -3,7 +3,8 @@
 Updated: 2026-09-13
 Baseline: `REPO-RESET-20260912-01`
 Product architecture: `docs/TARGET_PRODUCT_ARCHITECTURE_V3.md`
-Execution plan: `docs/DELIVERY_PLAN_V3.md`
+Execution plan: `docs/DELIVERY_PLAN_V4.md`
+Active decisions: `DECISIONS.md` + `DECISIONS_V3.md` + `DECISIONS_V4.md` + `DECISIONS_V5.md` + `DECISIONS_V6.md`
 
 ## Active product direction
 
@@ -16,6 +17,22 @@ VHDCHY is one platform with four first-class deliverables:
 APK and Website use the same domain/API/business semantics. LAN and Cloud use the same business command/event rules through different persistence/runtime adapters.
 
 Legacy repository and the earlier transport-only APK/Agent prototype remain NON_AUTHORITY reference only.
+
+## Authentication authority — V6 locked, implementation pending
+
+The former unresolved ROOT-factor/lifetime gate in V5 is closed by `DECISIONS_V6.md`.
+
+Current locked semantics:
+- ROOT normal login uses the fixed approved recovery-email one-time password;
+- credential validity is 5 minutes and resend cooldown is 5 minutes from successful send;
+- credential is single-use;
+- ROOT TOTP is optional; when enabled it is an additional required factor, when disabled a valid email one-time password is sufficient;
+- ROOT one-time login does not create `MUST_CHANGE_PASSWORD`;
+- a normal account using forgot-password one-time login enters restricted `MUST_CHANGE_PASSWORD` until a different permanent password is set;
+- the fixed ROOT email channel cannot be disabled;
+- readable credentials/secrets never belong in source, logs, Sheet/Drive business data or audit payloads.
+
+This authority is not yet equivalent to runtime PASS. Cloud/LAN/Web/APK implementations and acceptance tests remain pending.
 
 ## V3 LAN behavior
 
@@ -78,8 +95,8 @@ Technical/provider retry errors remain automatic. Unresolved business/data synch
 
 ## Cloudflare BETA
 
-- D1 `vhdchy-data-beta` remains `business_core_v3` PASS.
-- Worker `vhdchy-beta` foundation/health remains live at `https://beta.supra.cc.cd`.
+- D1 `vhdchy-data-beta` remains `business_core_v3` PASS from the latest verified provider evidence recorded by the project.
+- Worker `vhdchy-beta` foundation/health remains live at `https://beta.supra.cc.cd` from the latest verified provider evidence recorded by the project.
 - Protected business/admin APIs remain fail-closed.
 - Reviewed multi-module manifest exists, but the active provider-mutating deploy workflow still needs safe multi-module packaging support before Worker runtime integration/deploy.
 - Do not bypass platform write-safety guards.
@@ -92,6 +109,7 @@ Source-level foundations already exist for:
 - Service API/canonical mutation design.
 
 Still pending runtime/product implementation:
+- V6 authentication state machine and runtime routes/tests;
 - shared provider-neutral domain core;
 - D1 business adapter;
 - LAN reconciliation ingestion;
@@ -114,20 +132,23 @@ Required product components:
 - locally served Web bundle;
 - no-admin diagnostics/update/recovery.
 
+LAN authentication must implement the same V6 semantics where approved delivery capability exists and must not fabricate successful email delivery while disconnected.
+
 ## Website/APK
 
 - Website is the wider management/administration surface.
 - APK is the compact PDA operational surface.
 - Both consume the same business API/domain contract.
 - Both require Cloud/LAN endpoint selection and meaningful sync/Google/conflict states.
+- Both must expose the applicable V6 one-time-password/recovery flow.
 - APK scanner/QR functions must invoke domain commands rather than bypass Service logic.
 
 ## Current exact project position
 
 ```text
-Cloud/D1/Google foundation
+Authority through V6 + Cloud/D1/Google foundation
         |
-        +--> NOW: V3 shared domain + LAN local authority/sync/Google receipt contracts
+        +--> NOW: shared domain + V6 auth + LAN local authority/sync contracts
                  |
           +------+------+
           |             |
@@ -144,10 +165,10 @@ Cloud/D1/Google foundation
             BETA acceptance
 ```
 
-Immediate work: extend shared Service/API + LAN edge contracts for V3, materialize shared domain/adapters, then build Cloud/LAN/Web/APK vertical slices in parallel.
+Immediate work: keep the multi-module Worker gate fail-closed, implement/reconcile V6 auth contract/runtime/tests, continue shared Service/domain + LAN edge contracts, materialize Cloud/LAN adapters, and build Web/APK foundations in parallel where dependencies are already stable.
 
 ## Physical dependencies / STABLE
 
 Final company-network/no-admin/PDA evidence still requires the intended physical environment, but source/product work continues now.
 
-STABLE remains blocked until full BETA PASS + explicit Owner approval.
+STABLE infrastructure may be prepared in isolation but business activation/promotion remains blocked until full BETA PASS + explicit Owner approval.
