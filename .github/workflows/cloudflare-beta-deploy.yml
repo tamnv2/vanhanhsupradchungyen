@@ -94,34 +94,42 @@ jobs:
           set -euo pipefail
           node <<'NODE'
           const fs = require('fs');
-          const spec = JSON.parse(fs.readFileSync('service/worker/deploy.beta.json', 'utf8'));
-          const source = fs.readFileSync(spec.source, 'utf8');
-          const metadata = {
-            main_module: 'index.js',
-            compatibility_date: spec.compatibility_date,
-            bindings: [
-              { type: 'd1', name: spec.d1_binding.name, database_id: spec.d1_binding.database_id },
-              { type: 'plain_text', name: 'APP_ENV', text: spec.vars.APP_ENV },
-              { type: 'plain_text', name: 'BUILD_SHA', text: process.env.GITHUB_SHA },
-              { type: 'plain_text', name: 'GAS_EXEC_URL', text: spec.vars.GAS_EXEC_URL }
-            ]
-          };
-          const form = new FormData();
-          form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }), 'metadata.json');
-          form.append('index.js', new Blob([source], { type: 'application/javascript+module' }), 'index.js');
-          const url = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(process.env.CLOUDFLARE_ACCOUNT_ID)}/workers/scripts/${encodeURIComponent(spec.target_worker)}`;
-          const response = await fetch(url, {
-            method: 'PUT',
-            headers: { authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}` },
-            body: form
-          });
-          let payload;
-          try { payload = await response.json(); }
-          catch { throw new Error(`Worker upload returned non-JSON HTTP ${response.status}`); }
-          if (!response.ok || payload?.success !== true) {
-            throw new Error(`Worker upload failed HTTP ${response.status}: ${JSON.stringify(payload?.errors || []).slice(0, 1500)}`);
+
+          async function main() {
+            const spec = JSON.parse(fs.readFileSync('service/worker/deploy.beta.json', 'utf8'));
+            const source = fs.readFileSync(spec.source, 'utf8');
+            const metadata = {
+              main_module: 'index.js',
+              compatibility_date: spec.compatibility_date,
+              bindings: [
+                { type: 'd1', name: spec.d1_binding.name, database_id: spec.d1_binding.database_id },
+                { type: 'plain_text', name: 'APP_ENV', text: spec.vars.APP_ENV },
+                { type: 'plain_text', name: 'BUILD_SHA', text: process.env.GITHUB_SHA },
+                { type: 'plain_text', name: 'GAS_EXEC_URL', text: spec.vars.GAS_EXEC_URL }
+              ]
+            };
+            const form = new FormData();
+            form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }), 'metadata.json');
+            form.append('index.js', new Blob([source], { type: 'application/javascript+module' }), 'index.js');
+            const url = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(process.env.CLOUDFLARE_ACCOUNT_ID)}/workers/scripts/${encodeURIComponent(spec.target_worker)}`;
+            const response = await fetch(url, {
+              method: 'PUT',
+              headers: { authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}` },
+              body: form
+            });
+            let payload;
+            try { payload = await response.json(); }
+            catch { throw new Error(`Worker upload returned non-JSON HTTP ${response.status}`); }
+            if (!response.ok || payload?.success !== true) {
+              throw new Error(`Worker upload failed HTTP ${response.status}: ${JSON.stringify(payload?.errors || []).slice(0, 1500)}`);
+            }
+            console.log(`WORKER_UPLOAD_PASS id=${payload?.result?.id || spec.target_worker}`);
           }
-          console.log(`WORKER_UPLOAD_PASS id=${payload?.result?.id || spec.target_worker}`);
+
+          main().catch(error => {
+            console.error(error.message);
+            process.exit(1);
+          });
           NODE
 
       - name: Read-only provider postflight
@@ -166,32 +174,40 @@ jobs:
           set -euo pipefail
           node <<'NODE'
           const fs = require('fs');
-          const spec = JSON.parse(fs.readFileSync('service/worker/deploy.beta.json', 'utf8'));
-          const expectedBuild = process.env.GITHUB_SHA;
-          async function get(path) {
-            const response = await fetch(`${spec.public_origin}${path}`, { cache: 'no-store', redirect: 'follow' });
-            const text = await response.text();
-            let payload;
-            try { payload = JSON.parse(text); }
-            catch { throw new Error(`${path} returned non-JSON HTTP ${response.status}`); }
-            if (!response.ok) throw new Error(`${path} failed HTTP ${response.status}: ${text.slice(0, 800)}`);
-            return payload;
+
+          async function main() {
+            const spec = JSON.parse(fs.readFileSync('service/worker/deploy.beta.json', 'utf8'));
+            const expectedBuild = process.env.GITHUB_SHA;
+            async function get(path) {
+              const response = await fetch(`${spec.public_origin}${path}`, { cache: 'no-store', redirect: 'follow' });
+              const text = await response.text();
+              let payload;
+              try { payload = JSON.parse(text); }
+              catch { throw new Error(`${path} returned non-JSON HTTP ${response.status}`); }
+              if (!response.ok) throw new Error(`${path} failed HTTP ${response.status}: ${text.slice(0, 800)}`);
+              return payload;
+            }
+            const health = await get('/health');
+            if (health?.ok !== true || health?.service !== 'VHDCHY_WORKER' || health?.environment !== 'BETA' || health?.build !== expectedBuild || health?.d1?.schemaVersion !== 'business_core_v3') {
+              throw new Error(`/health contract mismatch: ${JSON.stringify(health).slice(0, 1200)}`);
+            }
+            const deep = await get('/health/deep');
+            if (deep?.ok !== true || deep?.service !== 'VHDCHY_WORKER' || deep?.environment !== 'BETA' || deep?.build !== expectedBuild || deep?.d1?.schemaVersion !== 'business_core_v3') {
+              throw new Error(`/health/deep contract mismatch: ${JSON.stringify(deep).slice(0, 1200)}`);
+            }
+            const meta = await get('/api/v1/meta');
+            if (meta?.ok !== true || meta?.runtimeState !== 'BUSINESS_CORE_V3' || meta?.schemaVersion !== 'business_core_v3' || meta?.environment !== 'BETA' || meta?.build !== expectedBuild) {
+              throw new Error(`/api/v1/meta contract mismatch: ${JSON.stringify(meta).slice(0, 1200)}`);
+            }
+            const capabilities = await get('/api/v1/capabilities');
+            if (capabilities?.ok !== true || capabilities?.runtime !== 'BUSINESS_CORE_V3' || capabilities?.authority !== 'D1' || capabilities?.anonymousMutationAllowed !== false) {
+              throw new Error(`/api/v1/capabilities contract mismatch: ${JSON.stringify(capabilities).slice(0, 1200)}`);
+            }
+            console.log(`WORKER_BETA_HEALTH_PASS origin=${spec.public_origin} google_degraded=${deep?.degraded === true ? 'yes' : 'no'}`);
           }
-          const health = await get('/health');
-          if (health?.ok !== true || health?.service !== 'VHDCHY_WORKER' || health?.environment !== 'BETA' || health?.build !== expectedBuild || health?.d1?.schemaVersion !== 'business_core_v3') {
-            throw new Error(`/health contract mismatch: ${JSON.stringify(health).slice(0, 1200)}`);
-          }
-          const deep = await get('/health/deep');
-          if (deep?.ok !== true || deep?.service !== 'VHDCHY_WORKER' || deep?.environment !== 'BETA' || deep?.build !== expectedBuild || deep?.d1?.schemaVersion !== 'business_core_v3') {
-            throw new Error(`/health/deep contract mismatch: ${JSON.stringify(deep).slice(0, 1200)}`);
-          }
-          const meta = await get('/api/v1/meta');
-          if (meta?.ok !== true || meta?.runtimeState !== 'BUSINESS_CORE_V3' || meta?.schemaVersion !== 'business_core_v3' || meta?.environment !== 'BETA' || meta?.build !== expectedBuild) {
-            throw new Error(`/api/v1/meta contract mismatch: ${JSON.stringify(meta).slice(0, 1200)}`);
-          }
-          const capabilities = await get('/api/v1/capabilities');
-          if (capabilities?.ok !== true || capabilities?.runtime !== 'BUSINESS_CORE_V3' || capabilities?.authority !== 'D1' || capabilities?.anonymousMutationAllowed !== false) {
-            throw new Error(`/api/v1/capabilities contract mismatch: ${JSON.stringify(capabilities).slice(0, 1200)}`);
-          }
-          console.log(`WORKER_BETA_HEALTH_PASS origin=${spec.public_origin} google_degraded=${deep?.degraded === true ? 'yes' : 'no'}`);
+
+          main().catch(error => {
+            console.error(error.message);
+            process.exit(1);
+          });
           NODE
