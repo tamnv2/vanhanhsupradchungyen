@@ -1,78 +1,55 @@
 # LAN / APK DEV BUILD STATUS
 
 Updated: 2026-09-13
-Status: BUILD PASS / PHYSICAL REGRESSION PENDING
-Authority: current repository contracts and `docs/LAN_TRANSPORT_BETA_V1.md`
-Legacy reference: `tamnv2supra/vanhanhdchungyen@7b4488a89f585812c1bccba5d07d86049482bf4c` (NON_AUTHORITY)
+Status: DISPOSABLE PROTOTYPE BUILD PASS / NOT PRODUCT AUTHORITY
+Authority: `docs/TARGET_PRODUCT_ARCHITECTURE_V2.md`, `docs/DELIVERY_PLAN_V2.md`
+Legacy reference: `tamnv2supra/vanhanhdchungyen@7b4488a89f585812c1bccba5d07d86049482bf4c` — NON_AUTHORITY
 
-## Owner scope
+## Correction
 
-Android/APK build and LAN Agent/model development are active in parallel with Service/Google/Web work. They must not be paused merely because the final company-laptop/network regression environment is unavailable.
+The earlier `android-pilot/` + `lan-agent/` pair was built before the Owner clarified the final product role of APK and LAN.
 
-The Owner has an Android device available for APK installation/testing. Final corporate-network LAN evidence remains a separate later gate.
+It is now classified as a disposable transport prototype/reference only.
 
-## Current source
+It must NOT be extended as if:
+- APK were only a LAN diagnostics app;
+- LAN were only discovery/echo/transport relay;
+- success meant reproducing the legacy pilot.
 
-### Android transport pilot
+The actual product target is:
+- Web + APK as clients of one business/domain platform;
+- Cloud Service as normal runtime;
+- LAN Service as a real substitute runtime for Internet/Cloud Service failure and forced-LAN cases;
+- shared business command/event semantics and dual-runtime reconciliation.
 
-Path: `android-pilot/`
+## What the prototype evidence still proves
 
-Current package: `vn.vhdchy.transport.beta`.
+First build run `34756569016` passed both jobs and therefore proves only these low-level facts:
 
-Current purpose is transport-only validation:
-- cached Agent health -> UDP discovery;
-- two-sample activation hysteresis;
-- `LAN_AVAILABLE`, `LAN_ACTIVE`, `LAN_LOST`, `LOCAL_QUEUE_ONLY` state behavior;
-- durable local SQLite transport-test queue;
-- stable `deviceId + deviceSeq + idempotencyKey` for each queued test event;
-- echo/latency test;
-- retry of queued transport-test events.
+- GitHub CI can compile/package an Android debug APK in the current repository;
+- GitHub CI can publish a portable self-contained win-x64 .NET process;
+- no-admin Agent packaging is technically feasible at a basic build level;
+- the reviewed low-level discovery/queue/idempotency patterns can be implemented in current source.
 
-The current DEV pilot explicitly does not send business credentials, employee PII or canonical business mutations over LAN.
+This is useful engineering evidence, but it is not counted as completed business APK/LAN Service functionality.
 
-### Windows LAN Agent
+## Retained artifacts/source
 
-Path: `lan-agent/`.
+Current prototype paths remain temporarily for selective extraction/reference:
+- `android-pilot/`
+- `lan-agent/`
+- `.github/workflows/build-lan-dev.yml`
 
-Current model:
-- portable .NET 8 user-mode process;
-- HTTP `17891`;
-- UDP discovery `17892`;
-- persistent per-user Agent instance ID;
-- fresh `streamEpoch` per Agent start;
-- health/echo transport-test endpoints;
-- durable test-event receipt log under the normal user's LocalAppData;
-- idempotency payload-collision guard;
-- `(deviceId, deviceSeq)` collision guard;
-- no Administrator/router/DNS/firewall bypass logic.
+Do not treat these paths as the final product structure. Any reused component must first be reviewed against `TARGET_PRODUCT_ARCHITECTURE_V2` and moved/rewritten behind the current shared domain/service contracts.
 
-Agent test ACK is intentionally `TEST_ACCEPTED_AGENT_ONLY`. It is not a canonical business ACK and must never be reused as permission to delete future business commands.
+## Next product-level work
 
-## CI build
+The Android/LAN lane continues without pause, but its next work is not "install and polish the test APK".
 
-Workflow: `.github/workflows/build-lan-dev.yml`.
-
-First parallel build run: `34756569016` — SUCCESS.
-Source commit: `bd3e3f379fc954c781f37ede958bed53b961c0a8`.
-
-Both jobs passed:
-- `lan-agent`: SUCCESS; portable self-contained win-x64 Agent built and uploaded;
-- `android-pilot`: SUCCESS; installable debug APK built and uploaded.
-
-DEV artifacts:
-- artifact `lan-agent-dev`, id `10317647559`, artifact digest `sha256:a3ba4fa6b1394d62c1c03bf8717841e424addb92afff4c32e94d621673425c6a`;
-- artifact `android-transport-dev`, id `10317492785`, artifact digest `sha256:4eb427c8f6ce4c5306cc95f037b53d1c30882839067edeaa3cd91e4c4999d6a5`.
-
-Contained files:
-- `VHDCHY-Transport-BETA-debug.apk`;
-- `VHDCHY-Transport-BETA-debug.apk.sha256`;
-- `VHDCHY-LAN-Agent-DEV-win-x64.zip`;
-- `VHDCHY-LAN-Agent-DEV-win-x64.zip.sha256`.
-
-This DEV workflow uses no provider mutation and no Android release-signing secret. Release/BETA signing remains a later gate after transport source/build and physical behavior stabilize.
-
-## Acceptance boundary
-
-CI BUILD PASS proves source/build/package viability only. It does not prove current physical LAN feasibility.
-
-The available Android device can now be used for APK install/open/offline-queue checks. LAN discovery/echo/end-to-end testing additionally needs a machine running the matching Agent. Final LAN PASS still requires later evidence against the actual company laptop/network plus the intended PDA environment.
+Next sequence:
+1. establish the shared domain/API/offline-reconciliation contract;
+2. define the real LAN Service edge database/event/outbox model;
+3. define Cloud-direct / LAN-relay / LAN-autonomous runtime states;
+4. define offline security/pairing boundaries without inventing unresolved policy;
+5. begin real business vertical slices across Cloud + LAN + Web + APK;
+6. use legacy/prototype code only where a low-level mechanic is deliberately adopted.
