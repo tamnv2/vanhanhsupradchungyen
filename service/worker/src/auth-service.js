@@ -1,4 +1,5 @@
 import {
+  createPasswordRecord,
   generateBearerToken,
   hashBearerToken,
   verifyPasswordRecord
@@ -11,6 +12,10 @@ function safeSessionTtl(value) {
   const parsed = Number(value || DEFAULT_SESSION_TTL_MS);
   if (!Number.isSafeInteger(parsed)) return DEFAULT_SESSION_TTL_MS;
   return Math.max(15 * 60 * 1000, Math.min(parsed, 24 * 60 * 60 * 1000));
+}
+
+function batchSucceeded(results) {
+  return Array.isArray(results) && results.every(result => result?.success !== false);
 }
 
 export async function loadLoginRecord(db, username) {
@@ -129,4 +134,82 @@ export async function loginWithPassword(db, username, password, options = {}) {
     authMethodCode: 'PASSWORD'
   });
   return { ok: true, user: primary.user, session };
+}
+
+export async function changePermanentPassword(db, principal, newPassword, options = {}) {
+  if (!db || !principal?.userId || !principal?.username || !principal?.sessionId) {
+    return { ok: false, code: 'PASSWORD_CHANGE_CONTEXT_REQUIRED' };
+  }
+  if (String(principal.securityLevel || '').toUpperCase() === ROOT_LEVEL) {
+    return { ok: false, code: 'ROOT_PASSWORD_NOT_APPLICABLE' };
+  }
+
+  let record;
+  try {
+    record = await createPasswordRecord(newPassword, { username: principal.username });
+  } catch (error) {
+    return { ok: false, code: error?.code || 'PASSWORD_POLICY_REJECTED' };
+  }
+
+  const current = await db.prepare(`
+    SELECT credential_id
+    FROM auth_credentials
+    WHERE user_id = ? AND credential_type = 'PASSWORD' AND status = 'ACTIVE'
+    LIMIT 1
+  `).bind(principal.userId).first();
+
+  const changedAt = new Date(Number(options.nowMs ?? Date.now())).toISOString();
+  const credentialId = crypto.randomUUID();
+  const statements = [];
+
+  if (current?.credential_id) {
+    statements.push(db.prepare(`
+      UPDATE auth_credentials
+      SET status = 'REPLACED', replaced_at = ?
+      WHERE credential_id = ? AND user_id = ? AND status = 'ACTIVE'
+    `).bind(changedAt, current.credential_id, principal.userId));
+  }
+
+  statements.push(db.prepare(`
+    INSERT INTO auth_credentials(
+      credential_id, user_id, credential_type, secret_hash,
+      hash_algorithm, must_change, status, created_at
+    ) VALUES (?, ?, 'PASSWORD', ?, ?, 0, 'ACTIVE', ?)
+  `).bind(
+    credentialId,
+    principal.userId,
+    record.secretHash,
+    record.hashAlgorithm,
+    changedAt
+  ));
+
+  statements.push(db.prepare(`
+    UPDATE auth_sessions
+    SET status = 'REVOKED', revoked_at = ?
+    WHERE user_id = ? AND status = 'ACTIVE' AND auth_session_id <> ?
+  `).bind(changedAt, principal.userId, principal.sessionId));
+
+  statements.push(db.prepare(`
+    UPDATE auth_sessions
+    SET metadata_json = ?
+    WHERE auth_session_id = ? AND user_id = ? AND status = 'ACTIVE'
+  `).bind(
+    JSON.stringify({ mustChangePassword: false }),
+    principal.sessionId,
+    principal.userId
+  ));
+
+  try {
+    const results = await db.batch(statements);
+    if (!batchSucceeded(results)) return { ok: false, code: 'PASSWORD_CHANGE_COMMIT_FAILED' };
+  } catch {
+    return { ok: false, code: 'PASSWORD_CHANGE_COMMIT_FAILED' };
+  }
+
+  return {
+    ok: true,
+    credentialId,
+    changedAt,
+    mustChangePassword: false
+  };
 }
