@@ -69,14 +69,25 @@ jobs:
       - name: Validate clean D1 schema
         run: |
           set -euo pipefail
-          sqlite3 /tmp/vhdchy.db < service/worker/migrations/0001_initial.sql
-          test "$(sqlite3 /tmp/vhdchy.db "SELECT value FROM vhdchy_meta WHERE key='schema_version';")" = "business_core_v2"
+          rm -f /tmp/vhdchy.db
+          for migration in service/worker/migrations/*.sql; do
+            echo "Applying ${migration}"
+            sqlite3 /tmp/vhdchy.db < "${migration}"
+          done
+          test "$(sqlite3 /tmp/vhdchy.db "SELECT value FROM vhdchy_meta WHERE key='schema_version';")" = "business_core_v3"
           test "$(sqlite3 /tmp/vhdchy.db "SELECT count(*) FROM clusters WHERE cluster_id='PICK_PACK_1291';")" = "1"
+          test "$(sqlite3 /tmp/vhdchy.db "SELECT count(*) FROM root_security_policy WHERE policy_id='ROOT' AND totp_required=1 AND email_otp_required=1;")" = "1"
+          for table in employee_codes auth_user_permission_grants auth_recovery_challenges attendance_events presence_state session_tasks resource_registry pack_table_user_mappings resource_assignments resource_daily_usage labor_type_catalog documents document_media domain_events projection_outbox projection_checkpoints snapshots compatibility_telemetry; do
+            test "$(sqlite3 /tmp/vhdchy.db "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='${table}';")" = "1"
+          done
           test "$(sqlite3 /tmp/vhdchy.db "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='resources';")" = "0"
+          test "$(sqlite3 /tmp/vhdchy.db "PRAGMA foreign_key_check;")" = ""
 
       - name: Validate schema/runtime contract
         run: |
           set -euo pipefail
-          grep -q 'CORE_SCHEMA_VERSION = "business_core_v2"' service/worker/src/index.js
-          grep -q 'RUNTIME_STATE = "BUSINESS_CORE_V2"' service/worker/src/index.js
-          grep -q "'schema_version', 'business_core_v2'" service/worker/migrations/0001_initial.sql
+          grep -q 'CORE_SCHEMA_VERSION = "business_core_v3"' service/worker/src/index.js
+          grep -q 'RUNTIME_STATE = "BUSINESS_CORE_V3"' service/worker/src/index.js
+          grep -q "'schema_version', 'business_core_v3'" service/worker/migrations/0001_initial.sql
+          grep -q 'LOCK_AFTER_RELEASE_UNTIL_REISSUE' service/worker/migrations/0005_resources.sql
+          grep -q "state IN ('DRAFT','FINAL','REPLACED','CANCELLED')" service/worker/migrations/0006_business_records.sql
