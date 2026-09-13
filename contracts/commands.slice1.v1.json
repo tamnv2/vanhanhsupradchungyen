@@ -1,0 +1,78 @@
+{
+  "schemaVersion": "VHDCHY_COMMAND_SPEC_V1",
+  "domainContractVersion": "VHDCHY_DOMAIN_V1",
+  "slice": "IDENTITY_EMPLOYEE_ATTENDANCE",
+  "rules": {
+    "actorFromAuthenticatedContextOnly": true,
+    "clientActorFieldsAuthoritative": false,
+    "sameLogicalCommandKeepsIdentityAcrossRuntimeRoute": true,
+    "correctionsAppendEvidence": true,
+    "silentLastWriteWinsAllowed": false
+  },
+  "commands": [
+    {
+      "code": "EMPLOYEE_CREATE",
+      "entityType": "employee",
+      "permission": {"resource": "employee", "action": "create"},
+      "expectedEntityVersion": "NOT_APPLICABLE_CREATE",
+      "eventIntent": "EMPLOYEE_CREATED",
+      "lanAutonomousSemantics": "SAME_COMMAND_CONFLICT_ON_RECONCILIATION_IF_CANONICAL_GUARD_FAILS"
+    },
+    {
+      "code": "EMPLOYEE_UPDATE",
+      "entityType": "employee",
+      "permission": {"resource": "employee", "action": "edit"},
+      "expectedEntityVersion": "REQUIRED",
+      "eventIntent": "EMPLOYEE_UPDATED",
+      "lanAutonomousSemantics": "SAME_COMMAND_CONFLICT_ON_RECONCILIATION_IF_CANONICAL_GUARD_FAILS"
+    },
+    {
+      "code": "EMPLOYEE_STATUS_CHANGE",
+      "entityType": "employee",
+      "permission": {"resource": "employee", "action": "status"},
+      "expectedEntityVersion": "REQUIRED",
+      "eventIntent": "EMPLOYEE_STATUS_CHANGED",
+      "lanAutonomousSemantics": "SAME_COMMAND_CONFLICT_ON_RECONCILIATION_IF_CANONICAL_GUARD_FAILS"
+    },
+    {
+      "code": "EMPLOYEE_CODE_ASSIGN",
+      "entityType": "employee_code",
+      "permission": {"resource": "employee", "action": "edit"},
+      "expectedEntityVersion": "REQUIRED_WHEN_UPDATING_EXISTING_IDENTITY",
+      "eventIntent": "EMPLOYEE_CODE_ASSIGNED",
+      "lanAutonomousSemantics": "PRESERVE_ACCEPTANCE_EVIDENCE_AND_EXPLICITLY_CONFLICT_IF_ACTIVE_CODE_UNIQUENESS_FAILS"
+    },
+    {
+      "code": "EMPLOYEE_PORTRAIT_REPLACE",
+      "entityType": "employee",
+      "permission": {"resource": "employee", "action": "portrait"},
+      "expectedEntityVersion": "REQUIRED",
+      "eventIntent": "EMPLOYEE_PORTRAIT_REPLACED",
+      "lanAutonomousSemantics": "SAME_COMMAND_WITH_STAGED_MEDIA_WHEN_PROVIDER_UPLOAD_IS_UNAVAILABLE"
+    },
+    {
+      "code": "ATTENDANCE_IN",
+      "entityType": "attendance",
+      "permission": {"resource": "attendance", "action": "scan"},
+      "expectedEntityVersion": "PRESENCE_GUARD_WHERE_AVAILABLE",
+      "eventIntent": "ATTENDANCE_IN",
+      "lanAutonomousSemantics": "LOCAL_EVENT_AND_PRESENCE_STATE_THEN_EXPLICIT_CLOUD_RECONCILIATION"
+    },
+    {
+      "code": "ATTENDANCE_OUT",
+      "entityType": "attendance",
+      "permission": {"resource": "attendance", "action": "scan"},
+      "expectedEntityVersion": "PRESENCE_GUARD_WHERE_AVAILABLE",
+      "eventIntent": "ATTENDANCE_OUT",
+      "lanAutonomousSemantics": "LOCAL_EVENT_AND_PRESENCE_STATE_THEN_EXPLICIT_CLOUD_RECONCILIATION"
+    },
+    {
+      "code": "ATTENDANCE_CORRECT",
+      "entityType": "attendance",
+      "permission": {"resource": "attendance", "action": "correct"},
+      "expectedEntityVersion": "REQUIRED_FOR_TARGET_CURRENT_STATE_WHERE_APPLICABLE",
+      "eventIntent": "ATTENDANCE_CORRECTED",
+      "lanAutonomousSemantics": "APPEND_CORRECTION_EVIDENCE_NEVER_REWRITE_RAW_EVENT"
+    }
+  ]
+}
