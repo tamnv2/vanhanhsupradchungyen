@@ -1,4 +1,5 @@
 using Vhdchy.LanService;
+using Vhdchy.LanService.Harness;
 
 if (args.Length != 1 || string.IsNullOrWhiteSpace(args[0]))
 {
@@ -17,9 +18,9 @@ const string environment = "BETA";
 const string clusterId = "PICK_PACK_1291";
 const string compatibility = "VHDCHY_DOMAIN_V1";
 const string moduleId = "IDENTITY_EMPLOYEE_ATTENDANCE";
-const string scope = "{\"clusterId\":\"PICK_PACK_1291\",\"modules\":[\"PICK_PACK\"]}";
-const string payload1 = "{\"users\":[],\"permissionCatalogVersion\":\"VHDCHY_PERMISSION_CATALOG_V1\"}";
-const string payload2 = "{\"users\":[],\"permissionCatalogVersion\":\"VHDCHY_PERMISSION_CATALOG_V1\",\"generation\":2}";
+const string authorityScope = "{\"clusterId\":\"PICK_PACK_1291\",\"modules\":[\"IDENTITY_EMPLOYEE_ATTENDANCE\"]}";
+var payload1 = AuthorizationVectors.Payload1;
+var payload2 = AuthorizationVectors.Payload2;
 
 static void Assert(bool condition, string code)
 {
@@ -54,6 +55,7 @@ var authorityStore = new AuthoritySnapshotStore(databasePath);
 var operationalStore = new OperationalSnapshotStore(databasePath);
 var requiredOperationalModules = new[] { moduleId };
 
+// Operational state must never activate before synchronized authority exists.
 var preAuthorityOperational = new OperationalSnapshotEnvelope(
     "OP-TEST-PRE-AUTH",
     environment,
@@ -72,15 +74,15 @@ await ExpectOperationalError(
         requiredOperationalModules));
 Assert(await operationalStore.ReadStatusAsync("OP-TEST-PRE-AUTH") is null, "PRE_AUTH_OPERATIONAL_PERSISTED");
 
+// Authority generation 1: activate, replay idempotently, reject same-version different evidence.
 var a1 = new AuthoritySnapshotEnvelope(
     "AUTH-TEST-1",
     environment,
     clusterId,
     "cloud-checkpoint-1",
     compatibility,
-    scope,
+    authorityScope,
     payload1);
-
 var first = await authorityStore.ImportAsync(a1, environment, clusterId, compatibility);
 Assert(first.Activated && !first.AlreadyKnown && first.Status == "ACTIVE", "A1_FIRST_ACTIVATION_FAILED");
 Assert(await authorityStore.ReadActiveVersionAsync() == "AUTH-TEST-1", "A1_NOT_ACTIVE");
@@ -107,7 +109,7 @@ try
             clusterId,
             "cloud-checkpoint-bad",
             compatibility,
-            scope,
+            authorityScope,
             "{not-json"),
         environment,
         clusterId,
@@ -120,13 +122,14 @@ catch (AuthoritySnapshotException error) when (error.Code == "AUTHORITY_PAYLOAD_
 Assert(await authorityStore.ReadActiveVersionAsync() == "AUTH-TEST-1", "A1_LOST_AFTER_INVALID_IMPORT");
 Assert(await authorityStore.ReadStatusAsync("AUTH-TEST-BAD") is null, "INVALID_IMPORT_PERSISTED");
 
+// Authority generation 2 replaces generation 1 and becomes the evidence used by later acceptance.
 var a2 = new AuthoritySnapshotEnvelope(
     "AUTH-TEST-2",
     environment,
     clusterId,
     "cloud-checkpoint-2",
     compatibility,
-    scope,
+    authorityScope,
     payload2);
 var second = await authorityStore.ImportAsync(a2, environment, clusterId, compatibility);
 Assert(second.Activated && second.Status == "ACTIVE", "A2_ACTIVATION_FAILED");
@@ -143,7 +146,7 @@ try
             clusterId,
             "cloud-checkpoint-3",
             "VHDCHY_DOMAIN_INCOMPATIBLE",
-            scope,
+            authorityScope,
             payload2),
         environment,
         clusterId,
@@ -156,6 +159,10 @@ catch (AuthoritySnapshotException error) when (error.Code == "AUTHORITY_INCOMPAT
 Assert(await authorityStore.ReadActiveVersionAsync() == "AUTH-TEST-2", "A2_LOST_AFTER_INCOMPATIBLE_IMPORT");
 Console.WriteLine("LAN_AUTHORITY_SNAPSHOT_HARNESS_PASS active=AUTH-TEST-2 replay=PASS conflict=PASS rollback=PASS compatibility=PASS");
 
+// Execute synchronized authorization semantics against the real active authority row.
+await AuthorizationVectors.RunAsync(databasePath, environment, clusterId, moduleId, compatibility);
+
+// Operational snapshot: authority-gated, idempotent, replacement-safe, and never self-promotes readiness.
 const string operationalScope1 = "{\"modules\":[\"IDENTITY_EMPLOYEE_ATTENDANCE\"],\"generation\":1}";
 const string operationalState1 = "{\"employees\":[],\"presence\":[],\"generation\":1}";
 const string operationalState2 = "{\"employees\":[],\"presence\":[],\"generation\":2}";
@@ -288,9 +295,9 @@ await ExpectOperationalError(
         compatibility,
         requiredOperationalModules));
 Assert(await operationalStore.ReadActiveVersionAsync() == "OP-TEST-2", "OP2_LOST_AFTER_ENVIRONMENT_MISMATCH");
-
 Console.WriteLine("LAN_OPERATIONAL_SNAPSHOT_HARNESS_PASS active=OP-TEST-2 preAuthority=PASS replay=PASS payloadConflict=PASS corrupt=PASS requiredModule=PASS replacement=PASS compatibility=PASS readinessUnchanged=PASS");
 
+// Atomic local command transaction vectors.
 var commandStore = new LocalCommandStore(databasePath, environment, clusterId, compatibility);
 const string employeeId = "EMP-HARNESS-001";
 const string employeeStateKey = "employee:EMP-HARNESS-001";
