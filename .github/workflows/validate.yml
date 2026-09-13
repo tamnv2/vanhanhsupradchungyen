@@ -2,7 +2,7 @@ name: Validate clean baseline
 
 on:
   push:
-    branches: [main]
+    branches: [main, schema/business-core-v3]
   pull_request:
     branches: [main]
 
@@ -77,6 +77,8 @@ jobs:
           test "$(sqlite3 /tmp/vhdchy.db "SELECT value FROM vhdchy_meta WHERE key='schema_version';")" = "business_core_v3"
           test "$(sqlite3 /tmp/vhdchy.db "SELECT count(*) FROM clusters WHERE cluster_id='PICK_PACK_1291';")" = "1"
           test "$(sqlite3 /tmp/vhdchy.db "SELECT count(*) FROM root_security_policy WHERE policy_id='ROOT' AND totp_required=1 AND email_otp_required=1;")" = "1"
+          test "$(sqlite3 /tmp/vhdchy.db "SELECT count(*) FROM resource_type_catalog;")" = "4"
+          test "$(sqlite3 /tmp/vhdchy.db "SELECT count(*) FROM labor_type_catalog;")" = "4"
           for table in employee_codes auth_user_permission_grants auth_recovery_challenges attendance_events presence_state session_tasks resource_registry pack_table_user_mappings resource_assignments resource_daily_usage labor_type_catalog documents document_media domain_events projection_outbox projection_checkpoints snapshots compatibility_telemetry; do
             test "$(sqlite3 /tmp/vhdchy.db "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='${table}';")" = "1"
           done
