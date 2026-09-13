@@ -10,9 +10,10 @@ For product/business decisions read in this order:
 1. `DECISIONS.md` — base decisions;
 2. `DECISIONS_V3.md` — full LAN Service, direct LAN Google output, long-offline authority and reconciliation overrides;
 3. `DECISIONS_V4.md` — no-admin LAN host, canonical LAN domains and BETA/STABLE preparation/promotion overrides;
-4. `DECISIONS_V5.md` — recovered effective Owner rules from the reviewed approved specs plus explicit unresolved ROOT-security gates.
+4. `DECISIONS_V5.md` — recovered effective Owner rules from the reviewed approved specs;
+5. `DECISIONS_V6.md` — ROOT email one-time login, optional TOTP, five-minute credential lifecycle and normal-account forgot-password overrides.
 
-Newest applicable override wins only where it conflicts. Unaffected older decisions remain active.
+Newest applicable override wins only where it conflicts. Unaffected older decisions remain active. The former unresolved ROOT-factor block in V5 is resolved by V6 and must not be reopened from stale documents.
 
 Canonical consolidation/implementation guides:
 - `docs/OWNER_BUSINESS_RULES_V1.md`
@@ -100,7 +101,7 @@ Never migrate/replace/recreate D1/Worker from name alone. Verify exact identity/
 Read:
 - `PROJECT_SCOPE.md`;
 - `SERVICE_AUTHORITY.md`;
-- V3/V4/V5 decisions;
+- V3/V4/V5/V6 decisions;
 - `docs/OWNER_BUSINESS_RULES_V1.md`;
 - `docs/SERVICE_API_CONTRACT_V3.md`;
 - `config/projections.beta.json`;
@@ -111,7 +112,7 @@ Sheets/Drive are downstream outputs/storage and are never reconstructed as busin
 
 ### LAN SERVICE
 Read:
-- V3/V4/V5 decisions;
+- V3/V4/V5/V6 decisions;
 - `docs/TARGET_PRODUCT_ARCHITECTURE_V3.md`;
 - `docs/SERVICE_API_CONTRACT_V3.md`;
 - `docs/LAN_EDGE_STATE_V2.md`;
@@ -144,11 +145,9 @@ Read:
 
 Prepare isolated STABLE during development, keep business traffic fail-closed until explicit Owner promotion approval, promote the exact accepted BETA release, never BETA runtime/business data.
 
-## Explicit unresolved Owner gate
+## Current Owner decision gates
 
-`DECISIONS_V5.md` contains the only currently known material unresolved product/security decision set: final ROOT TOTP enable/disable semantics and ROOT email-OTP lifetime/unused-rotation semantics.
-
-These block only the affected ROOT-auth implementation. Independent work continues.
+No previously known ROOT factor/lifetime gate remains open: `DECISIONS_V6.md` resolves it. Future work must only raise a new `OWNER_DECISION_REQUIRED` when implementation reaches a genuinely unspecified product/security choice that cannot be derived from current authority.
 
 ## Escalation
 
