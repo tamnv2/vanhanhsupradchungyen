@@ -8,7 +8,8 @@ Baseline: `REPO-RESET-20260912-01`
 - Active repository: `tamnv2/vanhanhsupradchungyen` (PUBLIC), default branch `main`.
 - `AI_AUTHORITY_RESUME_V2` is active.
 - `D-041` remains active: overall execution continues by default and a blocked single lane does not stop independent safe work.
-- Physical Android/PDA build/regression and physical LAN testing remain environment-dependent, but LAN source/model adaptation is active again using the verified legacy repository as read-only reference.
+- Android/APK build and LAN Agent/model development are now ACTIVE in parallel with Worker/Service/Google/Web work by current Owner instruction.
+- The Owner has an Android device available for APK installation/testing. Final company-laptop/network LAN regression remains environment-dependent and is a later physical gate, not a reason to pause source/build work.
 - Legacy reference repository: `tamnv2supra/vanhanhdchungyen`; fixed V4 comparison commit `7b4488a89f585812c1bccba5d07d86049482bf4c`. It is NON_AUTHORITY and cannot override current decisions/contracts.
 - Secret values remain outside repository source/chat.
 
@@ -79,27 +80,33 @@ Baseline: `REPO-RESET-20260912-01`
 - Reusable canonical mutation helper remains to be implemented/tested when sensitive runtime-source write is available.
 - No Web business surface is live yet.
 
-## LAN source/model lane — ACTIVE / PHYSICAL PENDING
+## Android + LAN build lane — ACTIVE
 
 - Current LAN restoration review: `docs/LAN_SOURCE_REVIEW_20260913.md`.
-- Legacy repo `tamnv2supra/vanhanhdchungyen` is readable as reference; current connection has no push authority to it, which is acceptable because it must remain read-only evidence.
-- Legacy final V4 source reference `7b4488a89f585812c1bccba5d07d86049482bf4c` is verified to exist.
-- Prior legacy physical evidence included two MT90 reaching `LAN_ACTIVE`, durable queue recovery to zero, duplicate rejection and measured LAN latency; final V4 physical regression was still pending.
-- Reusable patterns now confirmed directly from source: cached endpoint -> UDP discovery -> manual recovery, health validation + anti-flapping hysteresis, durable SQLite queue with `event_id`/`device_seq`, ACK-driven removal, `streamEpoch + sequence` resync, no-admin Agent, diagnostics/load/transfer instrumentation and bounded Android background work.
-- These patterns may be adapted now, but legacy cleartext pilot endpoints and identity strings are not valid production authentication and must not carry current business data.
-- D1 remains canonical; LAN must use the same current command/event/idempotency/permission semantics rather than becoming a second backend.
+- Current transport contract: `docs/LAN_TRANSPORT_BETA_V1.md`.
+- Active build/status record: `docs/LAN_DEV_BUILD_STATUS.md`.
+- Legacy repo `tamnv2supra/vanhanhdchungyen` remains read-only NON_AUTHORITY reference at fixed V4 commit `7b4488a89f585812c1bccba5d07d86049482bf4c`.
+- Current Android source now exists under `android-pilot/`; package `vn.vhdchy.transport.beta` is an isolated DEV transport pilot so it can evolve without claiming current business-client authority.
+- Android DEV source implements cached endpoint -> UDP discovery, two-sample anti-flap activation, LAN state display, echo test and a durable SQLite transport-test queue using stable `deviceId + deviceSeq + idempotencyKey` per queued event.
+- Current Windows Agent source now exists under `lan-agent/`; it is a portable .NET 8 user-mode process using HTTP `17891` and UDP discovery `17892`, with persistent Agent instance ID, fresh `streamEpoch` per start and durable transport-test receipt metadata.
+- Agent transport-test receipt enforces idempotency payload collision and `(deviceId, deviceSeq)` collision guards.
+- DEV Agent ACK is intentionally `TEST_ACCEPTED_AGENT_ONLY`; it is not a canonical D1 business ACK.
+- Current cleartext DEV endpoints are transport-test only and must not carry business credentials, employee PII or canonical business mutations.
+- `.github/workflows/build-lan-dev.yml` builds the Android APK and portable win-x64 Agent in two independent parallel jobs with no provider mutation and no release-signing secret.
+- First parallel build run: `34756569016` (started from commit `bd3e3f379fc954c781f37ede958bed53b961c0a8`; verify final result before claiming BUILD PASS).
 
 ## Target architecture
 
 - D1 is canonical structured business authority.
 - Google Sheets is projection/reconciliation/DR only.
 - Google Drive stores media/documents/archive; D1 stores identifiers, metadata, hashes and state.
-- Web and later APK use one Service/domain contract.
+- Web and later production APK use one Service/domain contract.
 - LAN is a transport/fallback path over the same command/event model, with local durable queue and explicit authentication/pairing before business activation.
 - Web implementation follows usable Auth + initial business API runtime rather than a mock-heavy early frontend.
 
-## Physical dependencies / STABLE
+## Remaining physical dependencies / STABLE
 
-- Android/PDA packaging/signing/physical regression and real corporate-network LAN regression remain paused until the required devices/company environment are available.
-- LAN source/model/protocol adaptation is not paused and can continue from the legacy reference.
+- Android source/build is active and APK installation testing may proceed on the available device once the current artifact is green.
+- Final corporate-network LAN regression still requires the intended company laptop/network and PDA environment; this remains a physical evidence gate only.
+- LAN business traffic remains disabled until pairing/authenticated-channel design is implemented and accepted.
 - STABLE remains blocked until full BETA PASS plus explicit Owner approval.
