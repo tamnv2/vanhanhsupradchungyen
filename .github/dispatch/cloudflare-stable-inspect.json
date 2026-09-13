@@ -1,0 +1,6 @@
+{
+  "enabled": true,
+  "target": "stable",
+  "operation": "inspect_cloudflare_stable_read_only",
+  "reason": "Determine existing isolated STABLE resources before any preparation mutation"
+}
