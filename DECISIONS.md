@@ -121,3 +121,6 @@ BETA acceptance must cover login, IN/OUT and repeated IN on one business date, M
 
 ## D-040 — Target core schema version
 The reconciled Owner-approved D1 target introduced on 2026-09-13 is `business_core_v3`. It supersedes the stale source `business_core_v2` and the currently deployed zero-business-row `business_core_v1`. `0001_initial.sql` is the clean V3 baseline for new environments; existing BETA must use a guarded reconciliation path that first re-verifies the exact D1 identity and zero-business-row condition.
+
+## D-041 — Non-stop autonomous execution
+After Owner scope/instruction is established, AI continues execution automatically and re-evaluates parallel work at every gate. Ordinary implementation failures, CI failures, a blocked single lane, incomplete evidence or unavailable local tooling do not justify stopping the overall project. AI isolates/fixes/verifies the affected lane and continues every independent safe lane. Owner interaction is requested only when a missing Owner-controlled permission/access/consent prevents continuation, or when a material authority/business contradiction requires an Owner decision. Existing explicit lane gates such as STABLE promotion remain lane-specific and do not halt unrelated work.
