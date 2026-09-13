@@ -106,20 +106,26 @@ async function inspectD1ReadOnly(databaseId) {
   console.log('D1 read-only inspection PASS');
 }
 
-async function inspectWorkerRoutingReadOnly() {
+async function inspectWorkerReadOnly() {
   const accountSubdomain = await cf(`/accounts/${encodeURIComponent(accountId)}/workers/subdomain`);
   const workerSubdomain = await cf(`/accounts/${encodeURIComponent(accountId)}/workers/scripts/${encodeURIComponent(expectedWorker)}/subdomain`);
   const domainsPayload = await cf(`/accounts/${encodeURIComponent(accountId)}/workers/domains`);
+  const settingsPayload = await cf(`/accounts/${encodeURIComponent(accountId)}/workers/scripts/${encodeURIComponent(expectedWorker)}/settings`);
   const subdomain = String(accountSubdomain?.result?.subdomain || '');
   const enabled = workerSubdomain?.result?.enabled === true;
   const previewsEnabled = workerSubdomain?.result?.previews_enabled === true;
   const domains = (Array.isArray(domainsPayload?.result) ? domainsPayload.result : [])
     .filter(item => item?.service === expectedWorker)
     .map(item => ({ hostname: item.hostname, zone_name: item.zone_name, environment: item.environment || null }));
+  const bindings = (Array.isArray(settingsPayload?.result?.bindings) ? settingsPayload.result.bindings : [])
+    .map(item => ({ name: item?.name || '', type: item?.type || '' }))
+    .filter(item => item.name && item.type)
+    .sort((a, b) => a.name.localeCompare(b.name));
   console.log(`WORKERS_DEV_ACCOUNT_SUBDOMAIN=${subdomain}`);
   console.log(`WORKERS_DEV_ENABLED=${enabled ? 'yes' : 'no'}`);
   console.log(`WORKERS_DEV_PREVIEWS_ENABLED=${previewsEnabled ? 'yes' : 'no'}`);
   console.log(`WORKER_CUSTOM_DOMAINS=${JSON.stringify(domains)}`);
+  console.log(`WORKER_BINDING_NAMES_TYPES=${JSON.stringify(bindings)}`);
   if (subdomain && enabled) {
     console.log(`WORKER_PUBLIC_URL=https://${expectedWorker}.${subdomain}.workers.dev`);
   }
@@ -147,7 +153,7 @@ if (!worker || !database) {
   throw new Error(`Cloudflare expected-resource mismatch: worker=${worker ? 'found' : 'missing'}, d1=${database ? 'found' : 'missing'}. Fail closed; no resources were created.`);
 }
 
-await inspectWorkerRoutingReadOnly();
+await inspectWorkerReadOnly();
 
 const databaseId = database.uuid || database.id;
 await inspectD1ReadOnly(databaseId);
