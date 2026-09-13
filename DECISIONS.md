@@ -118,3 +118,6 @@ Use one quarterly workbook per environment + cluster + quarter. Service/Gateway 
 
 ## D-039 — BETA business acceptance scenarios
 BETA acceptance must cover login, IN/OUT and repeated IN on one business date, MNV reuse, PICK/PACK dispatch, mixed role/task use, resource changes, multiple User Pick assignments, Reissue, cross-cluster borrowing, labor start/finish/correction, dropped-goods manual/QR entry, document FINAL only after durable upload, and Google-degraded/outbox retry behavior.
+
+## D-040 — Target core schema version
+The reconciled Owner-approved D1 target introduced on 2026-09-13 is `business_core_v3`. It supersedes the stale source `business_core_v2` and the currently deployed zero-business-row `business_core_v1`. `0001_initial.sql` is the clean V3 baseline for new environments; existing BETA must use a guarded reconciliation path that first re-verifies the exact D1 identity and zero-business-row condition.
