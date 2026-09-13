@@ -8,6 +8,7 @@ on:
       - 'lan-service/**'
       - 'contracts/**'
       - 'config/permissions.v1.json'
+      - '.github/scripts/domain-parity-test.mjs'
       - '.github/workflows/build-product-foundations.yml'
   workflow_dispatch:
 
@@ -31,11 +32,16 @@ jobs:
           test -s web/app.js
           test -s web/styles.css
           test -s contracts/domain.v1.json
+          test -s contracts/commands.slice1.v1.json
+          test -s contracts/acceptance.v1.json
           test -s config/permissions.v1.json
           grep -Fq 'VẬN HÀNH DC HƯNG YÊN' web/index.html
           grep -Fq 'LAN_ACCEPTED_PENDING_SYNC' web/app.js
           jq -e '.contractVersion == "VHDCHY_DOMAIN_V1"' contracts/domain.v1.json >/dev/null
+          jq -e '.schemaVersion == "VHDCHY_COMMAND_SPEC_V1"' contracts/commands.slice1.v1.json >/dev/null
+          jq -e '.schemaVersion == "VHDCHY_ACCEPTANCE_V1"' contracts/acceptance.v1.json >/dev/null
           jq -e '.schemaVersion == "VHDCHY_PERMISSION_CATALOG_V1"' config/permissions.v1.json >/dev/null
+          node .github/scripts/domain-parity-test.mjs
           mkdir -p out/web
           cp -R web/. out/web/
           tar -C out/web -czf out/VHDCHY-WEB-foundation.tar.gz .
@@ -59,6 +65,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          node .github/scripts/domain-parity-test.mjs
           dotnet build lan-service/Vhdchy.LanService.csproj -c Release
           VHDCHY_ENV=BETA VHDCHY_CLUSTER_ID=PICK_PACK_1291 VHDCHY_LAN_PORT=17901 \
             dotnet run --project lan-service/Vhdchy.LanService.csproj -c Release --no-build > "$RUNNER_TEMP/lan-service.log" 2>&1 &
