@@ -1,3 +1,6 @@
+import { authenticateRequest } from './session.js';
+import { permissionSummary } from './permission-store.js';
+
 const API_VERSION = "v1";
 const CORE_SCHEMA_VERSION = "business_core_v3";
 const RUNTIME_STATE = "BUSINESS_CORE_V3";
@@ -92,85 +95,133 @@ function publicCapabilities() {
   };
 }
 
-export default {
-  async fetch(request, env) {
-    const url = new URL(request.url);
-    const requestId = crypto.randomUUID();
+function authError(result, requestId) {
+  const code = result?.code || 'AUTH_FAILED';
+  return error(code, 'Authentication failed.', 401, requestId);
+}
 
-    if (url.pathname === "/health" && request.method === "GET") {
-      const d1 = await checkD1(env);
-      return json({
-        ok: d1.ok,
-        service: "VHDCHY_WORKER",
-        environment: env.APP_ENV || "unknown",
-        build: env.BUILD_SHA || "unknown",
-        d1
-      }, d1.ok ? 200 : 503, requestId);
-    }
+function passwordChangeGate(principal, requestId) {
+  if (principal?.mustChangePassword !== true) return null;
+  return error(
+    'PASSWORD_CHANGE_REQUIRED',
+    'A new permanent password must be established before ordinary product functions are available.',
+    403,
+    requestId
+  );
+}
 
-    if (url.pathname === "/health/deep" && request.method === "GET") {
-      const [d1, googleGateway] = await Promise.all([
-        checkD1(env),
-        checkGoogleGateway(env)
-      ]);
-      return json({
-        ok: d1.ok,
-        degraded: !googleGateway.ok,
-        service: "VHDCHY_WORKER",
-        environment: env.APP_ENV || "unknown",
-        build: env.BUILD_SHA || "unknown",
-        d1,
-        googleGateway
-      }, d1.ok ? 200 : 503, requestId);
-    }
+async function requirePrincipal(request, env, requestId) {
+  const auth = await authenticateRequest(request, env);
+  if (!auth.ok) return { response: authError(auth, requestId), principal: null };
+  return { response: null, principal: auth.principal };
+}
 
-    if (url.pathname === "/health/integrations" && request.method === "GET") {
-      const googleGateway = await checkGoogleGateway(env);
-      return json({
-        ok: googleGateway.ok,
-        service: "VHDCHY_WORKER",
-        environment: env.APP_ENV || "unknown",
-        googleGateway
-      }, googleGateway.ok ? 200 : 207, requestId);
-    }
+export async function handleRequest(request, env) {
+  const url = new URL(request.url);
+  const requestId = crypto.randomUUID();
 
-    if (url.pathname === "/api/v1/meta" && request.method === "GET") {
-      const schemaVersion = await readCoreSchema(env);
-      const ok = schemaVersion === CORE_SCHEMA_VERSION;
-      return json({
-        ok,
-        service: "VHDCHY_WORKER",
-        apiVersion: API_VERSION,
-        environment: env.APP_ENV || "unknown",
-        build: env.BUILD_SHA || "unknown",
-        runtimeState: RUNTIME_STATE,
-        schemaVersion,
-        expectedSchemaVersion: CORE_SCHEMA_VERSION
-      }, ok ? 200 : 503, requestId);
-    }
-
-    if (url.pathname === "/api/v1/capabilities" && request.method === "GET") {
-      return json(publicCapabilities(), 200, requestId);
-    }
-
-    if (url.pathname.startsWith("/api/v1/data/") || url.pathname.startsWith("/api/v1/admin/")) {
-      return error(
-        "AUTH_REQUIRED",
-        "Business data APIs remain closed until authenticated session and permission enforcement are active.",
-        401,
-        requestId
-      );
-    }
-
-    if (url.pathname.startsWith("/api/") && request.method === "OPTIONS") {
-      return error(
-        "CORS_NOT_ENABLED",
-        "Cross-origin API access is not enabled before the client security contract is active.",
-        403,
-        requestId
-      );
-    }
-
-    return error("NOT_FOUND", "Route not found.", 404, requestId);
+  if (url.pathname === "/health" && request.method === "GET") {
+    const d1 = await checkD1(env);
+    return json({
+      ok: d1.ok,
+      service: "VHDCHY_WORKER",
+      environment: env.APP_ENV || "unknown",
+      build: env.BUILD_SHA || "unknown",
+      d1
+    }, d1.ok ? 200 : 503, requestId);
   }
+
+  if (url.pathname === "/health/deep" && request.method === "GET") {
+    const [d1, googleGateway] = await Promise.all([
+      checkD1(env),
+      checkGoogleGateway(env)
+    ]);
+    return json({
+      ok: d1.ok,
+      degraded: !googleGateway.ok,
+      service: "VHDCHY_WORKER",
+      environment: env.APP_ENV || "unknown",
+      build: env.BUILD_SHA || "unknown",
+      d1,
+      googleGateway
+    }, d1.ok ? 200 : 503, requestId);
+  }
+
+  if (url.pathname === "/health/integrations" && request.method === "GET") {
+    const googleGateway = await checkGoogleGateway(env);
+    return json({
+      ok: googleGateway.ok,
+      service: "VHDCHY_WORKER",
+      environment: env.APP_ENV || "unknown",
+      googleGateway
+    }, googleGateway.ok ? 200 : 207, requestId);
+  }
+
+  if (url.pathname === "/api/v1/meta" && request.method === "GET") {
+    const schemaVersion = await readCoreSchema(env);
+    const ok = schemaVersion === CORE_SCHEMA_VERSION;
+    return json({
+      ok,
+      service: "VHDCHY_WORKER",
+      apiVersion: API_VERSION,
+      environment: env.APP_ENV || "unknown",
+      build: env.BUILD_SHA || "unknown",
+      runtimeState: RUNTIME_STATE,
+      schemaVersion,
+      expectedSchemaVersion: CORE_SCHEMA_VERSION
+    }, ok ? 200 : 503, requestId);
+  }
+
+  if (url.pathname === "/api/v1/capabilities" && request.method === "GET") {
+    return json(publicCapabilities(), 200, requestId);
+  }
+
+  if (url.pathname === "/api/v1/auth/me" && request.method === "GET") {
+    const auth = await requirePrincipal(request, env, requestId);
+    if (auth.response) return auth.response;
+    const permissions = await permissionSummary(env.DB, auth.principal);
+    return json({
+      ok: true,
+      principal: {
+        userId: auth.principal.userId,
+        username: auth.principal.username,
+        employeeId: auth.principal.employeeId,
+        displayName: auth.principal.displayName,
+        securityLevel: auth.principal.securityLevel,
+        deviceId: auth.principal.deviceId,
+        expiresAt: auth.principal.expiresAt,
+        mustChangePassword: auth.principal.mustChangePassword,
+        authMethodCode: auth.principal.authMethodCode
+      },
+      permissions
+    }, 200, requestId);
+  }
+
+  if (url.pathname.startsWith("/api/v1/data/") || url.pathname.startsWith("/api/v1/admin/")) {
+    const auth = await requirePrincipal(request, env, requestId);
+    if (auth.response) return auth.response;
+    const gate = passwordChangeGate(auth.principal, requestId);
+    if (gate) return gate;
+    return error(
+      "ROUTE_NOT_IMPLEMENTED",
+      "Authenticated business route is not implemented yet.",
+      404,
+      requestId
+    );
+  }
+
+  if (url.pathname.startsWith("/api/") && request.method === "OPTIONS") {
+    return error(
+      "CORS_NOT_ENABLED",
+      "Cross-origin API access is not enabled before the client security contract is active.",
+      403,
+      requestId
+    );
+  }
+
+  return error("NOT_FOUND", "Route not found.", 404, requestId);
+}
+
+export default {
+  fetch: handleRequest
 };
