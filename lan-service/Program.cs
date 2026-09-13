@@ -45,6 +45,7 @@ var state = new EdgeRuntimeState(
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Logging.ClearProviders();
+builder.WebHost.UseWebRoot(Path.Combine(AppContext.BaseDirectory, "wwwroot"));
 builder.WebHost.ConfigureKestrel(options => options.ListenAnyIP(port));
 var app = builder.Build();
 
@@ -131,7 +132,7 @@ app.MapMethods("/api/v1/{**path}", new[] { "POST", "PUT", "PATCH", "DELETE" }, (
     }, statusCode: StatusCodes.Status503ServiceUnavailable));
 
 Console.WriteLine($"{ServiceName} {version} environment={environment} cluster={clusterId}");
-Console.WriteLine($"Listening on :{port}; data={root}; readiness={state.Readiness}");
+Console.WriteLine($"Listening on :{port}; data={root}; readiness={state.Readiness}; webRoot={Path.Combine(AppContext.BaseDirectory, "wwwroot")}");
 Console.WriteLine("Business mutation is FAIL_CLOSED until edge persistence and synchronized authority are implemented.");
 
 await app.RunAsync();
