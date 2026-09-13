@@ -124,3 +124,24 @@ The reconciled Owner-approved D1 target introduced on 2026-09-13 is `business_co
 
 ## D-041 — Non-stop autonomous execution
 After Owner scope/instruction is established, AI continues execution automatically and re-evaluates parallel work at every gate. Ordinary implementation failures, CI failures, a blocked single lane, incomplete evidence or unavailable local tooling do not justify stopping the overall project. AI isolates/fixes/verifies the affected lane and continues every independent safe lane. Owner interaction is requested only when a missing Owner-controlled permission/access/consent prevents continuation, or when a material authority/business contradiction requires an Owner decision. Existing explicit lane gates such as STABLE promotion remain lane-specific and do not halt unrelated work.
+
+## D-042 — Final product topology: Web + APK + Cloud Service + LAN Service
+Owner clarified 2026-09-13. The finished product is one VHDCHY platform with Website, Android APK, normal Cloud Service runtime and a LAN Service substitute runtime. Android/LAN are first-class deliverables built in parallel with Cloud/Web; they are not diagnostic side projects or deferred extras.
+
+## D-043 — APK is the PDA-optimized business client
+Expands D-037. APK follows the same authenticated domain/API contract and business semantics as Web. It may expose a smaller PDA-appropriate operational UI, but it must not become an independently invented business system or merely a LAN diagnostics application. Which functions are compacted/omitted is decided from current PDA workflows/module requirements, not inherited automatically from the legacy app.
+
+## D-044 — LAN Service must substitute for Cloud Service when required
+Expands D-008. LAN must support three Owner-defined cases: (1) site Internet unavailable while local Wi-Fi/LAN remains usable; (2) Cloudflare Service unavailable/degraded; (3) an individual client is forced from direct Cloud access to the LAN path. When Cloud is reachable from LAN, forced-LAN normally uses LAN as a local relay/front door to the canonical Cloud Service. When Cloud/upstream is genuinely unavailable, LAN must support reviewed autonomous local execution for offline-capable business commands, not merely accept transport packets.
+
+## D-045 — Cloud and LAN share one business command/event model
+Cloud Service and LAN Service must not develop divergent business rules. The target is a provider-neutral domain core/shared command-event contract with Cloud D1 and LAN edge persistence adapters, plus identical acceptance vectors/error semantics. Provider/runtime packaging may differ; business meaning may not.
+
+## D-046 — Offline LAN events reconcile; conflicts are explicit
+D1 remains global canonical authority after recovery, but uninterrupted operation during a hard partition requires durable edge-accepted business events. LAN autonomous acceptance is recorded with stable idempotency/device/event identity and later reconciled to D1 exactly once when possible. Split-brain conflicts are retained and surfaced for deterministic/manual resolution; silent last-write-wins, silent drop or pretending strict global single-writer consistency during a hard partition is prohibited.
+
+## D-047 — Google remains downstream during LAN autonomous operation
+LAN Service does not make Google Sheets a fallback database. Sheets/Drive are deferred while Internet/Cloud dependencies are unavailable. Structured LAN events reconcile to D1 first, then normal outbox/Gateway projection runs. Files/images may be staged locally with hashes/metadata for later upload. Current `DRAFT -> FINAL` durable-Drive rule remains unchanged unless Owner explicitly changes it.
+
+## D-048 — Legacy and pre-clarification transport prototypes are NON_AUTHORITY
+The legacy repo and the transport-only APK/Agent prototype created immediately before the 2026-09-13 clarification are reference/evidence only. Reuse is selective after review against D-042..D-047. Do not continue implementation merely to reproduce the old pilot or the temporary transport prototype.
