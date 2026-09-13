@@ -57,13 +57,18 @@ Intended zone/domain: `supra.cc.cd`.
 Verified BETA account/resource authority:
 - Account ID: `1b1695e4f2a3abfe08dc475b352c7f42`
 - API token form: account-owned API token stored only in GitHub Environment `beta`
-- BETA Worker: `vhdchy-beta` — FOUND
+- BETA Worker: `vhdchy-beta` — FOUND / V3 DEPLOYED
+- BETA Worker public origin: `https://beta.supra.cc.cd`
+- BETA Worker `workers.dev`: DISABLED
+- BETA Worker bindings: `DB` (D1), `APP_ENV` (plain text), `BUILD_SHA` (plain text), `GAS_EXEC_URL` (plain text)
 - BETA D1: `vhdchy-data-beta` — FOUND
 - BETA D1 database ID: `37eb7d59-05c0-4ba2-8162-cb6a9fe5d492`
 - Initial identity verification run: GitHub Actions `34699120539` — PASS
 - Automated pre-migration D1 inspection run: GitHub Actions `34749417468` — PASS
 - Guarded BETA D1 migration run: GitHub Actions `34752340290` — PASS
 - Independent post-migration D1 inspection run: GitHub Actions `34752381290` — PASS
+- Guarded Worker BETA deploy run: GitHub Actions `34752917714` — PASS
+- Independent post-deploy provider inspection run: GitHub Actions `34752966242` — PASS
 
 Current authoritative D1 state:
 - Provider schema version: `business_core_v3`
@@ -75,15 +80,24 @@ Current authoritative D1 state:
 - `PRAGMA quick_check`: PASS
 - Classification: `BUSINESS_CORE_V3 / MIGRATION_PASS / ZERO_BUSINESS_ROWS`
 
-The migration was executed only after an immediate preflight reconfirmed exact database identity, `business_core_v1`, the expected V1 table set and zero business rows. The fixed migration batch applied reviewed files `0000` through `0008`; dispatch did not accept arbitrary SQL.
+Current authoritative Worker BETA state:
+- Source authority: `service/worker/src/index.js`
+- Deployed build SHA: `6b23f7134e02c7b53571c0a151f97f27a86bcb2e`
+- Runtime state: `BUSINESS_CORE_V3`
+- `/health`: PASS with BETA environment and D1 `business_core_v3`
+- `/health/deep`: PASS; Google Gateway not degraded at deployment verification
+- `/api/v1/meta`: PASS
+- `/api/v1/capabilities`: PASS; D1 authority and anonymous mutation disabled
+- Custom domain preserved: `beta.supra.cc.cd`
+- `workers.dev` remained disabled before and after deployment
+
+The D1 migration was executed only after exact preflight and fixed reviewed migration inputs. The Worker deployment was executed only after exact resource/routing/binding/schema preflight and then independently reverified. Raw Cloudflare credentials remain outside source and chat.
 
 Expected STABLE names remain reserved only:
 - STABLE Worker: `vhdchy-stable`
 - STABLE D1: `vhdchy-data-stable`
 
 Cloudflare operations are fail-closed: missing/mismatched expected resources or unexpected provider state must stop mutation/deployment; never silently recreate provider resources.
-
-Current token is proven capable of D1 Read/Write and Workers read/write through GitHub Environment `beta`; raw token values remain outside repository and chat.
 
 ## Android signing
 
