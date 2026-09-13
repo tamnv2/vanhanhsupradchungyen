@@ -1,6 +1,6 @@
 const API_VERSION = "v1";
-const CORE_SCHEMA_VERSION = "business_core_v2";
-const RUNTIME_STATE = "BUSINESS_CORE_V2";
+const CORE_SCHEMA_VERSION = "business_core_v3";
+const RUNTIME_STATE = "BUSINESS_CORE_V3";
 
 function json(payload, status = 200, requestId = null) {
   const body = requestId ? { ...payload, requestId } : payload;
