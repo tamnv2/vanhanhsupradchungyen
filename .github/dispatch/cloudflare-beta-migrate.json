@@ -1,6 +1,6 @@
 {
-  "enabled": true,
+  "enabled": false,
   "target": "beta",
   "operation": "migrate_business_core_v3",
-  "request_id": "business-core-v3-beta-20260913-1737"
+  "request_id": "retired-business-core-v3-migration-safe-idle"
 }
