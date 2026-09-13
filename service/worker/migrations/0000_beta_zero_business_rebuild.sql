@@ -1,8 +1,8 @@
-PRAGMA foreign_keys = OFF;
+PRAGMA defer_foreign_keys = ON;
 
 -- BETA-only zero-business-row rebuild preamble.
--- Safe only behind the automated preflight in .github/scripts/cloudflare-verify.mjs.
--- Never run if any business table contains rows or if the verified D1 identity/schema differs.
+-- Safe only after an exact read-only preflight confirms the verified BETA D1,
+-- schema business_core_v1, the expected legacy table set, and zero business rows.
 DROP TABLE IF EXISTS session_resource_bindings;
 DROP TABLE IF EXISTS labor_records;
 DROP TABLE IF EXISTS projection_outbox;
@@ -21,4 +21,4 @@ DROP TABLE IF EXISTS clusters;
 DROP TABLE IF EXISTS d1_migrations;
 DROP TABLE IF EXISTS vhdchy_meta;
 
-PRAGMA foreign_keys = ON;
+PRAGMA defer_foreign_keys = OFF;
