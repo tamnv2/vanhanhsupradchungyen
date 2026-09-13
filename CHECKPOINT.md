@@ -1,9 +1,9 @@
 # CHECKPOINT — VHDCHY
 
-checkpoint_version: 21
+checkpoint_version: 22
 protocol: AI_AUTHORITY_RESUME_V2
 status: EXECUTING_PRODUCT_V6_BETA
-reconciled_through_commit: 0ebb42c6e7eb1810e69d0b9ce3ee072e4985f34c
+reconciled_through_commit: e7f8b3d5cceb0dc1fd7f8cb2f94bb0e158cab30a
 action_mode: AUTONOMOUS_PARALLEL
 active_lanes: REPO_GOVERNANCE / SHARED_DOMAIN / CLOUD_SERVICE / LAN_FULL_SERVICE / AUTH / GOOGLE_SYNC / WEB / ANDROID_APK / RECONCILIATION / STABLE_PREPARATION
 paused_lanes: PHYSICAL_CORPORATE_LAN_REGRESSION
@@ -20,6 +20,7 @@ delivery_plan_ref: docs/DELIVERY_PLAN_V4.md
 release_promotion_ref: docs/RELEASE_PROMOTION_V1.md
 lan_host_domain_ref: docs/LAN_HOST_DOMAIN_V1.md
 context_index_ref: CONTEXT_INDEX.md
+external_project_bootstrap_ref: CHATGPT_PROJECT_BOOTSTRAP.md
 legacy_lan_reference_repo: tamnv2supra/vanhanhdchungyen
 legacy_lan_reference_commit: 7b4488a89f585812c1bccba5d07d86049482bf4c
 
@@ -29,8 +30,9 @@ legacy_lan_reference_commit: 7b4488a89f585812c1bccba5d07d86049482bf4c
 - Resume must compare current `main` HEAD with `reconciled_through_commit` before acting.
 - All active decision layers V1/V3/V4/V5/V6 are mandatory resume reads regardless of what an older checkpoint listed.
 - V6 resolves the former ROOT factor/lifetime decision gate from V5.
-- `docs/SERVICE_API_CONTRACT_V3.md`, `docs/DELIVERY_PLAN_V4.md` and `CURRENT_STATE.md` have been reconciled through V6.
-- `NEXT_ACTIONS.md` still needs a governance-only reconciliation update; the attempted update was blocked by platform action-safety and must not be bypassed through a lower-level route.
+- `docs/SERVICE_API_CONTRACT_V3.md`, `docs/DELIVERY_PLAN_V4.md` and `CURRENT_STATE.md` are reconciled through V6.
+- `CHATGPT_PROJECT_BOOTSTRAP.md` now records the exact external ChatGPT Project instruction required to make fresh-chat live GitHub bootstrap deterministic.
+- `NEXT_ACTIONS.md` is still stale in several references; two high-level replacement attempts were blocked by platform action-safety. Do not bypass through lower-level Git/GitHub routes. Current authority is defined by the active decision layers, current guides, `CURRENT_STATE.md`, and this checkpoint until a permitted high-level update succeeds.
 
 ## Owner scope locked through V6
 
@@ -55,34 +57,35 @@ legacy_lan_reference_commit: 7b4488a89f585812c1bccba5d07d86049482bf4c
 - Worker multi-module deployment path remains an implementation blocker for Cloud runtime integration.
 - Legacy LAN repo and current transport-only prototype remain NON_AUTHORITY references.
 
-## Governance audit finding
+## Governance correction completed
 
-The previous checkpoint was materially stale: it reconciled only through `517e767d150488af07f10dacdb8afa23930411e1`, while `main` had advanced by 34 commits to V6 authority. It also named only V1/V3/V4 decision layers while `CONTEXT_INDEX.md` had already promoted V5/V6. That made a FAST resume vulnerable to reading incomplete authority even if GitHub was consulted.
+The earlier resume defect was caused by a materially stale checkpoint and an incomplete FAST-read dependency on checkpoint-listed authority. `main` had advanced through V5/V6 while the checkpoint still named only V1/V3/V4.
 
-Repository-side corrections completed in this audit:
-- `AI_ENTRYPOINT.md` now requires a live GitHub fetch in the current chat and HEAD-vs-checkpoint comparison;
-- `CONTEXT_INDEX.md` now requires all active decision layers independently of checkpoint contents;
-- `docs/SERVICE_API_CONTRACT_V3.md` reconciled through V6;
-- `docs/DELIVERY_PLAN_V4.md` reconciled through V6;
-- `CURRENT_STATE.md` reconciled through V6;
-- `.github/workflows/validate.yml` now checks active decision layers, current guide references and checkpoint authority freshness.
+Repository-side corrections now in place:
+- `AI_ENTRYPOINT.md` requires a live GitHub read in the current chat, HEAD-vs-checkpoint comparison, and reconciliation before mutation;
+- `CONTEXT_INDEX.md` requires all active decision layers independently of checkpoint contents;
+- `CHATGPT_PROJECT_BOOTSTRAP.md` documents the exact external ChatGPT Project instruction needed before a fresh chat can know to start the live GitHub bootstrap;
+- `docs/SERVICE_API_CONTRACT_V3.md`, `docs/DELIVERY_PLAN_V4.md`, and `CURRENT_STATE.md` are reconciled through V6;
+- `.github/workflows/validate.yml` checks active decision layers, current guide references and checkpoint freshness.
 
-Validation evidence:
-- workflow `Validate clean baseline` run `34763812176`: SUCCESS at commit `0ebb42c6e7eb1810e69d0b9ce3ee072e4985f34c`;
+Validation evidence before the external-bootstrap documentation change:
+- workflow `Validate clean baseline` run `34763849700`: SUCCESS;
 - authority file checks: PASS;
 - resume invariant checks: PASS;
 - checkpoint freshness check: PASS;
 - Worker syntax/unit/schema baseline checks: PASS.
 
-The remaining cross-chat guarantee requires one external bootstrap instruction in the ChatGPT Project configuration, because a repository file cannot cause itself to be fetched before a new chat knows to read it.
+A new validation run after this checkpoint must be verified before declaring the governance correction fully PASS at the new HEAD.
 
 ## Immediate next execution
 
-1. Continue the existing multi-module Worker packaging lane through allowed high-level paths only.
-2. Reconcile/implement V6 authentication runtime and tests without claiming runtime PASS from documentation alone.
-3. Continue shared domain, Cloud/LAN adapters, Web/APK foundations and isolated STABLE preparation in dependency-aware parallel lanes.
-4. Reconcile `NEXT_ACTIONS.md` when the high-level write path permits; do not bypass the current action-safety block.
-5. Physical LAN/domain regression remains deferred only until the intended company environment is available.
+1. Verify CI at the new governance/checkpoint HEAD.
+2. Install the `CHATGPT_PROJECT_BOOTSTRAP.md` instruction in ChatGPT Project settings; this is the only layer that cannot be changed from repository contents alone.
+3. Continue the existing multi-module Worker packaging lane through allowed high-level paths only.
+4. Reconcile/implement V6 authentication runtime and tests without claiming runtime PASS from documentation alone.
+5. Continue shared domain, Cloud/LAN adapters, Web/APK foundations and isolated STABLE preparation in dependency-aware parallel lanes.
+6. Reconcile `NEXT_ACTIONS.md` when the high-level write path permits; do not bypass the current action-safety block.
+7. Physical LAN/domain regression remains deferred only until the intended company environment is available.
 
 ## do_not_repeat:
 
