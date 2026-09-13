@@ -41,13 +41,15 @@ Google Apps Script BETA authority:
 - Script ID: `11jvFS3xBRrl3hmZveMbQP7no_hNw50TmOA0zFrAUJtedal0FrMn2sfnQ`
 - Canonical managed deployment ID: `AKfycbzxRzxjeFyPpYQ39T3MJRL_sSKrhJhHXLY5LgGy16CnxuPEIFoJo8vr9XijrsxZttRtjQ`
 - Canonical Web App URL: `https://script.google.com/macros/s/AKfycbzxRzxjeFyPpYQ39T3MJRL_sSKrhJhHXLY5LgGy16CnxuPEIFoJo8vr9XijrsxZttRtjQ/exec`
-- Verified immutable version: `2`
+- Current verified immutable version: `3`
 - Source authority: `service/google-gateway/`
 - Runtime bootstrap: `PASS`
 - Versioned deployment / `/exec` identity + bootstrap verification: `PASS`
-- Verification run: GitHub Actions `34696139468`
+- Projection contract protocol: `VHDCHY_PROJECTION_V1`
+- Projection contract deployment run: GitHub Actions `34753872034` — PASS
+- Projection write state: `FAIL_CLOSED / NOT_LIVE`; projection auth verifier and explicit enable state are required before writes are accepted.
 
-The manually-created deployment URL supplied during bootstrap is non-authoritative and superseded by the managed deployment above. Future releases update the managed deployment to a new immutable version instead of creating uncontrolled deployment identities.
+The managed deployment preserves the same canonical deployment ID and `/exec` URL across immutable versions. Version 3 adds the reviewed projection batch contract while retaining fail-closed behavior. Future releases update the same managed deployment rather than creating uncontrolled deployment identities.
 
 ## Cloudflare
 
@@ -81,7 +83,7 @@ Current authoritative D1 state:
 - Classification: `BUSINESS_CORE_V3 / MIGRATION_PASS / ZERO_BUSINESS_ROWS`
 
 Current authoritative Worker BETA state:
-- Source authority: `service/worker/src/index.js`
+- Source authority currently deployed: `service/worker/src/index.js`
 - Deployed build SHA: `6b23f7134e02c7b53571c0a151f97f27a86bcb2e`
 - Runtime state: `BUSINESS_CORE_V3`
 - `/health`: PASS with BETA environment and D1 `business_core_v3`
@@ -91,13 +93,15 @@ Current authoritative Worker BETA state:
 - Custom domain preserved: `beta.supra.cc.cd`
 - `workers.dev` remained disabled before and after deployment
 
+Auth/session/permission and outbox source modules are under active development on `main`; they are not treated as deployed Worker runtime until the guarded multi-module deployment path and runtime acceptance tests pass.
+
 The D1 migration was executed only after exact preflight and fixed reviewed migration inputs. The Worker deployment was executed only after exact resource/routing/binding/schema preflight and then independently reverified. Raw Cloudflare credentials remain outside source and chat.
 
 Expected STABLE names remain reserved only:
 - STABLE Worker: `vhdchy-stable`
 - STABLE D1: `vhdchy-data-stable`
 
-Cloudflare operations are fail-closed: missing/mismatched expected resources or unexpected provider state must stop mutation/deployment; never silently recreate provider resources.
+Cloudflare operations are fail-closed: missing/mismatched expected resources or unexpected provider state must stop the affected mutation/deployment; independent safe work continues under `AI_AUTHORITY_RESUME_V2`.
 
 ## Android signing
 
