@@ -24,12 +24,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Validate fixed dispatch and reviewed module manifest
+      - name: Read fixed dispatch state
+        id: dispatch
         shell: bash
         run: |
           set -euo pipefail
           test "$GITHUB_REF" = "refs/heads/main"
-          jq -e '.enabled == true and .target == "beta" and .operation == "deploy_worker_multimodule_business_core_v3"' .github/dispatch/cloudflare-beta-deploy-v2.json >/dev/null
+          jq -e '(.enabled == true or .enabled == false) and .target == "beta" and .operation == "deploy_worker_multimodule_business_core_v3"' .github/dispatch/cloudflare-beta-deploy-v2.json >/dev/null
+          enabled="$(jq -r '.enabled' .github/dispatch/cloudflare-beta-deploy-v2.json)"
+          echo "enabled=$enabled" >> "$GITHUB_OUTPUT"
+          if [ "$enabled" != "true" ]; then
+            echo "WORKER_MULTI_MODULE_DISPATCH_DISABLED_NOOP"
+          fi
+
+      - name: Validate reviewed module manifest
+        if: steps.dispatch.outputs.enabled == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
           jq -e '
             .target_worker == "vhdchy-beta" and
             .public_origin == "https://beta.supra.cc.cd" and
@@ -58,10 +70,12 @@ jobs:
           for source in service/worker/src/*.js; do node --input-type=module --check < "$source"; done
 
       - name: Read-only provider preflight
+        if: steps.dispatch.outputs.enabled == 'true'
         shell: bash
         run: node .github/scripts/cloudflare-verify.mjs | tee "$RUNNER_TEMP/provider-preflight.log"
 
       - name: Enforce exact BETA precondition
+        if: steps.dispatch.outputs.enabled == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -84,14 +98,17 @@ jobs:
           NODE
 
       - name: Upload reviewed Worker modules
+        if: steps.dispatch.outputs.enabled == 'true'
         shell: bash
         run: node .github/scripts/cloudflare-worker-upload.mjs service/worker/deploy.beta.json
 
       - name: Read-only provider postflight
+        if: steps.dispatch.outputs.enabled == 'true'
         shell: bash
         run: node .github/scripts/cloudflare-verify.mjs | tee "$RUNNER_TEMP/provider-postflight.log"
 
       - name: Enforce post-state
+        if: steps.dispatch.outputs.enabled == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -112,11 +129,12 @@ jobs:
           NODE
 
       - name: Verify public BETA health after edge propagation
+        if: steps.dispatch.outputs.enabled == 'true'
         shell: bash
         run: |
           set -euo pipefail
-          node <<'NODE'
-          const fs = require('fs');
+          node --input-type=module <<'NODE'
+          const fs = await import('node:fs');
           const spec = JSON.parse(fs.readFileSync('service/worker/deploy.beta.json', 'utf8'));
           const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
           async function get(path) {
