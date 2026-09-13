@@ -11,7 +11,7 @@ Overall progress requests Owner interaction only for:
 - `OWNER_PERMISSION_REQUIRED`: an Owner-controlled permission/access/consent/secret-store action is required to continue the affected operation; or
 - `OWNER_DECISION_REQUIRED`: a material business/authority contradiction has multiple valid outcomes and cannot be resolved from current Owner instruction, provider evidence or GitHub authority.
 
-Physical Android/PDA build/regression and physical LAN testing remain environment-dependent. LAN source/model adaptation is active again using `tamnv2supra/vanhanhdchungyen` strictly as NON_AUTHORITY read-only reference.
+Android/APK build and LAN Agent/model development are ACTIVE in parallel with Worker/Service, Projection, D1, Google Sheets/Drive and Web preparation. The final company-laptop/network LAN regression remains a later physical evidence gate, not a source/build blocker. The Owner currently has an Android device available for APK installation/testing.
 
 ## Provider baseline — PASS
 
@@ -93,29 +93,36 @@ Next:
 3. implement business commands in dependency order after Auth enforcement is executable;
 4. cover BETA scenarios from `DECISIONS.md`: IN/OUT/repeated IN, MNV reuse, PICK/PACK mixed tasks, resource changes/reissue/borrow, labor, dropped goods, documents and degraded projection.
 
-## Gate 5 — LAN source/model adaptation — ACTIVE
+## Gate 5 — Android APK + LAN Agent/model — ACTIVE
 
 Reference boundary:
 - current authority remains this repository;
-- legacy repo `tamnv2supra/vanhanhdchungyen` is read-only evidence/reference;
-- use fixed V4 comparison commit `7b4488a89f585812c1bccba5d07d86049482bf4c`, not moving `main`;
-- restoration analysis is in `docs/LAN_SOURCE_REVIEW_20260913.md`.
+- legacy repo `tamnv2supra/vanhanhdchungyen` is read-only NON_AUTHORITY evidence/reference;
+- fixed V4 comparison commit: `7b4488a89f585812c1bccba5d07d86049482bf4c`;
+- source review: `docs/LAN_SOURCE_REVIEW_20260913.md`;
+- current contract: `docs/LAN_TRANSPORT_BETA_V1.md`;
+- build status: `docs/LAN_DEV_BUILD_STATUS.md`.
 
-Completed from the legacy reference:
-- verified prior two-MT90 LAN evidence and V4 source/build checkpoint;
-- directly reviewed Agent `PilotV4.cs`, Android `MainActivityV4.java` and `PilotRepository.java` patterns;
-- confirmed no-admin Agent, cached -> UDP -> manual endpoint selection, health/hysteresis, durable `event_id + device_seq` queue, ACK removal, epoch/sequence resync, diagnostics/load/transfer and bounded background work;
-- created current authoritative design `docs/LAN_TRANSPORT_BETA_V1.md`, aligned with the shared Service API and D1 canonical authority.
+Completed in the current repository:
+- Android project bootstrapped under `android-pilot/` with isolated DEV package `vn.vhdchy.transport.beta`;
+- Android transport state implements cached Agent -> UDP discovery and two-sample anti-flapping activation;
+- Android transport-test queue is durable SQLite and allocates stable `deviceId + deviceSeq + idempotencyKey` before transmission;
+- portable .NET 8 LAN Agent bootstrapped under `lan-agent/` with HTTP `17891` and UDP discovery `17892`;
+- Agent persists its instance ID, rotates `streamEpoch` on restart, stores test-event receipt metadata and rejects idempotency-payload or device-sequence collisions;
+- cleartext endpoints are explicitly transport-test only; business credentials/PII/canonical mutations remain prohibited;
+- `.github/workflows/build-lan-dev.yml` builds Android and Agent in independent parallel CI jobs without provider mutation/release signing secrets;
+- first build run is `34756569016`; final result must be read before BUILD PASS is claimed.
 
-Next executable work without physical devices:
-1. design the authenticated Agent/PDA pairing and channel binding that sits underneath `LAN_TRANSPORT_BETA_V1`; old service/protocol strings remain locator/identity hints only;
-2. define the exact current durable queue schema/state transitions and authoritative ACK mapping (`RECEIVED_BY_AGENT`, `ACCEPTED_CANONICAL`, `REJECTED_FINAL`, `RETRY_LATER`);
-3. extend `docs/BETA_ACCEPTANCE_MATRIX.md` with LAN source-level cases for retry identity preservation, queue ordering, anti-flap, epoch resync, bounded background work and secret exclusion;
-4. prepare current LAN source structure/adapters where writes are allowed, without connecting pilot endpoints to canonical business data prematurely;
-5. map later Android implementation to the same queue/transport contract without requiring current signing material;
-6. preserve a separate physical regression checklist for the real company laptop/network and MT90 devices.
+Next Android/LAN work, in parallel with Service work:
+1. resolve any failures from build run `34756569016` until both Android and Agent jobs are green;
+2. publish/retain the green DEV APK + Agent ZIP artifacts and SHA256 evidence;
+3. use the Owner's available Android device for APK install/open/basic offline queue behavior once the APK is green;
+4. continue pairing/authenticated-channel design so transport discovery/health identity is upgraded before any business LAN payload is enabled;
+5. add realtime `streamEpoch + sequence` resync and bounded background-finish behavior from the proven legacy V4 patterns;
+6. add transport source-level tests/acceptance for duplicate retry, idempotency collision, device-sequence collision, queue ordering and restart/resync;
+7. later run the final company-network/laptop/PDA regression without assuming Administrator/router/DNS/firewall changes.
 
-Physical LAN/PDA PASS remains pending the real company laptop/network and MT90 devices. Do not report old 0.3.36 physical evidence as current-production PASS.
+A DEV Agent response `TEST_ACCEPTED_AGENT_ONLY` is transport-test evidence only. Future business commands must remain queued until `ACCEPTED_CANONICAL` from the Service/D1 authority.
 
 ## Gate 6 — Drive media/documents
 
@@ -137,9 +144,11 @@ Then:
 4. add Drive/media flows;
 5. run Web -> Service -> D1 -> Projection/Drive E2E acceptance.
 
-## Physical dependencies — Android / LAN
+## Physical dependencies
 
-Android/PDA packaging/signing/physical regression and real corporate-network LAN regression remain pending the required devices/company environment. These physical dependencies do not block LAN source/model work or Service/Web/Google progress.
+- Android APK installation/testing can proceed on the currently available test device once CI produces a green APK.
+- Final corporate LAN PASS still depends on the real company laptop/network and intended PDA environment.
+- Lack of that final physical environment does not pause Android source/build, LAN Agent source/build, LAN protocol/model work or independent Service/Web/Google work.
 
 ## STABLE
 
