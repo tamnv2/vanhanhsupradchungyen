@@ -60,25 +60,30 @@ Verified BETA account/resource authority:
 - BETA Worker: `vhdchy-beta` — FOUND
 - BETA D1: `vhdchy-data-beta` — FOUND
 - BETA D1 database ID: `37eb7d59-05c0-4ba2-8162-cb6a9fe5d492`
-- Identity verification run: GitHub Actions `34699120539` — PASS
-- Automated identity + D1 read-only inspection run: GitHub Actions `34748247818` — PASS
+- Initial identity verification run: GitHub Actions `34699120539` — PASS
+- Automated pre-migration D1 inspection run: GitHub Actions `34749417468` — PASS
+- Guarded BETA D1 migration run: GitHub Actions `34752340290` — PASS
+- Independent post-migration D1 inspection run: GitHub Actions `34752381290` — PASS
 
-Automated D1 inspection evidence:
-- Provider schema version: `business_core_v1`
-- Business row state: ZERO BUSINESS ROWS across all observed business tables
-- Provider bookkeeping rows only: `d1_migrations=1`, `vhdchy_meta=3`
-- Classification: `BUSINESS_CORE_V1 / ZERO_BUSINESS_ROWS / SCHEMA_MISMATCH`
-- The inspection reads only schema metadata, schema version and table counts; it does not read business row contents or issue DML/DDL writes.
+Current authoritative D1 state:
+- Provider schema version: `business_core_v3`
+- Target table contract: 54 application tables plus D1 internal `_cf_KV`
+- Required seeds verified: `clusters=1`, `modules=1`, `cluster_modules=1`, `module_domain_registry=6`, `resource_type_catalog=4`, `labor_type_catalog=4`, `root_security_policy=1`, `vhdchy_meta=8`
+- Business rows remain zero after migration
+- Legacy V1 tables `resources`, `session_resource_bindings`, `document_metadata`, `d1_migrations` are absent
+- `PRAGMA foreign_key_check`: PASS
+- `PRAGMA quick_check`: PASS
+- Classification: `BUSINESS_CORE_V3 / MIGRATION_PASS / ZERO_BUSINESS_ROWS`
+
+The migration was executed only after an immediate preflight reconfirmed exact database identity, `business_core_v1`, the expected V1 table set and zero business rows. The fixed migration batch applied reviewed files `0000` through `0008`; dispatch did not accept arbitrary SQL.
 
 Expected STABLE names remain reserved only:
 - STABLE Worker: `vhdchy-stable`
 - STABLE D1: `vhdchy-data-stable`
 
-Cloudflare operations are fail-closed: missing/mismatched expected resources or unexpected business rows must stop migration/deployment; never silently recreate provider resources.
+Cloudflare operations are fail-closed: missing/mismatched expected resources or unexpected provider state must stop mutation/deployment; never silently recreate provider resources.
 
-Current token is already proven capable of the automated read-only D1 inspection through the GitHub Actions Environment bridge. Provider permission does not expose the raw token to ChatGPT; GitHub Actions receives the secret at runtime.
-
-The earlier `business_core_v2` source migration is now stale relative to Owner-approved 2026-09-13 target decisions. Do not apply it. Reconcile and validate the new target schema first, then rerun automated read-only inspection immediately before any BETA D1 write.
+Current token is proven capable of D1 Read/Write and Workers read/write through GitHub Environment `beta`; raw token values remain outside repository and chat.
 
 ## Android signing
 
