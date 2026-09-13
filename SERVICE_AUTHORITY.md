@@ -1,6 +1,6 @@
 # SERVICE AUTHORITY
 
-Status: ACTIVE / CLEAN BASELINE 2026-09-12
+Status: ACTIVE / OWNER RECONCILED 2026-09-13
 Baseline: `REPO-RESET-20260912-01`
 
 ## GitHub
@@ -52,7 +52,6 @@ The manually-created deployment URL supplied during bootstrap is non-authoritati
 ## Cloudflare
 
 Managing email: `nguyenvantam050595@gmail.com`.
-
 Intended zone/domain: `supra.cc.cd`.
 
 Verified BETA account/resource authority:
@@ -61,19 +60,25 @@ Verified BETA account/resource authority:
 - BETA Worker: `vhdchy-beta` — FOUND
 - BETA D1: `vhdchy-data-beta` — FOUND
 - BETA D1 database ID: `37eb7d59-05c0-4ba2-8162-cb6a9fe5d492`
-- Verification run: GitHub Actions `34699120539` — PASS
+- Identity verification run: GitHub Actions `34699120539` — PASS
+- Automated identity + D1 read-only inspection run: GitHub Actions `34748247818` — PASS
+
+Automated D1 inspection evidence:
+- Provider schema version: `business_core_v1`
+- Business row state: ZERO BUSINESS ROWS across all observed business tables
+- Provider bookkeeping rows only: `d1_migrations=1`, `vhdchy_meta=3`
+- Classification: `BUSINESS_CORE_V1 / ZERO_BUSINESS_ROWS / SCHEMA_MISMATCH`
+- The inspection reads only schema metadata, schema version and table counts; it does not read business row contents or issue DML/DDL writes.
 
 Expected STABLE names remain reserved only:
 - STABLE Worker: `vhdchy-stable`
 - STABLE D1: `vhdchy-data-stable`
 
-Cloudflare verification is fail-closed: missing expected retained resources must be reported and must not be silently recreated.
+Cloudflare operations are fail-closed: missing/mismatched expected resources or unexpected business rows must stop migration/deployment; never silently recreate provider resources.
 
-Minimum intended deploy-token permissions from retained design:
-- Account: `Workers Scripts Write`
-- Account: `D1 Write`
+Current token is already proven capable of the automated read-only D1 inspection through the GitHub Actions Environment bridge. Provider permission does not expose the raw token to ChatGPT; GitHub Actions receives the secret at runtime.
 
-Current verified BETA resource identity does not yet prove that the existing D1 contents are safe for the clean zero-baseline migration. Inspect current D1 tables/schema/data state before applying `service/worker/migrations/0001_initial.sql`.
+The earlier `business_core_v2` source migration is now stale relative to Owner-approved 2026-09-13 target decisions. Do not apply it. Reconcile and validate the new target schema first, then rerun automated read-only inspection immediately before any BETA D1 write.
 
 ## Android signing
 
@@ -81,4 +86,4 @@ Existing signing material is reference until locally re-verified. Do not use ret
 
 ## Secrets
 
-Secret values live only in provider secret stores / GitHub Environments. Repository files may contain only secret names, non-secret resource IDs, and status.
+Secret values live only in provider secret stores / GitHub Environments. Repository files may contain only secret names, non-secret resource IDs, verification state and non-sensitive policy.
