@@ -2,35 +2,57 @@
 
 Updated: 2026-09-13
 Baseline: `REPO-RESET-20260912-01`
+Product architecture: `docs/TARGET_PRODUCT_ARCHITECTURE_V2.md`
+Execution plan: `docs/DELIVERY_PLAN_V2.md`
 
 ## GitHub / authority
 
 - Active repository: `tamnv2/vanhanhsupradchungyen` (PUBLIC), default branch `main`.
-- `AI_AUTHORITY_RESUME_V2` is active.
-- `D-041` remains active: overall execution continues by default and a blocked single lane does not stop independent safe work.
-- Android/APK build and LAN Agent/model development are now ACTIVE in parallel with Worker/Service/Google/Web work by current Owner instruction.
-- The Owner has an Android device available for APK installation/testing. Final company-laptop/network LAN regression remains environment-dependent and is a later physical gate, not a reason to pause source/build work.
-- Legacy reference repository: `tamnv2supra/vanhanhdchungyen`; fixed V4 comparison commit `7b4488a89f585812c1bccba5d07d86049482bf4c`. It is NON_AUTHORITY and cannot override current decisions/contracts.
+- `AI_AUTHORITY_RESUME_V2` and D-041 non-stop/parallel execution remain active.
+- Owner clarified final product scope on 2026-09-13: Website + Android APK + Cloud Service + LAN Service are four first-class deliverables built toward one system.
+- APK is a PDA-optimized client of the same business/domain contract as Web, not a LAN diagnostics app.
+- LAN Service must substitute for Cloud Service during site Internet loss, Cloud Service failure/degradation, and support per-client forced-LAN routing.
+- Legacy repo `tamnv2supra/vanhanhdchungyen@7b4488a89f585812c1bccba5d07d86049482bf4c` remains NON_AUTHORITY reference only.
+- The transport-only APK/Agent prototype created immediately before this clarification is also NON_AUTHORITY/disposable reference. It must not define product direction.
 - Secret values remain outside repository source/chat.
 
-## GitHub BETA environment
+## Product runtime target
 
-- Environment `beta` is the provider execution boundary.
-- Google and Cloudflare CI credentials remain in Environment secret/variable stores.
-- Read-only Cloudflare verification, guarded D1 migration, guarded Worker deployment and GAS sync bridges exist.
-- Platform write-safety currently blocks modification of the provider-mutating Worker workflow and sensitive Auth/runtime source through the connected GitHub write path. This is not classified as an Owner permission blocker and must not be bypassed through lower-level Git/API methods.
+Normal mode:
+
+`Web/APK -> Cloudflare Worker -> D1 -> Google Gateway -> Sheets/Drive`
+
+LAN modes:
+
+- `LAN_RELAY`: Web/APK -> LAN Service -> Cloud Service/D1 when Cloud is reachable; used especially for per-client forced-LAN/direct-path problems.
+- `LAN_AUTONOMOUS`: Web/APK -> LAN Service -> local edge DB/event journal/sync outbox when Cloud/upstream is unavailable; later reconcile to D1.
+- `LOCAL_QUEUE_ONLY`: eligible command retained on the client when neither Cloud nor LAN can accept it.
+
+D1 remains global canonical authority after normal commit/reconciliation. LAN autonomous edge events are durable business facts pending reconciliation, not mere transport receipts. Split-brain conflicts must be explicit; silent overwrite/drop is prohibited.
+
+## Shared-domain requirement
+
+Cloud and LAN may not become two independently invented backends.
+
+Target implementation boundary:
+- provider-neutral domain command/event validation and state-transition core;
+- Cloud D1 adapter;
+- LAN edge persistence/reconciliation adapter;
+- identical business test vectors/machine error semantics across both.
+
+Exact LAN packaging/runtime technology is not Owner-locked; it must be selected based on no-admin compatibility/footprint and must not change business semantics.
 
 ## Google / Drive / Sheets / GAS
 
 - Current Google authority: `tam95.supra@gmail.com`.
-- Project root: `VẬN HÀNH DC HƯNG YÊN` with `01_BETA` and `02_STABLE` roots.
+- Project root: `VẬN HÀNH DC HƯNG YÊN` with `01_BETA` and `02_STABLE`.
 - BETA cluster: `PICK_PACK_1291`.
 - BETA workbook: `VHDCHY BETA - PICK PACK 1291 - 2026 Q3`.
-- Workbook schema remains `PP1291_SHEETS_BETA_V1`; D1 remains canonical; projection remains `PROVISIONED_NOT_LIVE`.
+- Workbook schema: `PP1291_SHEETS_BETA_V1`; projection remains `PROVISIONED_NOT_LIVE`.
 - GAS managed deployment immutable version `3`, deployment run `34753872034`: PASS.
-- Version 3 implements fail-closed `VHDCHY_PROJECTION_V1`, including fixed sheet/key mapping, bounded batches, unknown-column rejection, key upsert, ScriptLock, shared-token verifier gate and separate projection-enable gate.
-- Secure coordinated provisioning design is persisted in `docs/PROJECTION_AUTH_PLAN.md`.
-- Projection writes remain disabled until auth provisioning plus sender/ACK/retry/idempotency/degraded-Google acceptance pass.
+- Projection Gateway remains fail-closed until secure auth + sender/ACK/retry acceptance.
+- During LAN autonomous mode, Sheets/Drive remain deferred/downstream. LAN must not use Sheets as a fallback database.
+- Offline files may be staged with hashes/metadata; current document `DRAFT -> FINAL` durable-Drive rule remains unchanged until Owner explicitly changes it.
 
 ## Cloudflare D1 BETA — BUSINESS_CORE_V3 PASS
 
@@ -39,77 +61,105 @@ Baseline: `REPO-RESET-20260912-01`
 - D1 database ID: `37eb7d59-05c0-4ba2-8162-cb6a9fe5d492`.
 - Provider schema: `business_core_v3`.
 - Fresh read-only verification run `34754968801`: SUCCESS.
-- Verification reconfirmed exact database/Worker identity, full V3 table set, required baseline seeds and zero business rows.
+- Required schema/seeds/integrity verified; business rows remained zero at verification.
 
 ## Cloudflare Worker BETA — FOUNDATION LIVE / BUSINESS FAIL-CLOSED
 
 - Worker: `vhdchy-beta`.
 - Public origin: `https://beta.supra.cc.cd`.
 - `workers.dev`: disabled.
-- Expected bindings remain `DB`/D1, `APP_ENV`/plain text, `BUILD_SHA`/plain text and `GAS_EXEC_URL`/plain text.
-- Fresh provider verification run `34754968801`: SUCCESS.
-- Existing runtime health/meta/capability foundation remains the live contract.
+- Existing runtime health/meta/capability foundation is live.
 - Protected business/admin APIs remain fail-closed.
 
-## Worker packaging state
+### Worker packaging blocker
 
-- Current active deploy workflow still uploads only `service/worker/src/index.js`.
-- `service/worker/deploy.beta.json` now contains an exact reviewed seven-module manifest: `index.js`, `auth.js`, `auth-service.js`, `authorization.js`, `session.js`, `permission-store.js`, `projection.js`.
-- Manifest commit `45ee0cbadee6e6817e2894a7cfddfa4b995da9a4`; validation run `34754738074`: SUCCESS.
-- Packaging implementation contract is persisted in `docs/WORKER_PACKAGING_PLAN.md`.
-- No Worker deploy has been triggered after this manifest-only change. Do not deploy until the workflow itself supports and verifies the reviewed module set.
+- `service/worker/deploy.beta.json` declares reviewed modules: `index.js`, `auth.js`, `auth-service.js`, `authorization.js`, `session.js`, `permission-store.js`, `projection.js`.
+- Manifest validation `34754738074`: SUCCESS.
+- Active provider-mutating deploy workflow still uploads only `index.js`; do not deploy until multi-module workflow support is safely updated/verified.
+- Connected write-safety currently blocks that sensitive workflow/source mutation path. Do not bypass the guard through lower-level APIs.
 
-## Parallel Service implementation state
+## Cloud Service source foundation
 
-### Auth/session/permission
-- Password/hash, bearer-token and TOTP foundation exists.
-- Session resolution, expiry/revocation/device-security-epoch checks exist.
-- Scoped role/direct permission loading and explicit DENY precedence exist.
-- Non-ROOT password login/session issuance exists and is unit-tested.
-- ROOT password-only login remains fail-closed to `ROOT_MFA_REQUIRED`.
-- Runtime integration remains pending packaging PASS and an allowed sensitive-source write path.
+Already present/tested at source level:
+- password/hash/bearer/TOTP primitives;
+- session expiry/revocation/device-security-epoch checks;
+- scoped role/direct permission evaluation with DENY precedence;
+- non-ROOT login/session issuance;
+- ROOT password-only fail-closed to `ROOT_MFA_REQUIRED`;
+- projection outbox read/retry/dead-letter primitives;
+- shared Service API contract;
+- canonical mutation design.
 
-### Projection/outbox
-- `projection.js` contains bounded pending-outbox reads, processing/ACK/failure states, exponential retry and DEAD transition foundation.
-- GAS projection version 3 is deployed but not write-live.
-- Management-plane provisioning design prefers authenticated Apps Script API execution rather than provisioning through the anonymous Web App data plane.
-- D1 remains authoritative if Google is degraded; projection failure may not roll back committed D1 business state.
+Not yet runtime-live:
+- integrated protected routes;
+- reusable canonical mutation helper;
+- business APIs;
+- secure projection sender/auth;
+- Drive flow;
+- Web business UI.
 
-### Shared API / mutation
-- `docs/SERVICE_API_CONTRACT.md` defines bearer/session rules, effective permissions, idempotency, errors and canonical state + immutable event + outbox semantics.
-- Reusable canonical mutation helper remains to be implemented/tested when sensitive runtime-source write is available.
-- No Web business surface is live yet.
+## Android / LAN clarification state
 
-## Android + LAN build lane — ACTIVE / FIRST BUILD PASS
+### Prototype evidence retained, product authority removed
 
-- Current LAN restoration review: `docs/LAN_SOURCE_REVIEW_20260913.md`.
-- Current transport contract: `docs/LAN_TRANSPORT_BETA_V1.md`.
-- Active build/status record: `docs/LAN_DEV_BUILD_STATUS.md`.
-- Legacy repo `tamnv2supra/vanhanhdchungyen` remains read-only NON_AUTHORITY reference at fixed V4 commit `7b4488a89f585812c1bccba5d07d86049482bf4c`.
-- Current Android source now exists under `android-pilot/`; package `vn.vhdchy.transport.beta` is an isolated DEV transport pilot so it can evolve without claiming current business-client authority.
-- Android DEV source implements cached endpoint -> UDP discovery, two-sample anti-flap activation, LAN state display, echo test and a durable SQLite transport-test queue using stable `deviceId + deviceSeq + idempotencyKey` per queued event.
-- Current Windows Agent source now exists under `lan-agent/`; it is a portable .NET 8 user-mode process using HTTP `17891` and UDP discovery `17892`, with persistent Agent instance ID, fresh `streamEpoch` per start and durable transport-test receipt metadata.
-- Agent transport-test receipt enforces idempotency payload collision and `(deviceId, deviceSeq)` collision guards.
-- DEV Agent ACK is intentionally `TEST_ACCEPTED_AGENT_ONLY`; it is not a canonical D1 business ACK.
-- Current cleartext DEV endpoints are transport-test only and must not carry business credentials, employee PII or canonical business mutations.
-- `.github/workflows/build-lan-dev.yml` builds the Android APK and portable win-x64 Agent in two independent parallel jobs with no provider mutation and no release-signing secret.
-- First parallel build run `34756569016`: SUCCESS for both `android-pilot` and `lan-agent`.
-- APK file SHA256: `bf311b44ae1d514f897678aeac97c23e34a366762a94d82d410a1f4f6a5f7629`.
-- Agent ZIP file SHA256: `6681d7beec406cad34366074b998c5be70f046d1dc2d99db14c7c4a21a94b2a0`.
+First transport-only paired build run `34756569016` was green and proves basic CI/package/no-admin feasibility only.
 
-## Target architecture
+Prototype paths:
+- `android-pilot/`
+- `lan-agent/`
+- `.github/workflows/build-lan-dev.yml`
 
-- D1 is canonical structured business authority.
-- Google Sheets is projection/reconciliation/DR only.
-- Google Drive stores media/documents/archive; D1 stores identifiers, metadata, hashes and state.
-- Web and later production APK use one Service/domain contract.
-- LAN is a transport/fallback path over the same command/event model, with local durable queue and explicit authentication/pairing before business activation.
-- Web implementation follows usable Auth + initial business API runtime rather than a mock-heavy early frontend.
+These paths are temporarily retained for selective low-level extraction/reference. They are not the final product structure and must not be extended as the business APK/LAN Service without review/rework against V2 architecture.
 
-## Remaining physical dependencies / STABLE
+### Active product-level Android/LAN work
 
-- APK build is green and installation/open/basic local-queue testing may proceed on the available Android device.
-- LAN discovery/echo/end-to-end transport testing additionally requires a machine running the matching Agent.
-- Final corporate-network LAN regression still requires the intended company laptop/network and PDA environment; this remains a physical evidence gate only.
-- LAN business traffic remains disabled until pairing/authenticated-channel design is implemented and accepted.
-- STABLE remains blocked until full BETA PASS plus explicit Owner approval.
+Current work is now Phase 1 from `DELIVERY_PLAN_V2`:
+1. shared domain/API contract suitable for both Cloud and LAN;
+2. exact offline/reconciliation envelope and commit-status model;
+3. real LAN edge DB/event/outbox/snapshot design;
+4. Cloud-direct / LAN-relay / LAN-autonomous endpoint-state model;
+5. security/pairing boundary design without inventing unresolved offline-auth policy;
+6. then real vertical business slices across Cloud + LAN + Web + APK.
+
+## Important unresolved policy — do not invent
+
+The Owner has not yet locked:
+- exact offline authentication/capability mechanism;
+- exact offline auth TTL/staleness limit;
+- which privileged security/admin operations are allowed in autonomous LAN mode;
+- who may explicitly enter/exit emergency autonomous mode.
+
+These must remain explicit TBD/fail-closed boundaries, not assumptions hidden in code.
+
+## Current exact project position
+
+Infrastructure/provider foundations are substantially prepared. The project is now correcting the implementation shape before deeper business coding:
+
+```text
+Cloud/D1/Google foundation
+        |
+        +--> NOW: shared domain + dual-runtime Service/LAN contract
+                 |
+          +------+------+
+          |             |
+     Cloud runtime   LAN runtime
+          |             |
+          +------+------+
+                 |
+        vertical business slices
+          /      |       \
+        Web     APK   Sheets/Drive
+                 |
+        failover/reconciliation
+                 |
+            BETA acceptance
+```
+
+The next milestone is NOT installing/polishing the transport test APK. It is establishing the shared business core/contracts so Cloud Service and LAN Service can be built simultaneously without divergence.
+
+## Physical dependencies / STABLE
+
+- Android product source/build work is active now; final PDA UX/physical behavior can be tested as product slices become installable.
+- Final corporate-network/no-admin LAN regression still requires the intended company laptop/network/PDA environment.
+- Lack of that final environment blocks only physical evidence, not source/contracts/build work.
+- STABLE remains blocked until full BETA product acceptance + explicit Owner approval.
