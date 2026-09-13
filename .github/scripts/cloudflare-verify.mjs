@@ -8,9 +8,14 @@ const token = process.env.CLOUDFLARE_API_TOKEN;
 const expectedWorker = 'vhdchy-beta';
 const expectedD1 = 'vhdchy-data-beta';
 
-async function cfRaw(path) {
+async function cfRaw(path, init = {}) {
   const response = await fetch(`https://api.cloudflare.com/client/v4${path}`, {
-    headers: { authorization: `Bearer ${token}` }
+    ...init,
+    headers: {
+      authorization: `Bearer ${token}`,
+      ...(init.body ? { 'content-type': 'application/json' } : {}),
+      ...(init.headers || {})
+    }
   });
   let payload;
   try {
@@ -25,8 +30,8 @@ function summarizeErrors(payload) {
   return JSON.stringify(payload?.errors || []).slice(0, 1200);
 }
 
-async function cf(path) {
-  const { response, payload } = await cfRaw(path);
+async function cf(path, init = {}) {
+  const { response, payload } = await cfRaw(path, init);
   if (!response.ok || payload?.success !== true) {
     throw new Error(`Cloudflare API ${path} failed with HTTP ${response.status}: ${summarizeErrors(payload)}`);
   }
@@ -54,6 +59,53 @@ async function verifyToken() {
   );
 }
 
+function firstQueryRows(payload) {
+  const first = Array.isArray(payload?.result) ? payload.result[0] : payload?.result;
+  if (!first || first.success !== true || !Array.isArray(first.results)) {
+    throw new Error(`Unexpected D1 query response shape: ${JSON.stringify(payload).slice(0, 1200)}`);
+  }
+  return first.results;
+}
+
+async function d1Select(databaseId, sql, params = []) {
+  const path = `/accounts/${encodeURIComponent(accountId)}/d1/database/${encodeURIComponent(databaseId)}/query`;
+  const payload = await cf(path, {
+    method: 'POST',
+    body: JSON.stringify({ sql, params })
+  });
+  return firstQueryRows(payload);
+}
+
+async function inspectD1ReadOnly(databaseId) {
+  const tableRows = await d1Select(
+    databaseId,
+    `SELECT name FROM sqlite_schema WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name`
+  );
+  const tables = tableRows.map(row => String(row.name || '')).filter(Boolean);
+  console.log(`D1_READ_ONLY_TABLES=${JSON.stringify(tables)}`);
+
+  let schemaVersion = '(missing)';
+  if (tables.includes('vhdchy_meta')) {
+    const rows = await d1Select(databaseId, `SELECT value FROM vhdchy_meta WHERE key = ? LIMIT 1`, ['schema_version']);
+    if (rows.length > 0 && rows[0]?.value != null) schemaVersion = String(rows[0].value);
+  }
+  console.log(`D1_SCHEMA_VERSION=${schemaVersion}`);
+
+  const counts = {};
+  for (const table of tables) {
+    if (table === '_cf_KV') continue;
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(table)) {
+      throw new Error(`Unsafe table identifier returned by sqlite_schema: ${table}`);
+    }
+    const rows = await d1Select(databaseId, `SELECT COUNT(*) AS row_count FROM "${table}"`);
+    const count = Number(rows[0]?.row_count ?? 0);
+    if (!Number.isSafeInteger(count) || count < 0) throw new Error(`Invalid row count for ${table}`);
+    counts[table] = count;
+  }
+  console.log(`D1_READ_ONLY_ROW_COUNTS=${JSON.stringify(counts)}`);
+  console.log('D1 read-only inspection PASS');
+}
+
 const tokenKind = await verifyToken();
 
 const workers = await cf(`/accounts/${encodeURIComponent(accountId)}/workers/scripts`);
@@ -75,5 +127,8 @@ if (database) console.log(`D1_DATABASE_ID=${database.uuid || database.id || ''}`
 if (!worker || !database) {
   throw new Error(`Cloudflare expected-resource mismatch: worker=${worker ? 'found' : 'missing'}, d1=${database ? 'found' : 'missing'}. Fail closed; no resources were created.`);
 }
+
+const databaseId = database.uuid || database.id;
+await inspectD1ReadOnly(databaseId);
 
 console.log('Cloudflare BETA identity verification PASS');
