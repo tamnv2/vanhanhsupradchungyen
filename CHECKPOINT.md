@@ -5,10 +5,11 @@ protocol: AI_AUTHORITY_RESUME_V2
 status: RESUME_READY
 active_lane: SERVICE / OWNER TARGET SCHEMA RECONCILIATION
 approved_scope: Owner approved autonomous execution on 2026-09-13. Continue Service BETA automatically through safe reviewed gates; no STABLE promotion without explicit Owner approval.
-reconciled_through_commit: 6899d42b3e9d9b08c574c853b8ca09e56dde19b4
+reconciled_through_commit: 5c0e13c4b725733869b63cb4a901336dcd201ba4
 active_work_ref: NEXT_ACTIONS.md
 current_state_ref: CURRENT_STATE.md
 authority_ref: DECISIONS.md
+service_authority_ref: SERVICE_AUTHORITY.md
 context_router_ref: CONTEXT_INDEX.md
 
 ## Completed
@@ -19,7 +20,7 @@ context_router_ref: CONTEXT_INDEX.md
 - D1 classification: `BUSINESS_CORE_V1 / ZERO_BUSINESS_ROWS / SCHEMA_MISMATCH`.
 - Observed business table row counts are all zero; bookkeeping only: `d1_migrations=1`, `vhdchy_meta=3`.
 - Owner-approved 2026-09-13 business/data decisions were persisted to `DECISIONS.md`.
-- `CURRENT_STATE.md` and `NEXT_ACTIONS.md` were reconciled to current evidence.
+- `CURRENT_STATE.md`, `NEXT_ACTIONS.md`, and `SERVICE_AUTHORITY.md` were reconciled to current provider evidence.
 
 ## Current gate
 
