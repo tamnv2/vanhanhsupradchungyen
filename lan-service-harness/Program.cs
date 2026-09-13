@@ -16,6 +16,7 @@ if (!File.Exists(databasePath))
 const string environment = "BETA";
 const string clusterId = "PICK_PACK_1291";
 const string compatibility = "VHDCHY_DOMAIN_V1";
+const string moduleId = "IDENTITY_EMPLOYEE_ATTENDANCE";
 const string scope = "{\"clusterId\":\"PICK_PACK_1291\",\"modules\":[\"PICK_PACK\"]}";
 const string payload1 = "{\"users\":[],\"permissionCatalogVersion\":\"VHDCHY_PERMISSION_CATALOG_V1\"}";
 const string payload2 = "{\"users\":[],\"permissionCatalogVersion\":\"VHDCHY_PERMISSION_CATALOG_V1\",\"generation\":2}";
@@ -37,7 +38,39 @@ static async Task ExpectLocalCommandError(string code, Func<Task> action)
     }
 }
 
+static async Task ExpectOperationalError(string code, Func<Task> action)
+{
+    try
+    {
+        await action();
+        throw new InvalidOperationException($"{code}_NOT_REJECTED");
+    }
+    catch (OperationalSnapshotException error) when (error.Code == code)
+    {
+    }
+}
+
 var authorityStore = new AuthoritySnapshotStore(databasePath);
+var operationalStore = new OperationalSnapshotStore(databasePath);
+var requiredOperationalModules = new[] { moduleId };
+
+var preAuthorityOperational = new OperationalSnapshotEnvelope(
+    "OP-TEST-PRE-AUTH",
+    environment,
+    clusterId,
+    "cloud-operational-pre-auth",
+    compatibility,
+    "{\"modules\":[\"IDENTITY_EMPLOYEE_ATTENDANCE\"]}",
+    "{\"employees\":[],\"presence\":[]}");
+await ExpectOperationalError(
+    "OPERATIONAL_AUTHORITY_REQUIRED",
+    () => operationalStore.ImportAsync(
+        preAuthorityOperational,
+        environment,
+        clusterId,
+        compatibility,
+        requiredOperationalModules));
+Assert(await operationalStore.ReadStatusAsync("OP-TEST-PRE-AUTH") is null, "PRE_AUTH_OPERATIONAL_PERSISTED");
 
 var a1 = new AuthoritySnapshotEnvelope(
     "AUTH-TEST-1",
@@ -123,8 +156,142 @@ catch (AuthoritySnapshotException error) when (error.Code == "AUTHORITY_INCOMPAT
 Assert(await authorityStore.ReadActiveVersionAsync() == "AUTH-TEST-2", "A2_LOST_AFTER_INCOMPATIBLE_IMPORT");
 Console.WriteLine("LAN_AUTHORITY_SNAPSHOT_HARNESS_PASS active=AUTH-TEST-2 replay=PASS conflict=PASS rollback=PASS compatibility=PASS");
 
+const string operationalScope1 = "{\"modules\":[\"IDENTITY_EMPLOYEE_ATTENDANCE\"],\"generation\":1}";
+const string operationalState1 = "{\"employees\":[],\"presence\":[],\"generation\":1}";
+const string operationalState2 = "{\"employees\":[],\"presence\":[],\"generation\":2}";
+var op1 = new OperationalSnapshotEnvelope(
+    "OP-TEST-1",
+    environment,
+    clusterId,
+    "cloud-operational-1",
+    compatibility,
+    operationalScope1,
+    operationalState1);
+
+var opFirst = await operationalStore.ImportAsync(
+    op1,
+    environment,
+    clusterId,
+    compatibility,
+    requiredOperationalModules);
+Assert(opFirst.Activated && !opFirst.AlreadyKnown && opFirst.Status == "ACTIVE", "OP1_FIRST_ACTIVATION_FAILED");
+Assert(opFirst.AuthoritySnapshotVersion == "AUTH-TEST-2", "OP1_AUTHORITY_LINK_WRONG");
+Assert(await operationalStore.ReadActiveVersionAsync() == "OP-TEST-1", "OP1_NOT_ACTIVE");
+
+var opReplay = await operationalStore.ImportAsync(
+    op1 with
+    {
+        ScopeJson = "{ \"generation\": 1, \"modules\": [\"IDENTITY_EMPLOYEE_ATTENDANCE\"] }",
+        StateJson = "{ \"generation\": 1, \"presence\": [], \"employees\": [] }"
+    },
+    environment,
+    clusterId,
+    compatibility,
+    requiredOperationalModules);
+Assert(opReplay.AlreadyKnown && opReplay.Activated && opReplay.Status == "ACTIVE", "OP1_REPLAY_NOT_IDEMPOTENT");
+
+await ExpectOperationalError(
+    "OPERATIONAL_VERSION_PAYLOAD_CONFLICT",
+    () => operationalStore.ImportAsync(
+        op1 with { StateJson = operationalState2 },
+        environment,
+        clusterId,
+        compatibility,
+        requiredOperationalModules));
+Assert(await operationalStore.ReadActiveVersionAsync() == "OP-TEST-1", "OP1_LOST_AFTER_PAYLOAD_CONFLICT");
+
+await ExpectOperationalError(
+    "OPERATIONAL_STATE_INVALID",
+    () => operationalStore.ImportAsync(
+        new OperationalSnapshotEnvelope(
+            "OP-TEST-BAD-JSON",
+            environment,
+            clusterId,
+            "cloud-operational-bad-json",
+            compatibility,
+            operationalScope1,
+            "{not-json"),
+        environment,
+        clusterId,
+        compatibility,
+        requiredOperationalModules));
+Assert(await operationalStore.ReadStatusAsync("OP-TEST-BAD-JSON") is null, "OP_BAD_JSON_PERSISTED");
+Assert(await operationalStore.ReadActiveVersionAsync() == "OP-TEST-1", "OP1_LOST_AFTER_BAD_JSON");
+
+await ExpectOperationalError(
+    "OPERATIONAL_REQUIRED_MODULE_MISSING",
+    () => operationalStore.ImportAsync(
+        new OperationalSnapshotEnvelope(
+            "OP-TEST-MISSING-MODULE",
+            environment,
+            clusterId,
+            "cloud-operational-missing-module",
+            compatibility,
+            "{\"modules\":[\"OTHER_MODULE\"]}",
+            operationalState2),
+        environment,
+        clusterId,
+        compatibility,
+        requiredOperationalModules));
+Assert(await operationalStore.ReadStatusAsync("OP-TEST-MISSING-MODULE") is null, "OP_MISSING_MODULE_PERSISTED");
+Assert(await operationalStore.ReadActiveVersionAsync() == "OP-TEST-1", "OP1_LOST_AFTER_MISSING_MODULE");
+
+var op2 = new OperationalSnapshotEnvelope(
+    "OP-TEST-2",
+    environment,
+    clusterId,
+    "cloud-operational-2",
+    compatibility,
+    "{\"generation\":2,\"modules\":[\"IDENTITY_EMPLOYEE_ATTENDANCE\"]}",
+    operationalState2);
+var opSecond = await operationalStore.ImportAsync(
+    op2,
+    environment,
+    clusterId,
+    compatibility,
+    requiredOperationalModules);
+Assert(opSecond.Activated && opSecond.Status == "ACTIVE", "OP2_ACTIVATION_FAILED");
+Assert(await operationalStore.ReadActiveVersionAsync() == "OP-TEST-2", "OP2_NOT_ACTIVE");
+Assert(await operationalStore.ReadStatusAsync("OP-TEST-1") == "REPLACED", "OP1_NOT_REPLACED");
+Assert(await operationalStore.ReadStatusAsync("OP-TEST-2") == "ACTIVE", "OP2_STATUS_WRONG");
+
+await ExpectOperationalError(
+    "OPERATIONAL_INCOMPATIBLE",
+    () => operationalStore.ImportAsync(
+        new OperationalSnapshotEnvelope(
+            "OP-TEST-INCOMPATIBLE",
+            environment,
+            clusterId,
+            "cloud-operational-incompatible",
+            "VHDCHY_DOMAIN_INCOMPATIBLE",
+            operationalScope1,
+            operationalState2),
+        environment,
+        clusterId,
+        compatibility,
+        requiredOperationalModules));
+Assert(await operationalStore.ReadActiveVersionAsync() == "OP-TEST-2", "OP2_LOST_AFTER_INCOMPATIBLE");
+
+await ExpectOperationalError(
+    "OPERATIONAL_ENVIRONMENT_MISMATCH",
+    () => operationalStore.ImportAsync(
+        new OperationalSnapshotEnvelope(
+            "OP-TEST-WRONG-ENV",
+            "STABLE",
+            clusterId,
+            "cloud-operational-wrong-env",
+            compatibility,
+            operationalScope1,
+            operationalState2),
+        environment,
+        clusterId,
+        compatibility,
+        requiredOperationalModules));
+Assert(await operationalStore.ReadActiveVersionAsync() == "OP-TEST-2", "OP2_LOST_AFTER_ENVIRONMENT_MISMATCH");
+
+Console.WriteLine("LAN_OPERATIONAL_SNAPSHOT_HARNESS_PASS active=OP-TEST-2 preAuthority=PASS replay=PASS payloadConflict=PASS corrupt=PASS requiredModule=PASS replacement=PASS compatibility=PASS readinessUnchanged=PASS");
+
 var commandStore = new LocalCommandStore(databasePath, environment, clusterId, compatibility);
-const string moduleId = "IDENTITY_EMPLOYEE_ATTENDANCE";
 const string employeeId = "EMP-HARNESS-001";
 const string employeeStateKey = "employee:EMP-HARNESS-001";
 
