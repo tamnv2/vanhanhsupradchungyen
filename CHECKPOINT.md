@@ -1,12 +1,13 @@
 # CHECKPOINT — VHDCHY
 
-checkpoint_version: 16
+checkpoint_version: 17
 protocol: AI_AUTHORITY_RESUME_V2
 status: EXECUTING_PRODUCT_V3_BETA
 action_mode: AUTONOMOUS_PARALLEL
 active_lanes: SHARED_DOMAIN / CLOUD_SERVICE / LAN_FULL_SERVICE / GOOGLE_SYNC / WEB / ANDROID_APK / RECONCILIATION
 paused_lanes: PHYSICAL_CORPORATE_LAN_REGRESSION
 approved_scope: Build one VHDCHY product with Website + PDA-optimized APK + Cloud Service + full LAN Service in parallel. LAN Service executes the same approved business model locally, may project/upload to Google directly when Internet/Google is reachable, queues/stages Google work when offline, and synchronizes its immutable local events to Cloud/D1 whenever Cloud becomes reachable. Offline login remains available from the latest synchronized local authority snapshot without a time-based expiry solely because the outage is long. Only SUPERADMIN/ROOT may deliberately force LAN while Cloud is healthy. Unresolved business/data synchronization conflicts are decided by ADMIN or higher after automatic retry/deduplication/reconciliation has been exhausted.
+reconciled_through_commit: a5bf918781c45ac6640ed768fdf7ac6b09b4c798
 product_architecture_ref: docs/TARGET_PRODUCT_ARCHITECTURE_V3.md
 delivery_plan_ref: docs/DELIVERY_PLAN_V3.md
 authority_ref: DECISIONS_V3.md
