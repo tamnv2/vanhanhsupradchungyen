@@ -3,6 +3,7 @@
 Protocol: `AI_AUTHORITY_RESUME_V2`
 Repository: `tamnv2/vanhanhsupradchungyen`
 Authority branch: `main`
+External bootstrap reference: `CHATGPT_PROJECT_BOOTSTRAP.md`
 
 ## External bootstrap requirement
 
@@ -11,6 +12,8 @@ This repository is persistent project authority, but repository files do not loa
 For every fresh-chat resume, the AI must fetch this file from GitHub `main` in the current chat before using remembered project facts. A remembered copy, project/chat summary or prior conversation is not a substitute for a live GitHub read.
 
 If this file has not been fetched in the current chat, the project is not considered resumed yet.
+
+`CHATGPT_PROJECT_BOOTSTRAP.md` contains the exact one-time ChatGPT Project instruction required to trigger this live read from a fresh chat. Repository-side resume correctness is not considered end-to-end complete until that external Project instruction is installed.
 
 ## Owner commands
 
