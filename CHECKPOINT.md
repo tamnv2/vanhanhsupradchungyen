@@ -1,9 +1,9 @@
 # CHECKPOINT — VHDCHY
 
-checkpoint_version: 20
+checkpoint_version: 21
 protocol: AI_AUTHORITY_RESUME_V2
 status: EXECUTING_PRODUCT_V6_BETA
-reconciled_through_commit: 02cf8cb198a1c562a6f2b864b81e0bbc8812d12f
+reconciled_through_commit: 0ebb42c6e7eb1810e69d0b9ce3ee072e4985f34c
 action_mode: AUTONOMOUS_PARALLEL
 active_lanes: REPO_GOVERNANCE / SHARED_DOMAIN / CLOUD_SERVICE / LAN_FULL_SERVICE / AUTH / GOOGLE_SYNC / WEB / ANDROID_APK / RECONCILIATION / STABLE_PREPARATION
 paused_lanes: PHYSICAL_CORPORATE_LAN_REGRESSION
@@ -64,18 +64,25 @@ Repository-side corrections completed in this audit:
 - `CONTEXT_INDEX.md` now requires all active decision layers independently of checkpoint contents;
 - `docs/SERVICE_API_CONTRACT_V3.md` reconciled through V6;
 - `docs/DELIVERY_PLAN_V4.md` reconciled through V6;
-- `CURRENT_STATE.md` reconciled through V6.
+- `CURRENT_STATE.md` reconciled through V6;
+- `.github/workflows/validate.yml` now checks active decision layers, current guide references and checkpoint authority freshness.
+
+Validation evidence:
+- workflow `Validate clean baseline` run `34763812176`: SUCCESS at commit `0ebb42c6e7eb1810e69d0b9ce3ee072e4985f34c`;
+- authority file checks: PASS;
+- resume invariant checks: PASS;
+- checkpoint freshness check: PASS;
+- Worker syntax/unit/schema baseline checks: PASS.
 
 The remaining cross-chat guarantee requires one external bootstrap instruction in the ChatGPT Project configuration, because a repository file cannot cause itself to be fetched before a new chat knows to read it.
 
 ## Immediate next execution
 
-1. Verify CI after the governance reconciliation commits.
-2. Strengthen baseline validation so missing active decision layers/current guide references cannot pass silently.
-3. Continue the existing multi-module Worker packaging lane through allowed high-level paths only.
-4. Reconcile/implement V6 authentication runtime and tests without claiming runtime PASS from documentation alone.
-5. Continue shared domain, Cloud/LAN adapters, Web/APK foundations and isolated STABLE preparation in dependency-aware parallel lanes.
-6. Physical LAN/domain regression remains deferred only until the intended company environment is available.
+1. Continue the existing multi-module Worker packaging lane through allowed high-level paths only.
+2. Reconcile/implement V6 authentication runtime and tests without claiming runtime PASS from documentation alone.
+3. Continue shared domain, Cloud/LAN adapters, Web/APK foundations and isolated STABLE preparation in dependency-aware parallel lanes.
+4. Reconcile `NEXT_ACTIONS.md` when the high-level write path permits; do not bypass the current action-safety block.
+5. Physical LAN/domain regression remains deferred only until the intended company environment is available.
 
 ## do_not_repeat:
 
