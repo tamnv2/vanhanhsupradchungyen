@@ -42,7 +42,7 @@ jobs:
           jq -e '.contractVersion == "VHDCHY_DOMAIN_V1"' contracts/domain.v1.json >/dev/null
           jq -e '.schemaVersion == "VHDCHY_COMMAND_SPEC_V1"' contracts/commands.slice1.v1.json >/dev/null
           jq -e '.schemaVersion == "VHDCHY_ACCEPTANCE_V1"' contracts/acceptance.v1.json >/dev/null
-          jq -e '.$id == "VHDCHY_MUTATION_RESULT_V1"' contracts/mutation-result.v1.schema.json >/dev/null
+          jq -e '.["$id"] == "VHDCHY_MUTATION_RESULT_V1"' contracts/mutation-result.v1.schema.json >/dev/null
           jq -e '.schemaVersion == "VHDCHY_PERMISSION_CATALOG_V1"' config/permissions.v1.json >/dev/null
           node .github/scripts/domain-parity-test.mjs
           mkdir -p out/web
