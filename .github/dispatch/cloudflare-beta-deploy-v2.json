@@ -1,6 +1,6 @@
 {
-  "enabled": true,
+  "enabled": false,
   "target": "beta",
   "operation": "deploy_worker_multimodule_business_core_v3",
-  "reason": "Retry reviewed multi-module packaging with bounded edge-propagation verification v2"
+  "reason": "Safe idle state after verifier fix; no provider mutation requested"
 }
