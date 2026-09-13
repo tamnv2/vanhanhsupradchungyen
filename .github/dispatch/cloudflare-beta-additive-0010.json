@@ -1,0 +1,6 @@
+{
+  "enabled": false,
+  "target": "beta",
+  "operation": "migrate_auth_v6_email_otp_0010",
+  "reason": "Idle until reviewed additive 0010 workflow passes fail-closed validation"
+}
