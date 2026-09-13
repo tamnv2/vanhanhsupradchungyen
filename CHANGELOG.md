@@ -1,25 +1,28 @@
 # CHANGELOG
 
-## 2026-09-12 — AI_AUTHORITY_RESUME_V2
+## 2026-09-13
 
-- Added `AI_ENTRYPOINT.md` as the single project bootstrap entry.
-- Added `CONTEXT_INDEX.md` with FAST / FOCUSED / FULL read routing to reduce unnecessary context/token use.
-- Added `CHECKPOINT.md` as the short resume ledger for interruption/chat handoff.
-- Upgraded `AI_OPERATING_CONTRACT.md` with a hard memory non-authority rule, Owner approval boundary, dependency/parallel execution model, checkpoint/interruption protocol, evidence-before-PASS and fail-closed resume behavior.
-- Standardized Owner resume aliases: `Tiếp tục VHDCHY`, `Tiếp tục việc đang làm`, `Tiếp tục việc đang dở`.
-- Standardized full-audit aliases: `Tiếp tục VHDCHY — full audit.`, `Rà soát toàn bộ dự án`, `Kiểm tra toàn bộ dự án`.
-- Extended baseline CI to validate protocol files and invariants.
+### Cloudflare D1 inspection automation
+- Extended the retained Cloudflare verification script to inspect the exact verified BETA D1 read-only through Cloudflare API using the GitHub Environment `beta` secret at runner runtime.
+- Inspection logs table names, `vhdchy_meta.schema_version`, and per-table row counts only; it does not read business row contents or issue INSERT/UPDATE/DELETE/DDL.
+- Updated the Cloudflare verification workflow so relevant verification source/workflow changes trigger the read-only gate automatically.
+- GitHub Actions run `34748247818` PASS: exact Worker/D1 identity confirmed, `schema_version=business_core_v1`, all measured business tables zero rows, bookkeeping only (`d1_migrations=1`, `vhdchy_meta=3`).
+- Provider classification: `BUSINESS_CORE_V1 / ZERO_BUSINESS_ROWS / SCHEMA_MISMATCH`.
 
-## 2026-09-12 — REPO-RESET-20260912-01
+### Owner authority reconciliation
+- Persisted Owner-approved 2026-09-13 business/data decisions into `DECISIONS.md` without publishing private recovery contact values.
+- Marked the existing `business_core_v2` migration as stale relative to the new Owner target; it must not be applied.
+- Advanced active work to complete target-schema reconciliation, local validation, pre-write reinspection, reviewed BETA migration, post-migration verification, and Worker/API integration.
+- Reconciled `CURRENT_STATE.md`, `NEXT_ACTIONS.md`, `SERVICE_AUTHORITY.md`, and `CHECKPOINT.md`.
 
-- Preserved the pre-zero state at `backup/pre-zero-20260912`.
-- Cleared the active `main` tree to a zero marker and rebuilt authority from the confirmed current scope.
-- Kept the current Drive and BETA Sheet identifiers.
-- Retained the reviewed least-privilege Google Gateway foundation.
-- Owner manually removed obsolete branches, LAN tags, GitHub Environments, and all Actions environment/repository secrets and variables.
-- Current branches are only `main` + temporary `backup/pre-zero-20260912`; current tag namespace and Releases are empty.
-- Reconciled the pre-reset Worker/D1 version conflict by creating a clean `business_core_v2` / `BUSINESS_CORE_V2` source contract.
-- Consolidated the approved D1 model into `service/worker/migrations/0001_initial.sql` without legacy compatibility tables, historical business rows or credential seeds.
-- Expanded baseline CI to validate authority files, JSON configuration, exact GAS OAuth scopes, Worker syntax, D1 schema application and Worker/schema version agreement.
-- Provider deploy scripts/workflows remain intentionally absent until current Google/Cloudflare/signer resources are verified.
-- LAN/Android source remains preserved only in the temporary pre-zero backup branch pending later review while Owner is off-site.
+## 2026-09-12
+
+### AI authority/resume protocol v2
+- Established `AI_ENTRYPOINT.md` as the fixed project bootstrap.
+- Added `AI_OPERATING_CONTRACT.md`, `CONTEXT_INDEX.md`, and `CHECKPOINT.md` for authority, context economy, checkpoints, fail-closed execution and resume behavior.
+- GitHub `main` remains the persistent project authority; memory is non-authoritative unless verified against current evidence.
+
+### Provider foundation
+- Reconciled Google Gateway BETA foundation and managed deployment.
+- Verified Cloudflare BETA account, Worker `vhdchy-beta`, and D1 `vhdchy-data-beta` identities without recreating resources.
+- Preserved pre-zero Android/LAN evidence under `backup/pre-zero-20260912` pending reviewed restoration.
