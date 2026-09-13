@@ -103,10 +103,42 @@ Expected STABLE names remain reserved only:
 
 Cloudflare operations are fail-closed: missing/mismatched expected resources or unexpected provider state must stop the affected mutation/deployment; independent safe work continues under `AI_AUTHORITY_RESUME_V2`.
 
+## LAN Service authority model
+
+Current product authority is defined by `docs/TARGET_PRODUCT_ARCHITECTURE_V2.md` and D-042..D-048.
+
+- LAN Service is a first-class substitute runtime, not merely a transport test.
+- Normal global canonical structured authority remains D1 after Cloud commit/reconciliation.
+- In `LAN_RELAY`, Cloud Service/D1 remains the immediate authoritative commit path.
+- In `LAN_AUTONOMOUS`, the LAN Service may durably accept reviewed offline-capable business events into local edge state/event/outbox while Cloud is unreachable; these events are pending global reconciliation rather than disposable receipts.
+- Successful reconciliation commits/reconciles them into D1 exactly once where non-conflicting.
+- Conflicts remain explicit evidence and must not be silently overwritten/dropped.
+- LAN Service may not use Google Sheets as a fallback database.
+
+No production LAN Service implementation is yet authoritative/runtime-PASS. The prior transport-only `android-pilot/` + `lan-agent/` build is a disposable prototype/reference only.
+
+## Website / Android client authority
+
+- Website and APK use one reviewed Service/domain contract.
+- Website is the wider/full browser surface.
+- APK is the PDA-optimized operational surface.
+- Neither client may bypass Service/domain rules with direct D1/Sheets writes.
+- Both must understand Cloud-direct, LAN-relay, LAN-autonomous and pending-sync/conflict statuses.
+
 ## Android signing
 
 Existing signing material is reference until locally re-verified. Do not use retired Pick Pack legacy signer. No keystore content or password may be committed.
 
+## Unresolved offline security policy
+
+Do not invent or treat as locked:
+- exact offline credential/capability mechanism;
+- exact offline expiry/TTL;
+- privileged/security operations allowed in autonomous LAN mode;
+- authorization for explicit emergency autonomous-mode entry/exit.
+
+These remain fail-closed design gates until reviewed.
+
 ## Secrets
 
-Secret values live only in provider secret stores / GitHub Environments. Repository files may contain only secret names, non-secret resource IDs, verification state and non-sensitive policy.
+Secret values live only in provider secret stores / GitHub Environments or reviewed local secure storage when LAN security design is implemented. Repository files may contain only secret names, non-secret resource IDs, verification state and non-sensitive policy.
