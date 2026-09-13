@@ -1,56 +1,83 @@
-# CANONICAL D1 MUTATION PLAN — V1
+# MUTATION + EDGE RECONCILIATION PLAN — V2
 
 Status: REVIEWED DESIGN / SOURCE IMPLEMENTATION PENDING
 Updated: 2026-09-13
-Authority: `DECISIONS.md` D-004, `docs/SERVICE_API_CONTRACT.md`
+Authority: `DECISIONS.md` D-004/D-042..D-047, `docs/SERVICE_API_CONTRACT.md`, `docs/TARGET_PRODUCT_ARCHITECTURE_V2.md`
 
-## Invariant
+## Purpose
 
-Every successful business command must atomically produce all three effects in canonical D1:
+Define one business mutation model that can be executed through:
 
-1. apply the guarded current-state mutation;
-2. append exactly one immutable `domain_events` row;
-3. enqueue exactly one `projection_outbox` row for that event.
+- Cloud Service -> D1 canonical transaction; or
+- LAN Service autonomous edge transaction -> later D1 reconciliation.
 
-No API success may be returned if only a subset commits. Google projection remains asynchronous and is never part of the canonical transaction.
+Cloud and LAN persistence mechanisms may differ. Business validation, command identity, event meaning, optimistic-version semantics and conflict/error behavior may not drift.
+
+## Shared command identity
+
+Every retryable mutation uses stable identity independent of runtime/path:
+
+- request ID;
+- idempotency key;
+- authenticated/authorized actor context;
+- device ID and monotonically increasing device sequence where applicable;
+- command/event type;
+- target entity ID/type;
+- expected/base entity version where applicable;
+- normalized payload + payload hash;
+- cluster/module scope.
+
+Changing Cloud direct -> LAN relay -> LAN autonomous -> reconciliation must not create a new logical business command.
+
+## Provider-neutral domain result
+
+Before persistence, the shared domain layer should produce a reviewed result conceptually containing:
+
+- validated command identity;
+- required current-state/base-version preconditions;
+- intended state transition(s);
+- immutable event type/entity/payload;
+- projection intent where applicable;
+- stable business error if validation fails.
+
+Provider adapters may translate this into D1 or LAN-edge transactions, but may not alter business meaning.
+
+# Part A — Cloud D1 transaction
+
+## Cloud invariant
+
+Every successful direct/reconciled canonical business command must atomically:
+
+1. apply guarded current-state mutation(s);
+2. append exactly one immutable `domain_events` row for the logical mutation;
+3. enqueue exactly one `projection_outbox` row for that event where projection applies.
+
+No Cloud success may be returned if only a subset commits. Google projection remains asynchronous and is never part of the canonical D1 transaction.
 
 ## D1 transaction primitive
 
-Use `D1Database.batch()` with prepared statements only. The reviewed Cloudflare contract treats a batch as a transaction: statements execute sequentially and a failing statement aborts/rolls back the entire sequence.
+Use `D1Database.batch()` with prepared statements only. Statements execute as one reviewed batch/transaction and any failing statement must abort the unit.
 
-Do not emulate a transaction with separate awaited `.run()` calls.
+Do not emulate the canonical transaction with unrelated awaited `.run()` calls.
 
-## Command execution order
+## Cloud execution order
 
-For a normal guarded command:
-
-1. authenticate principal and resolve effective permissions outside the mutation batch;
-2. perform bounded read-only validation needed to build the command;
-3. check an existing `domain_events.idempotency_key` for an ordinary retry fast-path;
-4. build one D1 batch whose last canonical state statement is the primary guarded mutation;
-5. immediately after the primary mutation, insert the immutable domain event with an in-SQL row-count assertion;
-6. insert the projection outbox row referencing the new event;
-7. return success only after `db.batch()` succeeds;
-8. if the batch fails because another request won the same idempotency key race, re-read that key and reconcile only if the existing event exactly matches the requested command identity/payload.
+1. authenticate/resolve effective permission;
+2. bounded reads needed to construct command;
+3. ordinary idempotency fast-path lookup;
+4. build one guarded D1 batch;
+5. apply state write(s);
+6. assert guarded mutation count inside the transaction;
+7. append immutable event;
+8. append projection outbox;
+9. return `CLOUD_COMMITTED` only after the batch succeeds;
+10. on unique idempotency race, re-read the winning event and reconcile only if command identity/payload matches.
 
 ## Guarded state mutation
 
-The primary state write must encode the concurrency/business guard in SQL, for example through entity version, open-state, availability or expected current-state predicates.
+Use entity version/open-state/availability/current-state predicates as appropriate. A zero-row guarded update is a business conflict, not success.
 
-Expected normal mutation count is exactly one row unless a command-specific reviewed contract explicitly says otherwise.
-
-A zero-row guarded update is a business conflict, not success.
-
-## Atomic row-count assertion
-
-A D1 batch cannot be inspected midway and then rolled back from Worker code after it has committed. Therefore the transaction itself must turn an unexpected mutation count into a SQL failure.
-
-The preferred V1 pattern is:
-
-- make the guarded state write the immediately preceding INSERT/UPDATE/DELETE statement;
-- in the following `domain_events` INSERT, derive the event `entity_version` with a SQL `CASE` using SQLite `changes()`;
-- when `changes()` does not equal the expected row count, supply an invalid entity version such as `0`;
-- `domain_events.entity_version` has `CHECK (entity_version >= 1)`, so the event INSERT fails and D1 rolls back the entire batch.
+For V1 D1 implementation the reviewed assertion strategy may use SQLite `changes()` in the immediately following immutable event insert, causing a constraint failure when the expected state row count is not exactly correct.
 
 Conceptual form:
 
@@ -59,82 +86,185 @@ UPDATE some_state
 SET ..., entity_version = entity_version + 1
 WHERE entity_id = ? AND entity_version = ? AND ...;
 
-INSERT INTO domain_events(
-  event_id, event_type, entity_type, entity_id, entity_version, ...
-) VALUES (
-  ?, ?, ?, ?,
-  CASE WHEN changes() = 1 THEN ? ELSE 0 END,
-  ...
-);
+INSERT INTO domain_events(..., entity_version, ...)
+VALUES (..., CASE WHEN changes() = 1 THEN ? ELSE 0 END, ...);
 
 INSERT INTO projection_outbox(event_id, projection_target, payload_json, status, attempts)
 VALUES (?, 'GOOGLE_SHEETS', ?, 'PENDING', 0);
 ```
 
-This pattern must be covered by automated D1 acceptance tests before use by a business command.
+Command-specific multi-row mutations must add equivalent in-transaction guards/assertions rather than ignoring partial/zero-row writes.
 
-## Multi-statement business mutations
+# Part B — LAN autonomous edge transaction
 
-If a command needs multiple state writes:
+## Edge invariant
 
-- every preliminary write must be protected by database constraints or a command-specific assertion strategy;
-- the final primary guarded write must remain immediately before the domain-event assertion;
-- do not accept a generic helper that silently ignores a zero-row preliminary update;
-- when this cannot be expressed safely, create a command-specific transactional batch rather than weakening the invariant.
+A successful offline-capable LAN autonomous command must atomically:
 
-## Idempotency
+1. validate the reviewed available offline auth/permission context;
+2. validate local edge current-state/base-version/business preconditions;
+3. apply local edge current-state mutation(s);
+4. append exactly one immutable edge event for the logical command;
+5. append exactly one durable sync/reconciliation outbox row;
+6. return `LAN_ACCEPTED_PENDING_SYNC` only after the local durable transaction commits.
 
-`domain_events.idempotency_key` is unique when present.
+A LAN transport receipt alone is not business acceptance.
 
-Rules:
+## Edge store requirements
 
-- every client mutation requires a non-empty opaque idempotency key;
-- an existing key is a successful replay only when event type, entity type, entity ID, intended entity version and normalized payload are compatible with the original committed event;
-- reusing one key for a materially different command returns `IDEMPOTENCY_KEY_REUSED`/409;
-- a pre-read is only an optimization; the unique D1 constraint is the race-safe authority;
-- if a concurrent request commits the same key first, the losing batch must roll back and then reconcile by re-reading the winning event.
+The LAN persistence engine must provide real local transactional durability suitable for:
+- current operational state for declared offline-capable modules;
+- immutable edge events;
+- sync outbox;
+- snapshot/version metadata;
+- conflict/reconciliation evidence;
+- staged media metadata/files where required.
 
-## Device sequence
+Exact implementation technology is not locked here. SQLite is a strong candidate because the legacy/no-admin environment proved it feasible, but product selection must be based on current compatibility/footprint testing rather than inheritance.
 
-Where a registered device sequence applies:
+## Edge event minimum evidence
 
-- `device_id` and `device_seq` are recorded on the immutable event;
-- the existing unique index on `(device_id, device_seq)` is the race-safe duplicate/order guard;
-- a device sequence collision with a different command must not be treated as a successful idempotent replay merely because an idempotency key is absent or different.
+An accepted edge event must retain:
+- local edge event ID;
+- original request/idempotency key;
+- device ID/sequence where applicable;
+- edge instance ID and edge runtime epoch;
+- command/event/entity identity;
+- base/expected entity version;
+- normalized payload hash;
+- locally assigned resulting edge version/state evidence;
+- local acceptance time;
+- authorization evidence reference required by the later reviewed offline-auth mechanism;
+- reconciliation state.
 
-## Event and outbox payloads
+Raw bearer/provider secrets are not stored in event payloads.
 
-- actor identity comes from the authenticated principal, never trusted client actor fields;
-- event payload is normalized deterministically before comparison/replay handling;
-- outbox payload contains only the projection material needed by the Google Gateway contract;
-- outbox creation occurs in the same D1 batch as state/event;
-- no synchronous Google call occurs inside the business mutation path.
+## Edge idempotency
 
-## Error mapping
+- same idempotency key + same normalized command -> return/reconcile original edge acceptance;
+- same idempotency key + different payload/command -> hard conflict;
+- same `(deviceId, deviceSeq)` + different command -> hard collision/conflict;
+- retries do not append another edge event.
 
+# Part C — LAN relay
+
+When Cloud Service is reachable through the LAN host:
+
+1. preserve original command identity;
+2. forward to Cloud Service;
+3. do not perform an unnecessary autonomous local business commit;
+4. retry uncertain Cloud response using same idempotency key;
+5. return `LAN_RELAYED_CLOUD_COMMITTED` only after Cloud/D1 canonical commit/reconciliation is known.
+
+This is the preferred forced-LAN behavior while Cloud is healthy because it solves client path problems without creating avoidable dual histories.
+
+# Part D — reconciliation
+
+## Reconciliation invariant
+
+Reconciliation never means "copy current LAN tables over D1".
+
+It replays/reconciles immutable accepted edge commands/events into the canonical Cloud command path while preserving their original identity and precondition evidence.
+
+For each pending edge item:
+
+1. submit original logical command/reconciliation envelope to Cloud Service;
+2. Cloud checks idempotency first;
+3. if already canonically committed with compatible identity/payload, link the existing canonical event and mark reconciled;
+4. otherwise validate current canonical business state/version/availability;
+5. if compatible, commit through the normal D1 state + event + projection-outbox transaction;
+6. return/link canonical event identity;
+7. mark edge outbox `RECONCILED` only after authoritative response;
+8. if canonical guards conflict, retain edge evidence and move item to `SYNC_CONFLICT`;
+9. never silently mutate/drop the original edge event to make the conflict disappear.
+
+## Ordering
+
+Commands whose domain semantics depend on order must reconcile in deterministic origin/device/event order unless a reviewed command-specific rule permits independent execution.
+
+One conflict must not cause later dependent commands to overtake silently. Independent commands may proceed only when dependency analysis proves safety.
+
+## Rebase/readiness after recovery
+
+After reconciliation:
+- refresh/rebase LAN edge snapshot/current state from canonical Service data;
+- retain local immutable event/reconciliation history according to retention policy;
+- do not claim fully current autonomous readiness until required snapshot/version checkpoints are synchronized.
+
+# Part E — split-brain handling
+
+A hard network partition may allow Cloud-side and LAN-side actors to create conflicting valid histories. Because uninterrupted LAN operation is an explicit requirement, this cannot be eliminated in all cases without sacrificing availability.
+
+Required behavior:
+- detect version/resource/business conflicts;
+- keep both canonical and edge evidence;
+- classify `SYNC_CONFLICT`;
+- expose enough business context for a reviewed resolver action;
+- resolver/correction produces new canonical event(s); it does not rewrite raw history.
+
+Silent last-write-wins is prohibited.
+
+# Part F — Google projection
+
+- Cloud D1 canonical commit creates `projection_outbox` in the same transaction.
+- LAN autonomous acceptance does NOT directly write business Sheets.
+- After edge event reconciles into D1, the canonical projection outbox drives Google Gateway/Sheets.
+- Google failure does not roll back D1 and does not invalidate an already durable LAN edge acceptance; it remains a downstream degraded integration.
+
+# Part G — media/document consequence
+
+Offline LAN may stage media locally with durable hash/metadata, but current document lifecycle still requires durable Drive upload/readback before FINAL.
+
+Therefore:
+- offline capture may exist as local staged/DRAFT evidence;
+- reconciliation/upload occurs after Cloud/Internet recovery;
+- FINAL is not fabricated while Drive durability has not passed unless Owner explicitly changes D-024/D-047 policy.
+
+# Error/status mapping
+
+Cloud/runtime business errors remain stable:
 - authentication failure -> 401;
 - permission/policy denial -> 403;
-- zero-row version/state/resource guard -> 409;
-- idempotency key reused for another command -> 409;
+- version/state/resource/idempotency/reconciliation conflict -> 409;
 - valid syntax but invalid business input -> 422;
-- canonical D1 unavailable/schema mismatch -> 503;
-- Google unavailable after D1 commit -> business command remains successful; outbox stays/re-enters retry flow.
+- required current runtime dependency unavailable/schema mismatch -> 503.
 
-## Required automated acceptance
+Commit location is separate from HTTP/business error:
+- `CLOUD_COMMITTED`;
+- `LAN_RELAYED_CLOUD_COMMITTED`;
+- `LAN_ACCEPTED_PENDING_SYNC`;
+- client-only `QUEUED_CLIENT_LOCAL`;
+- reconciliation `SYNC_CONFLICT`.
 
-Before the helper is accepted:
+# Required automated acceptance
 
-1. happy-path state + event + outbox all commit;
-2. zero-row guarded mutation causes event assertion failure and leaves no event/outbox/state change;
-3. event constraint failure rolls back state change;
-4. outbox constraint failure rolls back state and event;
-5. same idempotency key + same command returns the original event without second mutation;
-6. same idempotency key + different command returns conflict;
-7. concurrent idempotency race yields one committed event only;
-8. entity-version conflict yields no partial writes;
-9. device-sequence collision yields no partial writes;
-10. Google unavailability after commit never rolls back canonical state and leaves projection retryable.
+## Shared vector
+1. same command vector produces same business transition/event/error on Cloud and LAN adapters.
+2. actor spoofing never becomes authority.
+3. same idempotency/device identity preserved across transport/runtime changes.
 
-## Implementation boundary
+## Cloud
+4. happy-path state + event + outbox commit atomically.
+5. state guard failure leaves no event/outbox/partial state.
+6. event/outbox failure rolls back state.
+7. idempotency race produces one canonical event.
+8. device sequence collision produces no partial writes.
 
-The current connected GitHub path is blocking sensitive runtime-source writes by platform safety. Persist this design now; implement the helper and tests only through an approved high-level write path. Do not bypass the safety guard and do not weaken the atomic contract to make implementation easier.
+## LAN edge
+9. happy-path edge state + immutable edge event + sync outbox commit atomically.
+10. edge state/event/outbox failure rolls back the local unit.
+11. edge retry creates one event only.
+12. edge device/idempotency collision is explicit.
+13. restart preserves accepted pending edge events/outbox.
+
+## Reconciliation
+14. non-conflicting edge event reconciles once to D1.
+15. uncertain sync response + retry does not duplicate canonical event.
+16. already-reconciled idempotency maps back to existing canonical event.
+17. canonical version/resource conflict becomes `SYNC_CONFLICT` with edge evidence retained.
+18. no direct Sheets business write occurs before D1 reconciliation.
+19. successful recovery refreshes/rebases required LAN snapshot/version state.
+
+# Implementation boundary
+
+Current platform safety still blocks some sensitive Cloud Worker source/workflow writes. Do not bypass that guard. The provider-neutral domain and LAN edge design/source can continue in independent safe paths, and Cloud integration resumes through approved high-level paths when available.
