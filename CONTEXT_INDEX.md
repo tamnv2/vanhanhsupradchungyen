@@ -15,6 +15,8 @@ For product/business decisions read in this order:
 
 Newest applicable override wins only where it conflicts. Unaffected older decisions remain active. The former unresolved ROOT-factor block in V5 is resolved by V6 and must not be reopened from stale documents.
 
+**All five active decision layers above are mandatory resume reads.** A stale or incomplete `CHECKPOINT.md` must never be used to omit a newer decision layer.
+
 Canonical consolidation/implementation guides:
 - `docs/OWNER_BUSINESS_RULES_V1.md`
 - `docs/TARGET_PRODUCT_ARCHITECTURE_V3.md`
@@ -29,6 +31,15 @@ Canonical consolidation/implementation guides:
 
 Older V2 contract/delivery/edge documents remain historical/reference only where a newer file above supersedes them.
 
+## Freshness rule
+
+Before selecting FAST/FOCUSED/FULL, compare current GitHub `main` HEAD with `CHECKPOINT.md.reconciled_through_commit`.
+
+- If they match for the affected lanes, FAST may continue.
+- If they differ, inspect changed paths/commits first.
+- Any changed `DECISIONS*`, `CONTEXT_INDEX.md`, `CURRENT_STATE.md`, `NEXT_ACTIONS.md`, `SERVICE_AUTHORITY.md`, active canonical guide, source/config/workflow or provider-evidence path relevant to active work requires reconciliation before mutation.
+- An outdated checkpoint is never authority over newer `main`.
+
 ## Read modes
 
 ### FAST
@@ -37,11 +48,11 @@ Read:
 - `AI_OPERATING_CONTRACT.md`
 - `CHECKPOINT.md`
 - this index
-- active decision override files named by the checkpoint
+- **all active decision layers listed under Authority precedence**
 - only task-specific current guide/source/evidence.
 
 ### FOCUSED
-Use for a new/changed task inside active boundaries. Read FAST plus the relevant subset of:
+Use for a new/changed task inside active boundaries or when relevant paths changed after the checkpoint. Read FAST plus the relevant subset of:
 - `PROJECT_SCOPE.md`
 - `SERVICE_AUTHORITY.md`
 - `CURRENT_STATE.md`
@@ -87,7 +98,7 @@ Do not let `docs/SERVICE_API_CONTRACT.md`, `docs/CANONICAL_MUTATION_PLAN.md`, `d
 ### CLOUDFLARE / D1 / WORKER
 Read:
 - `SERVICE_AUTHORITY.md`;
-- active decisions/current state/next actions;
+- all active decision layers plus current state/next actions;
 - `docs/SERVICE_API_CONTRACT_V3.md`;
 - `docs/DATA_MODEL_GUIDE_V2.md`;
 - `service/worker/src/`;
@@ -101,7 +112,7 @@ Never migrate/replace/recreate D1/Worker from name alone. Verify exact identity/
 Read:
 - `PROJECT_SCOPE.md`;
 - `SERVICE_AUTHORITY.md`;
-- V3/V4/V5/V6 decisions;
+- all active decision layers;
 - `docs/OWNER_BUSINESS_RULES_V1.md`;
 - `docs/SERVICE_API_CONTRACT_V3.md`;
 - `config/projections.beta.json`;
@@ -112,7 +123,7 @@ Sheets/Drive are downstream outputs/storage and are never reconstructed as busin
 
 ### LAN SERVICE
 Read:
-- V3/V4/V5/V6 decisions;
+- all active decision layers;
 - `docs/TARGET_PRODUCT_ARCHITECTURE_V3.md`;
 - `docs/SERVICE_API_CONTRACT_V3.md`;
 - `docs/LAN_EDGE_STATE_V2.md`;
@@ -126,7 +137,7 @@ Physical evidence and synthetic-capacity evidence remain distinct.
 
 ### WEBSITE / APK
 Read:
-- active decisions;
+- all active decision layers;
 - business rules;
 - V3 Service contract;
 - non-functional baseline;
@@ -137,7 +148,7 @@ Website and APK share the same domain authority. The earlier transport-only Andr
 
 ### BETA / STABLE / RELEASE PROMOTION
 Read:
-- `DECISIONS_V4.md`;
+- all active decision layers;
 - `docs/RELEASE_PROMOTION_V1.md`;
 - `docs/DELIVERY_PLAN_V4.md`;
 - `SERVICE_AUTHORITY.md`;
