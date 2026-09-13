@@ -1,6 +1,6 @@
 {
-  "enabled": false,
+  "enabled": true,
   "target": "beta",
   "operation": "verify",
-  "request_id": "final-prewrite-v3-20260913"
+  "request_id": "post-migration-v3-20260913-1739"
 }
