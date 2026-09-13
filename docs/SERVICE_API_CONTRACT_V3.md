@@ -2,7 +2,7 @@
 
 Status: ACTIVE DESIGN / IMPLEMENTATION CONTRACT
 Updated: 2026-09-13
-Authority: effective Owner decisions through V5, `docs/TARGET_PRODUCT_ARCHITECTURE_V3.md`.
+Authority: effective Owner decisions through V6, `docs/TARGET_PRODUCT_ARCHITECTURE_V3.md`.
 
 This supersedes V2 contract wording where it conflicts.
 
@@ -70,7 +70,28 @@ Protected Cloud routes validate active account/session/device/security state and
 
 DENY precedence and ROOT/SUPERADMIN boundaries follow the decision files. Temporary-password state may access only the required auth-self/change subset until completed.
 
-ROOT factor-combination and email-OTP lifetime semantics remain blocked by `DECISIONS_V5.md` Owner questions; implementation must not invent them.
+### ROOT email one-time login — V6
+
+ROOT uses the approved fixed recovery-email channel as its normal one-time-password login path.
+
+- The email one-time password is single-use.
+- It is valid for 5 minutes from issuance.
+- A replacement cannot be requested until 5 minutes after the previous successful send.
+- Successful ROOT login with the one-time password does not create `MUST_CHANGE_PASSWORD`.
+- The fixed ROOT email channel cannot be disabled.
+- TOTP is optional: if enabled, ROOT authentication must also satisfy TOTP; if disabled, the valid email one-time password is sufficient.
+- Credential values and provider secrets must never be logged or persisted in readable form.
+
+### Normal-account forgot-password — V6
+
+For a non-ROOT account with an approved recovery email:
+
+- request a single-use email one-time password;
+- 5-minute validity and 5-minute resend cooldown apply;
+- successful login with that credential enters restricted `MUST_CHANGE_PASSWORD` state;
+- ordinary product functions remain blocked until a new permanent password, different from the one-time password, is established under the normal password policy.
+
+Cloud and LAN implementations must preserve the same credential lifecycle semantics. Offline LAN must never fabricate successful email delivery.
 
 ## 6. LAN authentication/authorization
 
@@ -79,6 +100,8 @@ LAN maintains a protected synchronized authority snapshot sufficient for approve
 Offline duration alone does not invalidate login. A disconnected LAN cannot know Cloud-side changes made after its last successful authority synchronization; accepted events therefore record the authority-snapshot version used.
 
 After reconnect, refreshed authority applies to later operations. Previously accepted local business events are not silently deleted or rewritten.
+
+V6 recovery/login semantics remain identical on LAN where the required approved delivery/authority capability is actually available. If email delivery cannot be completed, LAN reports the delivery dependency state rather than issuing a fabricated success.
 
 ## 7. Cloud mutation transaction
 
@@ -169,7 +192,9 @@ Foundation:
 
 Auth family:
 - login/logout/me/change-password;
-- ROOT-specific recovery/factor routes only after the unresolved factor semantics are locked.
+- request/use email one-time password;
+- ROOT TOTP enable/disable/verify flows under ROOT policy;
+- recovery/session audit/status endpoints where approved.
 
 Business families:
 - employees/MNV;
@@ -188,7 +213,7 @@ Exact endpoint paths may be versioned/refined, but both runtimes use the same re
 
 ## 14. Functional rules referenced by the contract
 
-Effective business rules are in `docs/OWNER_BUSINESS_RULES_V1.md`. Important examples:
+Effective business rules are in `docs/OWNER_BUSINESS_RULES_V1.md` plus newer applicable decision overrides. Important examples:
 - multiple IN/OUT but one current presence;
 - IN does not open work session;
 - one MAIN session plus approved EXTRA;
@@ -206,10 +231,15 @@ Website and APK use the same business APIs. APK scanner/device integration produ
 
 Website must have a compatible LAN-local loading path. Both clients understand Cloud commit, LAN pending-sync, Google pending/completed and conflict states.
 
+Both clients expose the applicable V6 one-time-password flow. A normal account in `MUST_CHANGE_PASSWORD` may access only the restricted password-establishment flow until completed; ROOT one-time login does not enter that state.
+
 ## 16. Acceptance minimum
 
 Before one business command is BETA-live, evidence must cover:
 - authentication/permission/scope;
+- V6 one-time-password single-use, 5-minute expiry and 5-minute resend cooldown;
+- ROOT login with TOTP enabled and disabled;
+- normal-account recovery transition into and out of `MUST_CHANGE_PASSWORD`;
 - idempotent retry and device-sequence collision;
 - guarded version/state conflict;
 - Cloud atomic state+event+async-work commit;
