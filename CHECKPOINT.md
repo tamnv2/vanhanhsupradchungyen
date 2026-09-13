@@ -1,38 +1,42 @@
 # CHECKPOINT — VHDCHY
 
-checkpoint_version: 3
+checkpoint_version: 4
 protocol: AI_AUTHORITY_RESUME_V2
-status: IN_PROGRESS
+status: BLOCKED_OWNER_READ_ONLY_EVIDENCE
 active_lane: SERVICE / CLOUDFLARE D1 BETA PRE-MIGRATION INSPECTION
-approved_scope: Owner approved autonomous execution on 2026-09-13. Add and run a read-only D1 inspection gate through GitHub Actions; do not mutate D1, deploy Worker, or apply migration until inspection evidence is classified.
+approved_scope: Owner approved autonomous execution on 2026-09-13. Add/run a read-only D1 inspection gate; do not mutate D1, deploy Worker, or apply migration until inspection evidence is classified.
 current_state_ref: CURRENT_STATE.md
 authority_ref: SERVICE_AUTHORITY.md
 context_router_ref: CONTEXT_INDEX.md
+issue_ref: GitHub issue #6
+
+## Completed this session
+
+- Owner approval persisted before provider-facing work.
+- GitHub connection verified capable of writing `main`; checkpoint commit `aa2186343ce76f40321ea37be4ed459d880580e3` succeeded.
+- Two attempts to add a dedicated executable D1 read-only inspection helper through the connected GitHub file-write action were rejected by the platform action-safety guard.
+- Issue #6 was updated with the exact blocker and resume requirement.
 
 ## Current gate
 
-Inspect the already verified BETA D1 `vhdchy-data-beta` using metadata-only/read-only SQL. Evidence required:
-- user table names and schema metadata;
+Obtain read-only evidence from verified BETA D1 `vhdchy-data-beta`:
+- user table names/schema metadata only;
 - row count per user table;
-- `vhdchy_meta.schema_version` only when that table exists;
+- `vhdchy_meta.schema_version` if present;
 - classification: `EMPTY`, `BUSINESS_CORE_V2`, or `UNKNOWN_NONEMPTY/SCHEMA_MISMATCH`.
 
 ## Safety boundary
 
 - No INSERT / UPDATE / DELETE / DDL.
 - No business-row contents.
-- Verify Cloudflare account, D1 name and exact D1 database ID before querying.
-- If identity mismatches or inspection is uncertain, fail closed.
-- Do not apply `service/worker/migrations/0001_initial.sql` merely because resource identity matches.
+- Verify exact D1 identity before any future mutation.
+- No alternate low-level Git object writes to bypass the executable-source action-safety block.
+- Do not apply `service/worker/migrations/0001_initial.sql` before this gate is resolved.
 
-## Execution plan
+## Next safe action
 
-1. Add a dedicated D1 read-only inspection script and GitHub Actions workflow.
-2. Trigger it from `main` using a controlled dispatch file.
-3. Read workflow evidence and classify the database.
-4. Persist PASS/FAIL/UNKNOWN evidence before any subsequent mutation.
-5. Continue automatically only through the safe branch implied by the classification and current Owner-approved scope.
+Owner supplies the read-only D1 inspection output from Cloudflare dashboard/CLI, or a new supported Cloudflare/D1 execution connector becomes available. AI then classifies the database, persists evidence, and continues automatically from the first safe node.
 
 ## do_not_repeat
 
-Use completed/PASS items in `CURRENT_STATE.md` as the skip set. Never recreate verified Cloudflare resources. Never repeat a migration/deploy/provider mutation to resolve uncertainty; inspect evidence first.
+Do not recreate verified Cloudflare resources. Do not repeat migration/deploy/provider mutations to resolve uncertainty. Do not retry blocked executable-source writes through lower-level Git mechanisms.
