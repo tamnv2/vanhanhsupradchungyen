@@ -5,6 +5,7 @@ const slice = JSON.parse(fs.readFileSync('contracts/commands.slice1.v1.json', 'u
 const acceptance = JSON.parse(fs.readFileSync('contracts/acceptance.v1.json', 'utf8'));
 const mutationResult = JSON.parse(fs.readFileSync('contracts/mutation-result.v1.schema.json', 'utf8'));
 const permissionCatalog = JSON.parse(fs.readFileSync('config/permissions.v1.json', 'utf8'));
+const permissionSeedSql = fs.readFileSync('service/worker/migrations/0011_permission_catalog_v1.sql', 'utf8');
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -25,6 +26,13 @@ const eventCodes = new Set(Object.values(domain.eventFamilies || {}).flat());
 const permissionKeys = new Set(
   (permissionCatalog.permissions || []).map(item => `${item.resource}:${item.action}`)
 );
+const seededPermissionKeys = new Set();
+for (const match of permissionSeedSql.matchAll(/\('PERM:[^']+',\s*'([^']+)',\s*'([^']+)',/g)) {
+  seededPermissionKeys.add(`${match[1]}:${match[2]}`);
+}
+assert(permissionKeys.size > 0, 'Permission catalog is empty');
+assert(sameSet(permissionKeys, seededPermissionKeys), 'D1 permission seed differs from config permission catalog');
+
 const commitStatuses = new Set(domain.commitStatuses || []);
 const googleStatuses = new Set(domain.googleOutputStatuses || []);
 const stableErrors = new Set(domain.stableErrors || []);
@@ -66,4 +74,4 @@ for (const vector of acceptance.vectors) {
   }
 }
 
-console.log(`DOMAIN_PARITY_PASS commands=${slice.commands.length} vectors=${acceptance.vectors.length} resultSchema=PASS`);
+console.log(`DOMAIN_PARITY_PASS commands=${slice.commands.length} vectors=${acceptance.vectors.length} permissions=${permissionKeys.size} resultSchema=PASS`);
