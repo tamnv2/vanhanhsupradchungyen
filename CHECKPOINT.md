@@ -91,6 +91,6 @@ Current runtime remains safe: no post-manifest Worker deployment was triggered a
 
 Neither condition is currently established. Continue safe actionable work.
 
-## do_not_repeat
+## do_not_repeat:
 
 Do not rerun V1->V3 migration. Do not recreate verified provider resources. Do not trigger Worker deployment while active deploy workflow is single-module. Do not open business APIs anonymously. Do not make Sheets canonical. Do not enable projection before secure auth + E2E PASS. Do not expose secrets in source/chat. Do not bypass platform safety guards. Do not build Android/PDA or physical LAN until Owner resumes those lanes. Do not promote STABLE before full BETA PASS plus explicit Owner approval.
