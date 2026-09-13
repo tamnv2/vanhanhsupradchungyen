@@ -66,12 +66,13 @@ jobs:
           trap - EXIT
           test -s "$data_root/edge.db"
 
-      - name: Run snapshot and local-command atomicity vectors
+      - name: Run snapshot, authorization and local-command atomicity vectors
         shell: bash
         run: |
           set -euo pipefail
           dotnet run --project lan-service-harness/Vhdchy.LanService.Harness.csproj -c Release --no-build -- "$DATA_ROOT/edge.db" | tee "$RUNNER_TEMP/authority-harness.log"
           grep -Fq 'LAN_AUTHORITY_SNAPSHOT_HARNESS_PASS' "$RUNNER_TEMP/authority-harness.log"
+          grep -Fq 'LAN_AUTHORIZATION_HARNESS_PASS' "$RUNNER_TEMP/authority-harness.log"
           grep -Fq 'LAN_OPERATIONAL_SNAPSHOT_HARNESS_PASS' "$RUNNER_TEMP/authority-harness.log"
           grep -Fq 'LAN_LOCAL_COMMAND_TRANSACTION_PASS' "$RUNNER_TEMP/authority-harness.log"
 
