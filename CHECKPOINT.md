@@ -1,22 +1,38 @@
 # CHECKPOINT — VHDCHY
 
-checkpoint_version: 2
+checkpoint_version: 3
 protocol: AI_AUTHORITY_RESUME_V2
-status: RESUME_READY
-reconciled_through_commit: 920b1373a4e9266a7ab67d02d1bcabf078e114d8
-active_work_ref: NEXT_ACTIONS.md
+status: IN_PROGRESS
+active_lane: SERVICE / CLOUDFLARE D1 BETA PRE-MIGRATION INSPECTION
+approved_scope: Owner approved autonomous execution on 2026-09-13. Add and run a read-only D1 inspection gate through GitHub Actions; do not mutate D1, deploy Worker, or apply migration until inspection evidence is classified.
 current_state_ref: CURRENT_STATE.md
 authority_ref: SERVICE_AUTHORITY.md
 context_router_ref: CONTEXT_INDEX.md
 
-## Resume position
+## Current gate
 
-Continue from the first incomplete gate in `NEXT_ACTIONS.md` after reconciling it with `CURRENT_STATE.md` and current evidence.
+Inspect the already verified BETA D1 `vhdchy-data-beta` using metadata-only/read-only SQL. Evidence required:
+- user table names and schema metadata;
+- row count per user table;
+- `vhdchy_meta.schema_version` only when that table exists;
+- classification: `EMPTY`, `BUSINESS_CORE_V2`, or `UNKNOWN_NONEMPTY/SCHEMA_MISMATCH`.
 
-## Evidence index
+## Safety boundary
 
-Use evidence identifiers already recorded in `CURRENT_STATE.md` and `NEXT_ACTIONS.md`; do not duplicate long evidence ledgers here.
+- No INSERT / UPDATE / DELETE / DDL.
+- No business-row contents.
+- Verify Cloudflare account, D1 name and exact D1 database ID before querying.
+- If identity mismatches or inspection is uncertain, fail closed.
+- Do not apply `service/worker/migrations/0001_initial.sql` merely because resource identity matches.
 
-## do_not_repeat:
+## Execution plan
 
-Use the completed/PASS items in `CURRENT_STATE.md` as the skip set. Verify uncertain outcomes before any repeated state-changing action.
+1. Add a dedicated D1 read-only inspection script and GitHub Actions workflow.
+2. Trigger it from `main` using a controlled dispatch file.
+3. Read workflow evidence and classify the database.
+4. Persist PASS/FAIL/UNKNOWN evidence before any subsequent mutation.
+5. Continue automatically only through the safe branch implied by the classification and current Owner-approved scope.
+
+## do_not_repeat
+
+Use completed/PASS items in `CURRENT_STATE.md` as the skip set. Never recreate verified Cloudflare resources. Never repeat a migration/deploy/provider mutation to resolve uncertainty; inspect evidence first.
