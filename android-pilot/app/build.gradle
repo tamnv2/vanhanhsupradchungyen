@@ -1,0 +1,40 @@
+plugins {
+    id 'com.android.application'
+}
+
+def runNumber = System.getenv('GITHUB_RUN_NUMBER') ?: '1'
+def releaseVersion = System.getenv('LAN_PILOT_VERSION') ?: "0.1.${runNumber}"
+
+android {
+    namespace 'vn.vhdchy.transport'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'vn.vhdchy.transport.beta'
+        minSdk 23
+        targetSdk 35
+        versionCode Integer.parseInt(runNumber)
+        versionName releaseVersion
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    buildTypes {
+        debug {
+            versionNameSuffix '-debug'
+        }
+        release {
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+}
