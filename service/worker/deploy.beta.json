@@ -1,6 +1,15 @@
 {
   "target_worker": "vhdchy-beta",
   "source": "service/worker/src/index.js",
+  "modules": [
+    "index.js",
+    "auth.js",
+    "auth-service.js",
+    "authorization.js",
+    "session.js",
+    "permission-store.js",
+    "projection.js"
+  ],
   "compatibility_date": "2026-09-13",
   "public_origin": "https://beta.supra.cc.cd",
   "workers_dev_expected": false,
