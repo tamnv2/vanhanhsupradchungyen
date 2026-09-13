@@ -8,7 +8,8 @@ Baseline: `REPO-RESET-20260912-01`
 - Active repository: `tamnv2/vanhanhsupradchungyen` (PUBLIC), default branch `main`.
 - `AI_AUTHORITY_RESUME_V2` is active.
 - `D-041` remains active: overall execution continues by default and a blocked single lane does not stop independent safe work.
-- Current Owner scope pauses Android/PDA build and physical LAN/model work; active priority is Worker/Service -> D1 -> Google Sheets/Drive -> Web.
+- Physical Android/PDA build/regression and physical LAN testing remain environment-dependent, but LAN source/model adaptation is active again using the verified legacy repository as read-only reference.
+- Legacy reference repository: `tamnv2supra/vanhanhdchungyen`; fixed V4 comparison commit `7b4488a89f585812c1bccba5d07d86049482bf4c`. It is NON_AUTHORITY and cannot override current decisions/contracts.
 - Secret values remain outside repository source/chat.
 
 ## GitHub BETA environment
@@ -78,15 +79,27 @@ Baseline: `REPO-RESET-20260912-01`
 - Reusable canonical mutation helper remains to be implemented/tested when sensitive runtime-source write is available.
 - No Web business surface is live yet.
 
+## LAN source/model lane — ACTIVE / PHYSICAL PENDING
+
+- Current LAN restoration review: `docs/LAN_SOURCE_REVIEW_20260913.md`.
+- Legacy repo `tamnv2supra/vanhanhdchungyen` is readable as reference; current connection has no push authority to it, which is acceptable because it must remain read-only evidence.
+- Legacy final V4 source reference `7b4488a89f585812c1bccba5d07d86049482bf4c` is verified to exist.
+- Prior legacy physical evidence included two MT90 reaching `LAN_ACTIVE`, durable queue recovery to zero, duplicate rejection and measured LAN latency; final V4 physical regression was still pending.
+- Reusable patterns now confirmed directly from source: cached endpoint -> UDP discovery -> manual recovery, health validation + anti-flapping hysteresis, durable SQLite queue with `event_id`/`device_seq`, ACK-driven removal, `streamEpoch + sequence` resync, no-admin Agent, diagnostics/load/transfer instrumentation and bounded Android background work.
+- These patterns may be adapted now, but legacy cleartext pilot endpoints and identity strings are not valid production authentication and must not carry current business data.
+- D1 remains canonical; LAN must use the same current command/event/idempotency/permission semantics rather than becoming a second backend.
+
 ## Target architecture
 
 - D1 is canonical structured business authority.
 - Google Sheets is projection/reconciliation/DR only.
 - Google Drive stores media/documents/archive; D1 stores identifiers, metadata, hashes and state.
 - Web and later APK use one Service/domain contract.
+- LAN is a transport/fallback path over the same command/event model, with local durable queue and explicit authentication/pairing before business activation.
 - Web implementation follows usable Auth + initial business API runtime rather than a mock-heavy early frontend.
 
-## Paused lanes / STABLE
+## Physical dependencies / STABLE
 
-- Android/PDA build and physical LAN/model work are paused by current Owner instruction until required environments are available.
+- Android/PDA packaging/signing/physical regression and real corporate-network LAN regression remain paused until the required devices/company environment are available.
+- LAN source/model/protocol adaptation is not paused and can continue from the legacy reference.
 - STABLE remains blocked until full BETA PASS plus explicit Owner approval.
