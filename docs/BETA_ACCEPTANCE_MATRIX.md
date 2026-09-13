@@ -1,293 +1,233 @@
-# BETA ACCEPTANCE MATRIX — PRODUCT V2
+# BETA ACCEPTANCE MATRIX — PRODUCT V3
 
 Status: ACTIVE TEST CONTRACT
 Updated: 2026-09-13
-Authority: `DECISIONS.md`, `docs/TARGET_PRODUCT_ARCHITECTURE_V2.md`, `docs/SERVICE_API_CONTRACT.md`
+Authority: `docs/TARGET_PRODUCT_ARCHITECTURE_V3.md`, `docs/DELIVERY_PLAN_V3.md`, current business decisions.
 
-Website, APK, Cloud Service and LAN Service are all inside current product acceptance scope. Physical company-network tests remain a later evidence gate, but source/runtime/CI acceptance for APK and LAN is active now.
+Website, APK, Cloud Service, LAN Service, Google output and reconciliation are all inside product acceptance scope.
 
 ## Evidence rule
 
-A PASS claim requires reproducible evidence: CI run, provider readback, D1/LAN DB query, Gateway readback, Web/APK E2E log, reconciliation evidence or physical test record as applicable.
+A PASS claim requires reproducible evidence: CI, provider readback, D1/LAN DB query, Google readback, Web/APK E2E log, reconciliation evidence or physical test record as applicable.
 
-Compilation alone is never business/runtime PASS.
-
-Legacy physical evidence and the pre-clarification transport prototype are reference only and cannot be reported as current-product PASS.
+Compilation alone is never business/runtime PASS. Legacy/prototype evidence is reference only.
 
 ## Gate order
 
 1. Provider/runtime identity
 2. Shared domain/API parity
-3. Authentication/session/security
-4. Authorization/account administration
-5. Cloud canonical mutation/idempotency
-6. LAN runtime state/snapshot/relay/autonomous/reconciliation
-7. Attendance/presence vertical slice
-8. Work session + PICK/PACK/resources vertical slice
-9. Labor/dropped-goods vertical slice
-10. Documents/media vertical slice
-11. Google projection/reconciliation
-12. Website Cloud/LAN E2E
-13. APK Cloud/LAN E2E
-14. Failure/recovery/split-brain acceptance
-15. Backup/update/restore + physical corporate-LAN gate
+3. Cloud authentication/authorization
+4. LAN synchronized authority/offline login
+5. Cloud mutation/idempotency
+6. LAN local mutation/event/sync
+7. Direct LAN Google projection/upload
+8. Reconciliation/conflict handling
+9. Attendance/presence
+10. Work session + PICK/PACK/resources
+11. Labor/dropped-goods
+12. Documents/media
+13. Website Cloud/LAN E2E
+14. APK Cloud/LAN E2E
+15. Failure/recovery/long-offline acceptance
+16. Backup/update/restore + physical company-network gate
 
 ## A — Provider/runtime identity
 
 | Scenario | Expected result |
 |---|---|
-| Cloud `/health` | BETA Worker, D1 reachable, `business_core_v3` |
-| Cloud `/health/deep` with Google healthy | canonical health PASS, Gateway identity PASS |
-| Cloud `/health/deep` with Google unavailable | D1 health remains authoritative; response degraded, not false canonical failure |
-| `/api/v1/meta` | BETA environment/build/schema match deployed commit |
-| `/api/v1/capabilities` | correct authority/projection/runtime capabilities; anonymous mutation disabled |
-| workers.dev state | disabled |
-| public custom domain | reviewed BETA domain only |
-| binding contract | exact reviewed bindings/secrets; no unexpected binding |
-| LAN health | exact BETA LAN runtime identity/build/edge schema/instance/epoch, no credential leakage |
-| BETA/STABLE local state | isolated; no accidental cross-environment edge DB/config |
+| Cloud health | BETA Worker/D1 identity and `business_core_v3` match reviewed resources |
+| Cloud Google degraded | Cloud structured authority remains explicit; no false all-green status |
+| LAN health | exact BETA LAN build/edge schema/instance/epoch; no secret leakage |
+| environment isolation | BETA/STABLE Cloud, Google, LAN state and signing do not cross |
 
 ## B — Shared domain/API parity
 
 | Scenario | Expected result |
 |---|---|
-| same valid business command vector through Cloud adapter | expected transition/event/error contract |
-| same vector through LAN edge adapter | same business meaning/machine result except explicit commit-location status |
-| invalid command | Cloud and LAN reject with same stable validation/business error semantics |
-| same idempotency identity | preserved across Cloud direct, LAN relay, LAN autonomous and retry |
-| client actor field forged | ignored/rejected; authenticated context authoritative |
-| provider-specific code | cannot redefine business validation outside reviewed adapter boundary |
-| API compatibility | Web/APK/LAN use one reviewed contract/build family |
+| same valid business vector on Cloud | expected transition/event/result |
+| same vector on LAN | same business meaning/result except runtime/sync status |
+| invalid business vector | same stable validation/business error semantics |
+| same command retried across paths | same idempotency/device identity retained |
+| provider-specific adapter | cannot redefine business rules |
+| Web/APK compatibility | both consume the reviewed shared contract |
 
-## C — Authentication/session/security
-
-### Cloud baseline
+## C — Cloud authentication/authorization
 
 | Scenario | Expected result |
 |---|---|
-| valid NORMAL username/password | one ACTIVE session; raw token returned once; only token hash persisted |
-| wrong password | generic invalid credentials; no account existence leak |
-| disabled/locked/closed account | login denied |
-| ROOT password without TOTP | `ROOT_MFA_REQUIRED`; no session |
-| ROOT valid password + valid TOTP | session only after MFA PASS |
-| invalid/expired/revoked bearer | 401 |
-| expired/revoked session | 401 |
-| device security epoch changed | old linked session rejected |
-| temporary password | only auth-self/password-change subset until changed |
-| logout | session revoked and unusable afterward |
-
-### LAN/offline security
-
-The exact offline credential/capability mechanism, offline expiry and privileged-offline policy remain unresolved policy and must not be invented. Before LAN autonomous business auth can PASS, the reviewed policy must prove:
-
-- device/Agent pairing/channel binding cannot be replaced by service strings alone;
-- no raw Cloud provider credential is distributed to PDA/LAN runtime;
-- offline authorization staleness is explicitly bounded/detectable;
-- security epoch/revocation reconciliation is deterministic after reconnect;
-- unresolved privileged/security operations fail closed.
-
-## D — Authorization/account administration
-
-| Scenario | Expected result |
-|---|---|
-| matching ALLOW | operation allowed inside effective scope |
-| matching explicit DENY | DENY wins over ALLOW |
-| cluster/module mismatch | 403 |
-| expired/revoked grant | no authority |
-| SUPERADMIN normal business | all-cluster business authority |
+| valid account | Cloud session/auth context established |
+| invalid/disabled/locked account | denied without account-information leakage |
+| permission ALLOW | operation allowed inside scope |
+| explicit DENY | DENY wins |
+| cluster/module mismatch | denied |
+| SUPERADMIN ordinary business | allowed per current hierarchy |
 | SUPERADMIN ROOT-security action | denied |
-| same-level admin without dedicated permission | denied |
-| same-level admin with permission | allowed subject to grantor/self protection |
-| recipient attempts to lock/delete grantor | denied |
-| close account with history | retained; never hard-deleted |
-| LAN authorization snapshot stale/invalid beyond reviewed policy | autonomous command denied rather than silently widening authority |
+| ROOT security boundary | current ROOT-only rules preserved |
 
-## E — Cloud canonical mutation/idempotency
+## D — LAN synchronized authority / offline login
 
 | Scenario | Expected result |
 |---|---|
-| valid command | state + one immutable event + one projection outbox row commit atomically |
-| version/state guard fails | 409; no partial state/event/outbox |
-| event insert fails | state rolls back |
-| outbox insert fails | state + event roll back |
-| retry same idempotency key/same command | original canonical event returned; no second mutation |
-| reuse key/different command | 409 `IDEMPOTENCY_KEY_REUSED` |
-| concurrent same key | exactly one committed canonical event |
-| duplicate device sequence/different command | conflict; no partial writes |
-| raw event UPDATE/DELETE | rejected by reviewed immutability mechanism |
+| LAN has synchronized authority snapshot | user can authenticate locally according to that snapshot |
+| long Internet outage | login does not fail merely because offline duration is long |
+| user permission valid in local snapshot | allowed business operation executes locally |
+| account/permission changes remotely during outage | LAN cannot claim knowledge before reconnect; event records authority snapshot/version used |
+| reconnect authority refresh | refreshed authority/config applies to subsequent operations |
+| prior offline accepted event after refresh | not silently deleted/re-written; reconciles with evidence |
+| manual LAN activation while Cloud healthy by ordinary user/admin | denied |
+| manual LAN activation by SUPERADMIN/ROOT | allowed with audited scope/reason/time |
 
-## F — LAN runtime / failover / reconciliation
-
-### Edge readiness
+## E — Cloud mutation/idempotency
 
 | Scenario | Expected result |
 |---|---|
-| LAN starts with valid synchronized edge snapshot | reports ready scope/version and eligible autonomous modules |
-| snapshot missing/incomplete/stale beyond reviewed rule | not falsely reported as fully autonomous-ready |
-| Agent/service restart | pending edge events/outbox/staged media survive; new runtime epoch is visible |
-| no-admin launch | works as normal user without router/firewall/DNS bypass assumptions |
+| valid command | D1 state + immutable event + required outbox work commit atomically |
+| version/state guard fails | conflict; no partial write |
+| retry same command identity | original result/event returned; no duplicate mutation |
+| same key/different payload | conflict |
+| duplicate device sequence/different command | collision/conflict |
+| raw history overwrite | rejected by current immutable-history design |
 
-### Relay mode
-
-| Scenario | Expected result |
-|---|---|
-| client forced LAN while Cloud reachable | `LAN_RELAY`; same command reaches Cloud with same idempotency/device identity |
-| relay Cloud commit succeeds | client sees `LAN_RELAYED_CLOUD_COMMITTED` |
-| relay uncertain response then retry | Cloud idempotency prevents duplicate business mutation |
-| relay cannot reach Cloud | does not claim Cloud commit; mode transition follows reviewed failover policy |
-
-### Autonomous mode
+## F — LAN local mutation/event/sync
 
 | Scenario | Expected result |
 |---|---|
-| Internet/Cloud unavailable + offline-capable valid command | local edge transaction + immutable edge event + sync outbox commit atomically |
-| local edge transaction failure | no partial state/event/outbox |
-| accepted locally | status is `LAN_ACCEPTED_PENDING_SYNC`, never `CLOUD_COMMITTED` |
-| same offline command retried | one edge event only |
-| idempotency key reused with different payload | hard conflict |
-| `(deviceId, deviceSeq)` reused for different command | hard collision/conflict |
-| Google unavailable | no direct Sheets fallback write |
+| LAN valid command | edge current state + immutable edge event + sync work commit atomically |
+| local mutation failure | no partial state/event/sync record |
+| local accepted command | explicit LAN-accepted/pending-sync state until Cloud confirms |
+| same local command retried | one edge event only |
+| LAN restart | edge state, pending events and staged Google work survive |
+| Cloud reachable while users stay on LAN | LAN begins/continues background Cloud sync without requiring route switch |
+| Cloud unavailable | local business operation continues |
 
-### Recovery/reconciliation
-
-| Scenario | Expected result |
-|---|---|
-| Cloud returns with non-conflicting edge events | each reconciles to D1 exactly once; original identity retained |
-| sync retries after timeout | idempotency prevents duplicate D1 mutation |
-| D1 already contains same reconciled command | LAN marks reconciled, no duplicate |
-| base/entity version conflicts | `SYNC_CONFLICT`; edge evidence retained |
-| conflicting edge event | never silent last-write-wins/drop |
-| reconciliation completes | edge snapshot/state refreshed/rebased before normal autonomous-readiness claim |
-
-## G — Attendance/presence vertical slice
-
-The slice is complete only after required Cloud + LAN + Web + APK paths pass.
+## G — Direct LAN Google projection/upload
 
 | Scenario | Expected result |
 |---|---|
-| employee IN | immutable IN + current presence `IN`; no work session auto-created |
-| repeated IN according to business contract | accepted as history where allowed while one current state remains |
+| LAN active + Google reachable | authorized LAN path may project/update Sheets through controlled contract |
+| same LAN event projected twice | stable projection key prevents duplicate logical row |
+| LAN media upload + Drive reachable | file uploaded once; local logical-file ID, Drive file ID and hash receipt retained |
+| same media retried | receipt/hash prevents duplicate logical upload |
+| Google unavailable | LAN business event remains valid locally; Google work queues/stages |
+| Google succeeds before Cloud sync | later D1 reconciliation attaches existing receipt and does not duplicate row/file |
+| Sheets/Drive queried as business source | prohibited; LAN event journal remains sync source |
+
+## H — Reconciliation/conflict handling
+
+| Scenario | Expected result |
+|---|---|
+| Cloud returns with non-conflicting LAN events | each reaches D1 exactly once with original stable identity |
+| sync timeout/retry | Cloud idempotency prevents duplicate mutation |
+| D1 already has same logical event | LAN marks synchronized; no duplicate |
+| Google output already exists from LAN | Cloud records/accepts receipt; no duplicate projection/upload |
+| base/entity version conflict | explicit conflict state with full evidence |
+| business conflict auto-resolvable | deterministic automatic resolution only according to reviewed rule |
+| unresolved business/data conflict | ADMIN+ decision required |
+| transient provider/network error | automatic retry/backoff, not human escalation |
+| ROOT-security conflict | remains under ROOT-exclusive handling |
+| reconciliation completes | LAN snapshot/state rebased/refreshed |
+
+## I — Attendance/presence vertical slice
+
+| Scenario | Expected result |
+|---|---|
+| employee IN | immutable IN + current presence `IN`; no automatic work session |
+| repeated IN | follows current business rule while one current presence state remains |
 | OUT | immutable OUT + current presence `OUT` |
-| multiple IN/OUT same business date | history retained in order; one current state |
-| MNV active reuse | rejected |
-| MNV after prior employee inactive | new `employee_id`; old history preserved |
-| QR employee resolution | current active employee identity shown |
-| same attendance command offline LAN then recovery | one local edge event -> one reconciled D1 event |
+| MNV lifecycle | active reuse rejected; inactive-history retained on later reuse |
+| QR employee resolution | current active identity shown |
+| same attendance operation on LAN offline | local event accepted under same business semantics |
+| later Cloud sync | one D1 event or explicit conflict |
+| Google reachable during LAN | projection can appear before D1 sync using stable event/projection identity |
 
-## H — Work session / PICK / PACK / resources vertical slice
+## J — Work session / PICK / PACK / resources
 
 | Scenario | Expected result |
 |---|---|
-| start MAIN while another MAIN OPEN | conflict |
-| approved EXTRA | allowed with approval/reason |
-| one session contains PICK and PACK | allowed |
+| MAIN conflict | second main session rejected unless approved extra rule applies |
 | PICK without PDA | rejected |
-| PICK with PDA and optional User Pick | allowed |
-| change User Pick | old assignment closed; new history/event appended |
-| change PDA | does not duplicate User Pick history |
-| PACK table selection | valid/available mapped User Pack candidates returned |
-| PACK commit | table + one chosen User Pack committed atomically |
-| release/reissue rules | enforce same-day locks/reissue contract |
-| PDA release/reuse | immediate reuse per contract |
-| cross-cluster resource borrow | source ownership + consuming context/approval retained |
-| concurrent Cloud claim | exactly one succeeds |
-| offline LAN claim later conflicts with Cloud-side claim | explicit `SYNC_CONFLICT`, no silent overwrite |
+| PICK with PDA/User Pick | follows current contract |
+| PACK table/User Pack | candidate and atomic assignment rules preserved |
+| change assignment | prior history retained; new event appended |
+| release/reissue | current same-day rules enforced |
+| cross-cluster borrow | ownership/context/approval retained |
+| Cloud/LAN independent conflicting resource claim | explicit conflict; never silent overwrite |
+| unresolved resource conflict | ADMIN+ resolver receives evidence |
 
-## I — Labor / dropped-goods vertical slice
+## K — Labor / dropped goods
 
 | Scenario | Expected result |
 |---|---|
-| start configured labor type | one OPEN labor item per session |
-| second OPEN labor item same session | rejected |
-| finish/correct labor | immutable history/correction semantics |
-| cross-cluster labor | source/consuming context retained |
-| dropped goods manual DO + count | canonical/edge event according to runtime mode |
-| dropped goods QR parse | normalized equivalent to manual contract |
-| ordinary UI | hides technical idempotency/audit fields |
-| offline LAN event recovery | exactly-once reconciliation or explicit conflict |
+| labor open/finish/correction | same semantics on Cloud and LAN |
+| cross-cluster labor | context retained |
+| dropped goods manual/QR | same normalized business event |
+| LAN offline then sync | exactly-once D1 ingestion or explicit conflict |
+| Google reachable from LAN | direct projection dedupes correctly |
 
-## J — Documents/media vertical slice
+## L — Documents/media
 
 | Scenario | Expected result |
 |---|---|
-| create DRAFT metadata | allowed |
-| Internet unavailable capture | file may be staged durably with hash/metadata; not falsely claimed Drive-durable |
-| Drive upload fails | document cannot become FINAL under current rule |
-| durable Drive upload/readback PASS | metadata stores Drive identity/hash/state |
-| finalize document | FINAL only after durable evidence gate |
-| incorrect FINAL | new record/version; prior evidence retained |
-| replace employee portrait | previous image deleted per current policy; replacement audit retained |
-| LAN-staged file recovery | uploaded once after recovery; hash/readback verified before FINAL |
+| create DRAFT | allowed |
+| LAN + Drive reachable | direct upload/readback/hash receipt retained locally |
+| LAN offline | file staged durably with logical ID/hash |
+| Drive unavailable | no false durable-upload claim |
+| later upload | staged file uploaded once and receipt attached to Cloud/D1 on reconciliation |
+| FINAL gate | follows current durable-file rule |
+| replacement/portrait lifecycle | current business/audit semantics retained |
 
-## K — Google projection/reconciliation
-
-| Scenario | Expected result |
-|---|---|
-| projection auth absent/disabled | Gateway rejects; no false LIVE state |
-| wrong token/protocol/environment/sheet/column/key | rejected |
-| valid new item | append/upsert per contract |
-| same key replay | no duplicate logical row |
-| Google unavailable | D1 command remains committed; outbox retries |
-| LAN autonomous event before D1 reconciliation | no direct business Sheet write |
-| LAN event reconciled to D1 | normal D1 outbox drives projection |
-| repeated projection failure | bounded backoff then DEAD after reviewed limit |
-| closed-quarter correction | correction originates in D1 event path |
-
-## L — Website Cloud/LAN E2E
+## M — Website Cloud/LAN E2E
 
 | Scenario | Expected result |
 |---|---|
-| Cloud login -> authenticated shell | works with permission-aware navigation |
-| Cloud business command | Web -> Cloud Service -> D1 |
-| user selects/forces LAN while Cloud reachable | Web -> LAN_RELAY -> Cloud with same semantics |
-| site Internet unavailable | compatible Web bundle can load locally through reviewed LAN mechanism |
-| LAN autonomous command | UI clearly shows pending-sync status |
-| reconciliation | UI transitions to Cloud committed or explicit conflict |
-| stale Sheet | UI follows Service/runtime state, not Sheets as authority |
+| Cloud path | normal authenticated business flow works |
+| forced LAN by SUPERADMIN/ROOT | client uses LAN while LAN may continue background Cloud sync |
+| Cloud unavailable, Internet available | Web uses LAN; LAN continues business + Google where available |
+| full Internet loss | compatible Web bundle loads locally and uses LAN Service |
+| LAN accepted pending Cloud | UI shows local/sync state clearly |
+| conflict | ADMIN+ receives actionable conflict UI |
 
-## M — APK Cloud/LAN E2E
+## N — APK Cloud/LAN E2E
 
 | Scenario | Expected result |
 |---|---|
-| authenticated APK | same user/permission/domain semantics as Web |
-| normal Cloud business flow | same command/error model as Web |
-| forced LAN | uses LAN endpoint without inventing new business meaning |
-| Internet/Cloud loss | eligible operation uses LAN autonomous path |
-| neither Cloud nor LAN reachable | only eligible client-local command is queued; status explicit |
-| QR/scanner input | maps into reviewed domain command rather than direct DB/write shortcut |
-| background retry | bounded and preserves command identity |
-| APK restart | permitted pending queue survives and resumes deterministically |
+| Cloud path | same domain/permission semantics as Website |
+| LAN path | same business command semantics through local Service |
+| offline LAN | normal approved PDA workflow continues under local authority snapshot |
+| scanner/QR | produces domain command, not direct DB shortcut |
+| app restart | permitted local pending work survives deterministically |
+| sync/Google state | user can distinguish pending/confirmed/conflict states where relevant |
 
-## N — Failure/recovery/split-brain acceptance
+## O — Failure/recovery/long-offline acceptance
 
 Required drills:
 
 1. Internet disconnected mid-command.
-2. Cloud Worker unavailable while Internet remains available.
-3. One client direct-Cloud path fails and is forced to LAN.
-4. LAN Service restarts with pending autonomous events.
-5. Client retries after uncertain LAN/Cloud response.
-6. Cloud and LAN create conflicting resource/version changes during partition.
-7. Cloud recovers while LAN has ordered pending events.
-8. Google remains unavailable after Cloud recovery.
-9. LAN host unavailable while Cloud is healthy.
-10. Both Cloud and LAN unavailable -> client-local queue where eligible.
+2. Cloud Service unavailable while Internet/Google remains usable.
+3. SUPERADMIN/ROOT forces LAN while Cloud remains healthy.
+4. Users stay on LAN after Cloud recovers; background synchronization still resumes.
+5. Long-duration offline period with repeated logins/normal business operations.
+6. Remote account/permission/config changes occur during the outage; reconnect applies refreshed state prospectively.
+7. LAN Service restarts with pending events/media/Google work.
+8. Duplicate/uncertain response retries.
+9. Cloud and LAN create conflicting resource/entity changes during partition.
+10. Google already contains LAN output before D1 reconciliation.
+11. Both Cloud and LAN unavailable -> client-local queue only where explicitly permitted.
 
-Every case must produce explicit runtime/commit status and preserve evidence.
+Every case must preserve immutable evidence and explicit runtime/sync status.
 
-## O — Pre-STABLE durability / physical gate
+## P — Pre-STABLE durability / physical gate
 
 Before STABLE promotion can be proposed:
 
-- required V1 vertical slices pass on Cloud;
-- required V1 vertical slices pass on LAN relay/autonomous where declared offline-capable;
-- Web and APK E2E pass against both runtime paths;
-- reconciliation/split-brain tests pass without silent overwrite/drop;
-- scheduled D1 snapshots enabled after core business PASS;
-- at least one D1 restore test;
-- LAN edge pending-event/staged-media recovery test;
-- update/rollback tests for LAN Service and APK channel;
-- real company laptop/network/PDA no-admin LAN regression;
-- quota/retention evidence collected rather than guessed;
-- no OPEN/PENDING work included in destructive archive/purge;
+- required business slices pass through Cloud and LAN;
+- Website/APK E2E pass against both runtime paths;
+- long-offline login/operation acceptance passes;
+- LAN -> Cloud reconciliation and Google receipt deduplication pass;
+- conflict/admin-resolution acceptance passes;
+- D1 snapshot/restore tested;
+- LAN edge pending-event/staged-media recovery tested;
+- LAN/APK update/rollback channels tested;
+- real company laptop/network/PDA no-admin regression passes;
+- quota/retention evidence collected;
 - explicit Owner approval for STABLE promotion.
