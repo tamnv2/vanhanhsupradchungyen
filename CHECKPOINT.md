@@ -1,9 +1,9 @@
 # CHECKPOINT — VHDCHY
 
-checkpoint_version: 18
+checkpoint_version: 19
 protocol: AI_AUTHORITY_RESUME_V2
 status: EXECUTING_PRODUCT_V4_BETA
-reconciled_through_commit: d3c38ba72b5d75286351ccbf0acd0ddaa17ad540
+reconciled_through_commit: 517e767d150488af07f10dacdb8afa23930411e1
 action_mode: AUTONOMOUS_PARALLEL
 active_lanes: SHARED_DOMAIN / CLOUD_SERVICE / LAN_FULL_SERVICE / GOOGLE_SYNC / WEB / ANDROID_APK / RECONCILIATION / STABLE_PREPARATION / KNOWLEDGE_RECONCILIATION
 paused_lanes: PHYSICAL_CORPORATE_LAN_REGRESSION
@@ -38,16 +38,17 @@ legacy_lan_reference_commit: 7b4488a89f585812c1bccba5d07d86049482bf4c
 
 Full GitHub audit found that most Owner-locked business rules are persisted in `DECISIONS.md` and V3/V4 override files, and D1 `business_core_v3` already models the main business domains.
 
-However, documentation is not fully internally reconciled yet. The audit file records active drift:
+Documentation is not fully internally reconciled yet. The active audit records these remaining drifts:
 - `docs/SERVICE_API_CONTRACT.md` remains V2 in several LAN/Google/offline-auth sections;
 - `docs/CANONICAL_MUTATION_PLAN.md` remains V2 for LAN direct-Google behavior;
 - `docs/LAN_EDGE_STATE_V1.md` remains V2 and lacks V3 authority/Google-receipt/cloud-sync requirements;
 - `SERVICE_AUTHORITY.md` still contains V2 LAN authority wording and STABLE-reserved-only wording;
 - `docs/ARCHITECTURE.md` contains older V2 text beneath partial V3 reconciliation;
+- `docs/BETA_ACCEPTANCE_MATRIX.md` still includes some V2 expectations;
 - current CI/provider setup remains BETA-focused; isolated STABLE provider/runtime preparation is not yet implemented;
 - offline canonical LAN-domain resolution is not yet implemented/proven.
 
-`CONTEXT_INDEX.md` was updated so future AI must read V3/V4 overrides and cannot let stale V2 text overrule them.
+`CONTEXT_INDEX.md` now requires future AI to read V3/V4 overrides first.
 
 ## Provider/source state retained
 
@@ -64,7 +65,7 @@ However, documentation is not fully internally reconciled yet. The audit file re
 3. Add isolated STABLE preparation lane/configuration while preserving Owner activation gate.
 4. Continue shared domain-core and dual Cloud/LAN adapters.
 5. Build Web/APK foundations against the same contract.
-6. Start business vertical Slice 1 only after the shared contracts/data boundaries are internally consistent.
+6. Start business vertical Slice 1 only after shared contracts/data boundaries are internally consistent.
 7. Physical LAN/domain regression remains deferred only until the intended company environment is available.
 
 ## do_not_repeat:
