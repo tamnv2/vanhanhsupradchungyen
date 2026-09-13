@@ -111,28 +111,36 @@ jobs:
           console.log('WORKER_MULTI_MODULE_POSTCHECK_PASS');
           NODE
 
-      - name: Verify public BETA health
+      - name: Verify public BETA health after edge propagation
         shell: bash
         run: |
           set -euo pipefail
           node <<'NODE'
           const fs = require('fs');
           const spec = JSON.parse(fs.readFileSync('service/worker/deploy.beta.json', 'utf8'));
+          const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
           async function get(path) {
             const response = await fetch(`${spec.public_origin}${path}`, { cache: 'no-store', redirect: 'follow' });
             const text = await response.text();
             let payload;
-            try { payload = JSON.parse(text); } catch { throw new Error(`${path} non-JSON HTTP ${response.status}`); }
-            if (!response.ok) throw new Error(`${path} HTTP ${response.status}: ${text.slice(0, 800)}`);
-            return payload;
+            try { payload = JSON.parse(text); }
+            catch { return { transportOk: false, status: response.status, text: text.slice(0, 800) }; }
+            return { transportOk: response.ok, status: response.status, payload };
           }
-          const health = await get('/health');
-          if (health?.ok !== true || health?.environment !== 'BETA' || health?.build !== process.env.GITHUB_SHA || health?.d1?.schemaVersion !== 'business_core_v3') throw new Error('/health mismatch');
-          const deep = await get('/health/deep');
-          if (deep?.ok !== true || deep?.environment !== 'BETA' || deep?.build !== process.env.GITHUB_SHA || deep?.d1?.schemaVersion !== 'business_core_v3') throw new Error('/health/deep mismatch');
-          const meta = await get('/api/v1/meta');
-          if (meta?.ok !== true || meta?.runtimeState !== 'BUSINESS_CORE_V3' || meta?.build !== process.env.GITHUB_SHA) throw new Error('/api/v1/meta mismatch');
-          const capabilities = await get('/api/v1/capabilities');
-          if (capabilities?.ok !== true || capabilities?.authority !== 'D1' || capabilities?.anonymousMutationAllowed !== false) throw new Error('/api/v1/capabilities mismatch');
-          console.log(`WORKER_MULTI_MODULE_HEALTH_PASS origin=${spec.public_origin}`);
+          async function expectedBuild(path, predicate) {
+            let last;
+            for (let attempt = 1; attempt <= 12; attempt++) {
+              last = await get(path);
+              const payload = last.payload;
+              if (last.transportOk && predicate(payload)) return payload;
+              console.log(`HEALTH_WAIT path=${path} attempt=${attempt} status=${last.status} body=${JSON.stringify(payload || last.text).slice(0, 1200)}`);
+              if (attempt < 12) await sleep(2500);
+            }
+            throw new Error(`${path} did not converge to expected build ${process.env.GITHUB_SHA}; last=${JSON.stringify(last).slice(0, 1600)}`);
+          }
+          const health = await expectedBuild('/health', p => p?.ok === true && p?.environment === 'BETA' && p?.build === process.env.GITHUB_SHA && p?.d1?.schemaVersion === 'business_core_v3');
+          const deep = await expectedBuild('/health/deep', p => p?.ok === true && p?.environment === 'BETA' && p?.build === process.env.GITHUB_SHA && p?.d1?.schemaVersion === 'business_core_v3');
+          const meta = await expectedBuild('/api/v1/meta', p => p?.ok === true && p?.runtimeState === 'BUSINESS_CORE_V3' && p?.build === process.env.GITHUB_SHA);
+          const capabilities = await expectedBuild('/api/v1/capabilities', p => p?.ok === true && p?.authority === 'D1' && p?.anonymousMutationAllowed === false);
+          console.log(`WORKER_MULTI_MODULE_HEALTH_PASS origin=${spec.public_origin} build=${health.build} google_degraded=${deep?.degraded === true ? 'yes' : 'no'} runtime=${meta.runtimeState} authority=${capabilities.authority}`);
           NODE
