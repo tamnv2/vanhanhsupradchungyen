@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Vận hành DC Hưng Yên</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <strong>VẬN HÀNH DC HƯNG YÊN</strong>
+      <span id="environmentBadge" class="badge">Đang kiểm tra</span>
+    </div>
+    <div id="runtimeStatus" class="status">Runtime: chưa xác định</div>
+  </header>
+
+  <div class="layout">
+    <nav aria-label="Điều hướng chính">
+      <button data-view="dashboard" class="active">Dashboard</button>
+      <button data-view="business">Nghiệp vụ</button>
+      <button data-view="people">Nhân sự</button>
+      <button data-view="attendance">Ra/Vào & Công nhật</button>
+      <button data-view="resources">Tài nguyên</button>
+      <button data-view="documents">Biên bản</button>
+      <button data-view="history">Lịch sử</button>
+      <button data-view="sync">Đồng bộ</button>
+      <button data-view="admin">Quản trị</button>
+      <button data-view="settings">Cài đặt</button>
+    </nav>
+
+    <main>
+      <section class="panel">
+        <h1>Website BETA foundation</h1>
+        <p>Giao diện này dùng chung contract với APK và có thể được phục vụ từ Cloud Service hoặc LAN Service.</p>
+        <div class="grid">
+          <article><h2>Service</h2><p id="serviceSummary">Đang kiểm tra…</p></article>
+          <article><h2>Đồng bộ Cloud</h2><p id="cloudSyncSummary">Chưa có dữ liệu.</p></article>
+          <article><h2>Google output</h2><p id="googleSummary">Chưa có dữ liệu.</p></article>
+          <article><h2>Xung đột</h2><p id="conflictSummary">Chưa có dữ liệu.</p></article>
+        </div>
+      </section>
+      <section id="message" class="panel muted" aria-live="polite">
+        Các màn hình nghiệp vụ vẫn fail-closed cho tới khi shared domain + auth + adapters tương ứng PASS.
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
