@@ -11,7 +11,7 @@ Overall progress requests Owner interaction only for:
 - `OWNER_PERMISSION_REQUIRED`: an Owner-controlled permission/access/consent/secret-store action is required to continue the affected operation; or
 - `OWNER_DECISION_REQUIRED`: a material business/authority contradiction has multiple valid outcomes and cannot be resolved from current Owner instruction, provider evidence or GitHub authority.
 
-Current Owner scope pauses Android/PDA build and physical LAN/model work. Concentrate execution on Worker/Service, Projection, D1, Google Sheets/Drive and the later Web path.
+Physical Android/PDA build/regression and physical LAN testing remain environment-dependent. LAN source/model adaptation is active again using `tamnv2supra/vanhanhdchungyen` strictly as NON_AUTHORITY read-only reference.
 
 ## Provider baseline — PASS
 
@@ -93,7 +93,35 @@ Next:
 3. implement business commands in dependency order after Auth enforcement is executable;
 4. cover BETA scenarios from `DECISIONS.md`: IN/OUT/repeated IN, MNV reuse, PICK/PACK mixed tasks, resource changes/reissue/borrow, labor, dropped goods, documents and degraded projection.
 
-## Gate 5 — Drive media/documents
+## Gate 5 — LAN source/model adaptation — ACTIVE
+
+Reference boundary:
+- current authority remains this repository;
+- legacy repo `tamnv2supra/vanhanhdchungyen` is read-only evidence/reference;
+- use fixed V4 comparison commit `7b4488a89f585812c1bccba5d07d86049482bf4c`, not moving `main`;
+- restoration analysis is in `docs/LAN_SOURCE_REVIEW_20260913.md`.
+
+Confirmed reusable legacy patterns:
+- no-admin portable Windows Agent;
+- cached endpoint -> UDP discovery -> manual recovery;
+- health validation and two-sample anti-flapping hysteresis;
+- durable local queue with stable `event_id`, monotonic `device_seq`, ACK-driven removal and deterministic duplicate handling;
+- `streamEpoch + sequence` restart/buffer-gap resync;
+- diagnostics, transfer/load measurement and safe export;
+- foreground-only realtime plus bounded finish-only background work.
+
+Next executable work without physical devices:
+1. define current `VHDCHY_LAN_TRANSPORT_BETA_V1` command envelope aligned with the Service API: request ID/idempotency key, device ID/sequence, actor/session context, command type, entity/version precondition and payload hash;
+2. define Agent/PDA pairing and authenticated channel requirements so old service/protocol string matching is never treated as business authentication;
+3. define a transport-neutral durable queue contract usable by later Android and optional LAN Agent relaying without changing D1 canonical authority;
+4. adapt discovery/health/hysteresis/reconnect state semantics into current BETA design;
+5. define realtime/status use of `streamEpoch + sequence` separately from canonical business mutation ordering;
+6. add LAN source-level acceptance cases to the BETA matrix: discovery identity, anti-flap, queue order, idempotent retry, epoch resync, bounded background work and no cleartext business-secret path;
+7. prepare current source structure only where it does not require Android signing or physical network evidence.
+
+Physical LAN/PDA PASS remains pending the real company laptop/network and MT90 devices. Do not report old 0.3.36 physical evidence as current-production PASS.
+
+## Gate 6 — Drive media/documents
 
 After initial business API primitives are executable:
 1. implement durable upload flow;
@@ -102,7 +130,7 @@ After initial business API primitives are executable:
 4. implement employee portrait replacement semantics;
 5. test upload failure/duplicate/retry and durable-readback gates.
 
-## Gate 6 — Web
+## Gate 7 — Web
 
 Do not start a mock-heavy frontend before the Auth/runtime and initial business API are usable.
 
@@ -113,9 +141,9 @@ Then:
 4. add Drive/media flows;
 5. run Web -> Service -> D1 -> Projection/Drive E2E acceptance.
 
-## Paused — Android / LAN
+## Physical dependencies — Android / LAN
 
-Android/PDA build and physical LAN/model work are paused by current Owner instruction until Android and company-laptop/network environments are available. They are not on the current critical path and must not block Service/Web/Google progress.
+Android/PDA packaging/signing/physical regression and real corporate-network LAN regression remain pending the required devices/company environment. These physical dependencies do not block LAN source/model work or Service/Web/Google progress.
 
 ## STABLE
 
