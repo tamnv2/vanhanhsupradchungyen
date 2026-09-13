@@ -1,113 +1,80 @@
 # ARCHITECTURE
 
-Status: ACTIVE / V2 TARGET 2026-09-13
-Primary detail: `docs/TARGET_PRODUCT_ARCHITECTURE_V2.md`
-Execution: `docs/DELIVERY_PLAN_V2.md`
+Status: ACTIVE / V3 TARGET 2026-09-13
+Primary detail: `docs/TARGET_PRODUCT_ARCHITECTURE_V3.md`
+Execution: `docs/DELIVERY_PLAN_V3.md`
 
 ## Product topology
 
 ```text
-                       +-------------------+
-                       |      Website      |
-                       +-------------------+
-                                 \
-                                  \
-                                   > one domain/API contract
-                                  /
-                       +-------------------+
-                       |    Android APK    |
-                       +-------------------+
-                                  |
-                    +-------------+-------------+
-                    |                           |
-             Cloud Service path           LAN Service path
-                    |                           |
-            Cloudflare Worker            local no-admin host
-                    |                   /                  \
-                   D1            Cloud reachable       Cloud unavailable
-                    |                 LAN_RELAY          LAN_AUTONOMOUS
-            immutable events               |                  |
-              + outbox                     +-------> Cloud    + edge DB
-                    |                                          + event journal
-          Google Gateway                                      + sync outbox
-            /          \                                       + staged media
-       Sheets          Drive                                         |
-                                                             reconcile to D1
-                                                               after recovery
+Website / APK
+      |
+      +-------------------------------+
+      |                               |
+Cloud Service                    LAN Service
+Worker + D1                 edge DB/event journal
+      |                         |        |
+      |                         |        +-> Cloud sync/reconcile when reachable
+      |                         +----------> Google projection/Drive when reachable
+      |
+Google Gateway -> Sheets / Drive
 ```
 
-## Client rule
+Website and APK use one business/domain contract. Cloud Service and LAN Service use the same business command/event semantics with different persistence/runtime adapters.
 
-Web and APK are clients of the same business platform.
+## Cloud path
 
-- Web: wider/full browser management and operational surface.
-- APK: PDA-optimized compact operational surface.
-- Both use the same authenticated command/query/error/permission semantics.
-- UI/device differences do not create separate business rules or authorities.
+Normal path:
 
-## Cloud Service
+`Web/APK -> Cloud Service -> D1 -> Google`
 
-Normal online runtime:
-- Cloudflare Worker is the public Service entry point;
-- D1 is the global canonical structured authority after normal commit/reconciliation;
-- business mutations are immutable-event/idempotency oriented;
-- Google integration is downstream/asynchronous.
+D1 is the central consolidated structured store after synchronization.
 
-## LAN Service
+## LAN path
 
-LAN is not merely a transport test.
+LAN is a full local Service substitute, not transport-only.
 
-Required modes:
-- `LAN_RELAY`: client uses LAN endpoint while LAN can reach Cloud; Cloud/D1 remains the immediate canonical commit path;
-- `LAN_AUTONOMOUS`: Cloud/upstream unavailable; LAN executes approved offline-capable commands locally, persists edge events and queues later D1 reconciliation.
+It supports:
+- user-forced LAN routing under the approved elevated-control rule;
+- Cloud Service unavailable/degraded while Internet remains available;
+- complete Internet loss while local Wi-Fi/LAN remains usable.
 
-Required use cases:
-- site Internet unavailable but local Wi-Fi/LAN still works;
-- Cloud Service unavailable/degraded;
-- an individual client is forced to LAN because its direct Cloud path is problematic.
+During LAN operation:
+- accepted business operations commit to local edge state + immutable local events;
+- if Cloud is reachable, LAN synchronizes to D1 in the background without requiring a route switch;
+- if Google is reachable, LAN may project to Sheets/upload Drive directly using stable IDs/receipts;
+- if Google is unavailable, Google work is queued/staged locally;
+- later Cloud reconciliation consumes LAN event/outbox records, not Sheets/Drive as a business source.
 
-LAN remains no-admin/minimum-information and must not assume control of company router/firewall/internal DNS.
+## Offline authority
 
-## Shared business core
+LAN maintains the latest synchronized local authority/configuration snapshot required for offline business operation. Offline duration alone does not expire login under the current Owner requirement.
 
-Cloud and LAN must not maintain independently invented business logic.
+Remote changes that occur during a true partition cannot be known until reconnect. After refresh, new authority/configuration applies to later operations. Already accepted offline events remain immutable evidence and reconcile explicitly.
 
-Target separation:
+Only SUPERADMIN/ROOT may deliberately force LAN while Cloud is healthy. Forced routing is audited and does not disable background Cloud synchronization when Cloud is reachable.
 
-```text
-Domain command/query contract
-        |
-provider-neutral business validation / transition / event intent
-        |
-   +----+----+
-   |         |
-D1 adapter  LAN edge adapter
-```
+## Conflict model
 
-Both adapters must pass identical business acceptance vectors and machine error semantics.
-
-## Offline authority and reconciliation
-
-A hard partition cannot provide both guaranteed global single-writer consistency and uninterrupted local writes. Because the product requirement requires continued local operation, LAN autonomous mode uses explicit event reconciliation rather than pretending this limitation does not exist.
-
-Rules:
-- edge acceptance is durable and auditable;
-- stable idempotency/device/event identities survive reconnect;
-- non-conflicting events reconcile once;
-- conflicting events are retained as `SYNC_CONFLICT` evidence and never silently overwritten/dropped;
-- D1 becomes global canonical after successful reconciliation.
+Hard partitions can create independent Cloud/LAN changes. Therefore:
+- stable event/idempotency/device/version identity is mandatory;
+- non-conflicting reconciliation is automatic;
+- technical/provider retries are automatic;
+- silent last-write-wins/drop is prohibited;
+- unresolved business conflicts are escalated to ADMIN+ with evidence;
+- ROOT-security conflicts retain the existing ROOT-exclusive boundary.
 
 ## Google rules
 
-- Sheets is asynchronous projection/reconciliation/DR only.
-- Drive is media/document/archive storage.
-- LAN does not turn Sheets into a fallback database.
-- During Internet/Cloud loss, projection and Drive upload are deferred/staged.
-- Structured LAN events reconcile to D1 before normal Sheets projection.
+- Sheets remains projection/reconciliation/DR, not business authority.
+- Drive remains media/document/archive storage.
+- Authorized Cloud and LAN Service writers must use controlled Google integration and stable projection/file identities.
+- Google output may precede D1 reconciliation for LAN-accepted events when Internet/Google is available.
+- Cloud sync still consumes LAN event/outbox records; Google receipts only prevent duplicate output.
 
 ## Local Web continuity
 
-A public-cloud webpage is not sufficient during complete Internet loss. The LAN package must support a reviewed way to load the current Web client locally, preferably by serving the compatible Web bundle from the LAN Service. This allows browser clients on the same site network to continue against LAN Service.
+The LAN Service must support a reviewed local-loading path for the compatible Website build so browser clients can continue operating during complete Internet loss.
 
 ## Environment mapping
 
@@ -121,12 +88,18 @@ A public-cloud webpage is not sufficient during complete Internet loss. The LAN 
 | Signing | isolated signer | isolated signer |
 | LAN runtime state | isolated BETA local state | isolated STABLE local state |
 
-## Current unresolved security policy
+## Shared business core
 
-Do not invent these values/permissions:
-- exact offline-auth credential/capability mechanism;
-- exact offline-auth expiry/TTL;
-- which privileged security/admin actions are allowed offline;
-- who may explicitly enter emergency autonomous mode.
+Cloud and LAN must not maintain independently invented business logic.
 
-Until reviewed, unresolved privileged offline behavior remains fail-closed.
+```text
+Domain command/query contract
+        |
+provider-neutral validation / transition / event intent
+        |
+   +----+----+
+   |         |
+D1 adapter  LAN edge adapter
+```
+
+Both adapters must pass the same business acceptance vectors and machine error semantics.
