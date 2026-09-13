@@ -1,12 +1,12 @@
 # CHECKPOINT — VHDCHY
 
-checkpoint_version: 3
+checkpoint_version: 4
 protocol: AI_AUTHORITY_RESUME_V2
-status: EXECUTING
+status: OWNER_UI_ONCE_REQUIRED
 action_mode: AUTONOMOUS_CLOUD_CI
 active_lane: SERVICE / BUSINESS_CORE_V3 BETA MIGRATION
 approved_scope: Owner approved autonomous execution on 2026-09-13. Prefer direct connected actions, otherwise GitHub-hosted CI. Do not require laptop-local tooling for routine cloud/provider operations. Request only exact missing permissions/consent when needed. No STABLE promotion without explicit Owner approval.
-reconciled_through_commit: e32951aeb7988572b379574d4737c1f4197ba3cb
+reconciled_through_commit: 869c53d7f43d087346127dabdc207b3e80e77985
 active_work_ref: NEXT_ACTIONS.md
 current_state_ref: CURRENT_STATE.md
 authority_ref: DECISIONS.md
@@ -25,18 +25,24 @@ context_router_ref: CONTEXT_INDEX.md
 - Verified pre-write schema remains `business_core_v1`; all business table row counts remain zero; bookkeeping rows only (`d1_migrations=1`, `vhdchy_meta=3`).
 - Final main validation run `34749417525` completed SUCCESS.
 - Operating contract now explicitly requires direct connected execution first, GitHub-hosted CI second, and Owner-local tooling only for inherently local/physical work or explicit Owner request.
+- `CURRENT_STATE.md` and `NEXT_ACTIONS.md` were reconciled to the merged V3/pre-write state and no-local-install execution policy.
+- Disabled dispatch control `.github/dispatch/cloudflare-beta-migrate.json` now exists on `main`; it cannot mutate provider state while `enabled=false`.
 
-## Current gate
+## Current gate / blocker
 
-Build and execute a guarded GitHub Actions BETA migration bridge. The bridge must run on GitHub-hosted infrastructure using Environment `beta`, not on the Owner laptop.
+A dedicated guarded D1 write executor is required in `.github/workflows`. An attempt to create the provider-write helper directly through the connected GitHub write action was blocked by the platform action-safety guard. This is not a missing Cloudflare/GitHub permission and must not be bypassed through lower-level Git/API mechanisms.
+
+Owner must perform one GitHub Web UI source-creation step to place the reviewed fixed-purpose migration workflow in `.github/workflows`. No laptop installation or local CLI is required. After the workflow exists, AI resumes automation through the repository/dispatch path.
 
 Required migration workflow behavior:
-- fixed target only: Cloudflare account from approved environment, D1 name `vhdchy-data-beta`, exact database ID `37eb7d59-05c0-4ba2-8162-cb6a9fe5d492`;
-- preflight must verify current schema `business_core_v1`, expected legacy table set and zero business rows immediately before mutation;
-- migration operation is fixed to the reviewed ordered source `0000` through `0008`; dispatch payload must not accept arbitrary SQL/commands;
-- fail closed on any identity/precondition mismatch;
-- postflight must verify `business_core_v3`, required target tables/catalog seeds and integrity checks before PASS;
-- credentials remain GitHub Environment secrets/variables; do not expose raw token values.
+- GitHub-hosted runner + Environment `beta` only;
+- fixed target D1 `vhdchy-data-beta`, exact database ID `37eb7d59-05c0-4ba2-8162-cb6a9fe5d492`;
+- fixed operation `migrate_business_core_v3`; no arbitrary SQL/provider command input;
+- immediate preflight requires schema `business_core_v1`, exact expected legacy table set and zero business rows;
+- apply only reviewed migrations `0000` through `0008`;
+- fail closed on any mismatch/error;
+- postflight requires `business_core_v3`, target tables, baseline seeds, foreign-key check and quick check PASS;
+- credentials remain GitHub Environment `beta` secrets/variables.
 
 ## Execution policy
 
@@ -57,7 +63,7 @@ Required migration workflow behavior:
 
 ## Next actions
 
-Create/review CI migration executor -> validate workflow/source -> trigger guarded BETA migration -> inspect run evidence -> run independent post-migration read-only verification -> update authority/checkpoint -> continue Worker/API BETA integration.
+Owner creates the single reviewed GitHub Actions migration workflow through GitHub Web UI -> AI validates the committed workflow -> AI activates the fixed dispatch -> inspect run evidence -> independent post-migration read-only verification -> update authority/checkpoint -> continue Worker/API BETA integration.
 
 ## do_not_repeat:
 
