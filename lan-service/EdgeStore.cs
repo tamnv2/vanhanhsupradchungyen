@@ -69,6 +69,16 @@ internal sealed class EdgeStore
                 "SELECT COUNT(*) FROM edge_conflicts WHERE state IN ('OPEN','REVIEW_REQUIRED')", cancellationToken));
     }
 
+    public async Task<EdgeStoreIntegrity> CheckIntegrityAsync(CancellationToken cancellationToken = default)
+    {
+        await using var connection = await OpenAsync(cancellationToken);
+        var foreignKeyViolations = await CountRowsAsync(connection, "PRAGMA foreign_key_check", cancellationToken);
+        var quickCheck = await ScalarTextAsync(connection, "PRAGMA quick_check", cancellationToken);
+        return new EdgeStoreIntegrity(
+            ForeignKeysOk: foreignKeyViolations == 0,
+            QuickCheckOk: string.Equals(quickCheck, "ok", StringComparison.OrdinalIgnoreCase));
+    }
+
     private async Task<SqliteConnection> OpenAsync(CancellationToken cancellationToken)
     {
         var connection = new SqliteConnection(_connectionString);
@@ -154,6 +164,30 @@ internal sealed class EdgeStore
         return Convert.ToInt64(value ?? 0L);
     }
 
+    private static async Task<long> CountRowsAsync(
+        SqliteConnection connection,
+        string sql,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.CommandText = sql;
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        long count = 0;
+        while (await reader.ReadAsync(cancellationToken)) count++;
+        return count;
+    }
+
+    private static async Task<string?> ScalarTextAsync(
+        SqliteConnection connection,
+        string sql,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.CommandText = sql;
+        var value = await command.ExecuteScalarAsync(cancellationToken);
+        return value is null or DBNull ? null : Convert.ToString(value);
+    }
+
     private static DateTimeOffset? ParseTimestamp(string? value) =>
         DateTimeOffset.TryParse(value, out var timestamp) ? timestamp : null;
 
@@ -216,9 +250,6 @@ CREATE TABLE IF NOT EXISTS edge_events (
   payload_hash TEXT NOT NULL,
   accepted_at TEXT NOT NULL,
   authority_snapshot_version TEXT NOT NULL,
-  reconciliation_status TEXT NOT NULL DEFAULT 'PENDING' CHECK (reconciliation_status IN ('PENDING','SYNCHRONIZING','RECONCILED','CONFLICT','REVIEW_REQUIRED')),
-  canonical_event_id TEXT,
-  canonical_committed_at TEXT,
   FOREIGN KEY(authority_snapshot_version) REFERENCES authority_snapshots(authority_version) ON UPDATE CASCADE ON DELETE RESTRICT
 );
 
@@ -229,12 +260,27 @@ CREATE UNIQUE INDEX IF NOT EXISTS ux_edge_event_device_sequence
 ON edge_events(device_id, device_seq)
 WHERE device_id IS NOT NULL AND device_seq IS NOT NULL;
 
-CREATE INDEX IF NOT EXISTS ix_edge_event_reconciliation
-ON edge_events(reconciliation_status, accepted_at);
+CREATE TRIGGER IF NOT EXISTS trg_edge_events_no_update
+BEFORE UPDATE ON edge_events
+BEGIN SELECT RAISE(ABORT, 'edge_events are immutable'); END;
 
 CREATE TRIGGER IF NOT EXISTS trg_edge_events_no_delete
 BEFORE DELETE ON edge_events
 BEGIN SELECT RAISE(ABORT, 'edge_events are immutable'); END;
+
+CREATE TABLE IF NOT EXISTS edge_reconciliation_state (
+  event_id TEXT PRIMARY KEY,
+  state TEXT NOT NULL DEFAULT 'PENDING' CHECK (state IN ('PENDING','SYNCHRONIZING','RECONCILED','CONFLICT','REVIEW_REQUIRED')),
+  canonical_event_id TEXT,
+  canonical_committed_at TEXT,
+  last_attempt_at TEXT,
+  last_error_code TEXT,
+  updated_at TEXT NOT NULL,
+  FOREIGN KEY(event_id) REFERENCES edge_events(event_id) ON UPDATE CASCADE ON DELETE RESTRICT
+);
+
+CREATE INDEX IF NOT EXISTS ix_edge_reconciliation_state
+ON edge_reconciliation_state(state, updated_at);
 
 CREATE TABLE IF NOT EXISTS cloud_sync_outbox (
   outbox_id TEXT PRIMARY KEY,
@@ -331,3 +377,10 @@ internal sealed record EdgeStoreStatus(
     long PendingCloudSync,
     long PendingGoogleWork,
     long ConflictCount);
+
+internal sealed record EdgeStoreIntegrity(
+    bool ForeignKeysOk,
+    bool QuickCheckOk)
+{
+    public bool Ok => ForeignKeysOk && QuickCheckOk;
+}
