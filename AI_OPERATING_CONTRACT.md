@@ -30,7 +30,7 @@ Authority order for active work:
 4. task-specific source/config on `main`;
 5. historical/reference material only when explicitly required for reconciliation.
 
-If current provider evidence contradicts GitHub state, do not silently choose either side: stop the affected mutation, classify GitHub as stale, reconcile the discrepancy, and persist the corrected state.
+If current provider evidence contradicts GitHub state, do not silently choose either side: stop the affected mutation, classify GitHub as stale, reconcile the discrepancy, and persist the corrected state. Continue all unrelated safe work while that affected mutation is paused.
 
 A new Owner decision that must survive sessions must be persisted to GitHub before it is treated as persistent authority.
 
@@ -44,20 +44,23 @@ Use `CONTEXT_INDEX.md` to choose `FAST`, `FOCUSED` or `FULL` reads.
 
 Do not read historical logs, full changelog or unrelated lanes merely for completeness. Escalate context only when correctness requires it.
 
-## 4. Owner approval protocol
+## 4. Owner approval protocol and non-stop execution rule
 
-Before a new material scope is executed:
-1. analyze the Owner request;
-2. identify assumptions, risks, dependencies and parallelizable work;
-3. propose an execution plan and approval boundary;
-4. obtain Owner approval;
-5. persist the approved active scope to `CHECKPOINT.md` before the first material mutation when practical.
+For a genuinely new material scope, analyze intent, risks, dependencies and parallelizable work, then use the Owner's current instruction as the approval boundary. Once the Owner has approved or directly instructed the scope, execute all available actions end-to-end without adding routine confirmation gates.
 
-After approval, AI executes all actions available through connected tools end-to-end. Do not add a second approval gate merely because automation is inconvenient.
+The default state is `CONTINUE`, not `WAIT`.
 
-Request Owner interaction only when a required action is genuinely unavailable to tools, requires interactive consent, requires private input that must not enter chat/source, or requires physical access.
+Do not stop overall project progress because of ordinary implementation errors, failed CI, transient provider errors, unavailable local tooling, incomplete evidence, a blocked single lane, or because another independent task is still running. Diagnose, repair, verify and continue automatically. If one lane is blocked, keep all independent safe lanes moving.
 
-If execution would materially expand or change the approved scope, mark the plan as needing re-approval before that expansion.
+Overall progress may stop for Owner interaction only when one of these two conditions is true:
+1. `OWNER_PERMISSION_REQUIRED`: a missing permission, access grant, secret-store setup, interactive consent or equivalent Owner-controlled capability prevents AI from continuing the required action. Ask only for the exact minimum grant/action and continue every other independent lane meanwhile.
+2. `OWNER_DECISION_REQUIRED`: a material conflict, contradiction or unresolved business/authority choice has multiple materially different valid outcomes and cannot be resolved from current Owner instruction, verified provider state or GitHub authority. Present the conflict and request only the specific decision needed. Continue every other independent lane meanwhile.
+
+Do not ask Owner to reconfirm a choice already resolved by current instruction, `DECISIONS.md`, provider evidence or task-specific authority.
+
+A technical failure is not an Owner blocker unless it reduces to one of the two conditions above. First attempt safe diagnosis, correction, alternate connected execution, GitHub-hosted CI, or read-only evidence collection.
+
+Standing explicit Owner gates already recorded in authority, such as STABLE promotion, apply only to that gated lane. Reaching such a gate does not stop unrelated BETA/LAN/Android/documentation work that can still proceed safely.
 
 ## 5. Autonomous execution and no-local-install default
 
@@ -79,7 +82,7 @@ CI mutation workflows must be fail-closed: verify environment, account/resource 
 
 ## 6. Dependency and parallel execution
 
-Build a dependency graph before substantial execution.
+Build and continuously maintain a dependency graph before and during substantial execution.
 
 Classify work nodes where useful as:
 - `READ_ONLY`
@@ -88,9 +91,13 @@ Classify work nodes where useful as:
 - `OWNER_INTERACTION`
 - `PHYSICAL`
 
+At every checkpoint or newly completed gate, immediately re-evaluate which remaining nodes are independent and start/execute them without waiting for unrelated nodes. Parallelism is a required operating behavior, not an optional optimization.
+
 Execute independent nodes in parallel when tools and safety permit. Execute dependency-bound nodes in order. Serialize writes to the same file, branch/ref, database or provider resource.
 
-Do not block Service work merely because physical LAN testing is unavailable. When Owner is at the company, independent LAN and Service work may proceed in parallel.
+If one node fails, isolate the failure, preserve evidence, and continue all nodes that do not depend on it. A failed node becomes a global stop only if it creates `OWNER_PERMISSION_REQUIRED` or `OWNER_DECISION_REQUIRED` and no other actionable independent work remains.
+
+Do not block Service work merely because physical LAN testing is unavailable. Do not block projection design merely because auth runtime work is active. Do not block Web/API contract work merely because projection activation is pending when their shared dependencies are already stable. When Owner is at the company, independent LAN and Service work may proceed in parallel.
 
 ## 7. Checkpoint and interruption protocol
 
@@ -107,7 +114,9 @@ Checkpoint at these boundaries:
 
 Because exact tool lifetime may not always be observable, milestone checkpoints are mandatory and more important than relying on a clock alone.
 
-A checkpoint records at minimum: protocol version, active lane, status/gate, approved scope or approval state, reconciled commit, completed items, in-progress/blocked items, next actions, direct evidence references, and `do_not_repeat` safeguards.
+A checkpoint records at minimum: protocol version, active lanes, status/gate, approved scope or approval state, reconciled commit, completed items, in-progress/blocked items, parallel work still actionable, next actions, direct evidence references, and `do_not_repeat` safeguards.
+
+Do not convert checkpointing into a pause. After writing a checkpoint, continue automatically unless `OWNER_PERMISSION_REQUIRED` or `OWNER_DECISION_REQUIRED` applies and no independent work remains.
 
 ## 8. Resume protocol
 
@@ -116,9 +125,10 @@ On resume:
 2. compare checkpoint reconciliation point with current `main` changes;
 3. read the minimum relevant authority/source/evidence;
 4. verify uncertain previous outcomes before repeating any mutation;
-5. continue from the first incomplete safe node.
+5. rebuild the dependency/parallel-work view;
+6. continue from all currently actionable safe nodes, not just a single serial next step.
 
-If only unrelated documentation changed, use focused reconciliation. If relevant authority/source changed, reconcile before continuing. If the checkpoint cannot be reconciled safely, escalate to FULL.
+If only unrelated documentation changed, use focused reconciliation. If relevant authority/source changed, reconcile before continuing. If the checkpoint cannot be reconciled safely, escalate to FULL for the affected lane while unrelated lanes continue.
 
 Never repeat a migration/deploy/provider mutation merely because a previous session ended before reporting the result. Inspect evidence first.
 
@@ -126,13 +136,15 @@ Never repeat a migration/deploy/provider mutation merely because a previous sess
 
 A requested or automated action is not `PASS` merely because the command was issued. PASS requires observable evidence such as a successful API response, provider state, GitHub Actions result, remote health result, or other task-appropriate verification.
 
-If outcome is uncertain, record `UNKNOWN`/`VERIFY_REQUIRED`, not PASS.
+If outcome is uncertain, record `UNKNOWN`/`VERIFY_REQUIRED`, investigate it, and continue independent work. Do not turn uncertainty alone into an Owner stop.
 
 ## 10. Fail closed
 
 Before provider changes, verify the current account, environment and exact resource identity. Missing or mismatched expected resources must stop the affected operation unless Owner explicitly approves a reviewed replacement plan.
 
 Do not silently recreate provider resources, overwrite unknown databases, broaden permissions, promote STABLE, or infer current remote state from old history.
+
+Fail-closed applies to the affected mutation, not automatically to all project progress. Continue independent safe lanes.
 
 ## 11. Repository discipline
 
@@ -141,7 +153,7 @@ Do not silently recreate provider resources, overwrite unknown databases, broade
 - Move/promote STABLE only after BETA PASS and explicit Owner approval.
 - `CHECKPOINT.md` holds short-lived execution/resume state.
 - `CURRENT_STATE.md` holds concise current system truth.
-- `NEXT_ACTIONS.md` holds remaining ordered gates/work.
+- `NEXT_ACTIONS.md` holds remaining ordered/parallel gates and work.
 - `SERVICE_AUTHORITY.md` holds canonical identities/resource authority.
 - `DECISIONS.md` holds active architectural/operational decisions.
 - `CHANGELOG.md` holds history and is not a default FAST read.
