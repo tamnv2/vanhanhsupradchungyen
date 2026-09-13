@@ -2,7 +2,7 @@
 
 Status: ACTIVE EXECUTION PLAN
 Updated: 2026-09-13
-Authority: current Owner instruction, decision layers V1/V3/V4/V5, V3 architecture and reviewed project evidence.
+Authority: current Owner instruction, decision layers V1/V3/V4/V5/V6, V3 architecture and reviewed project evidence.
 
 Goal: reach a complete BETA product containing Website + APK + Cloud Service + LAN Service + Google outputs, while preparing isolated STABLE infrastructure so promotion later uses the exact accepted BETA release with minimal setup work and no BETA runtime-data copy.
 
@@ -38,21 +38,19 @@ D1 adapters            Edge adapters           shared client            isolated
                          STABLE activate
 ```
 
-## Phase 0 — knowledge/authority reconciliation — ACTIVE, mostly complete
+## Phase 0 — knowledge/authority reconciliation — COMPLETE FOR CURRENT OWNER-LOCKED RULES
 
 Outputs:
-- effective decision layers V1/V3/V4/V5;
+- effective decision layers V1/V3/V4/V5/V6;
 - canonical Owner business-rules handbook;
 - V3 shared Service API contract;
 - V2 LAN edge-state contract;
 - non-functional baseline;
 - data-model guide;
-- stale V2 wording no longer allowed to overrule current authority.
+- stale V2 wording no longer allowed to overrule current authority;
+- ROOT factor/lifetime ambiguity from V5 resolved by V6.
 
-Remaining gate:
-- Owner answers the two ROOT factor/OTP semantics in `DECISIONS_V5.md` before final ROOT auth behavior is coded.
-
-This does not block unrelated runtime/domain work.
+No known ROOT factor/lifetime Owner decision gate remains open. A future `OWNER_DECISION_REQUIRED` may be raised only for a genuinely new unspecified material choice.
 
 ## Phase 1 — shared domain foundation — START NOW
 
@@ -94,9 +92,18 @@ Current foundation already exists: D1 `business_core_v3`, Worker health/meta, au
 
 Replace the current single-`index.js` upload limitation with reviewed multi-module Worker packaging and validation. This is the immediate Cloud runtime blocker.
 
-### C2 — protected route integration
+### C2 — protected route integration + V6 authentication runtime
 
 Integrate session/permission context into runtime after C1. Keep business/admin routes fail-closed until tests pass.
+
+Implement the locked V6 authentication contract:
+- ROOT normal login by fixed-email one-time password;
+- 5-minute validity and 5-minute resend cooldown;
+- atomic single-use consumption and replay rejection;
+- optional ROOT TOTP, enforced only when enabled;
+- ROOT one-time login does not set `MUST_CHANGE_PASSWORD`;
+- normal-account forgot-password uses the same one-time credential lifecycle but enters restricted `MUST_CHANGE_PASSWORD` until a different permanent password is set;
+- no readable credential values in source/log/audit/business storage.
 
 ### C3 — Cloud canonical mutation adapter
 
@@ -157,7 +164,8 @@ Physical LAN/domain proof remains a later gate.
 - common API client;
 - runtime selector/state indicators;
 - conflict/admin surface shell;
-- online build and LAN-hostable build from the same compatible source.
+- online build and LAN-hostable build from the same compatible source;
+- V6 one-time-password request/use flow and normal-account forced-password-change state.
 
 ### A1 — APK shell
 
@@ -167,7 +175,8 @@ Physical LAN/domain proof remains a later gate.
 - Cloud/LAN endpoint selection;
 - durable client queue only for explicitly allowed cases;
 - update/compatibility foundations;
-- BETA/STABLE signing/channel separation.
+- BETA/STABLE signing/channel separation;
+- V6 one-time-password request/use flow and normal-account forced-password-change state.
 
 Android physical scanner validation can wait for hardware; source/build/test does not.
 
@@ -275,7 +284,7 @@ Implement/test:
 
 Use `docs/BETA_ACCEPTANCE_MATRIX.md` plus recovered non-functional targets.
 
-Mandatory evidence includes Cloud/LAN Web/APK paths, long offline operation, direct LAN Google output, Cloud reconciliation, conflict handling, C01–C10, documents/media, provider outages, burst/soak/quota, backup/restore/update and BETA/STABLE isolation.
+Mandatory evidence includes Cloud/LAN Web/APK paths, V6 authentication/recovery cases, long offline operation, direct LAN Google output, Cloud reconciliation, conflict handling, C01–C10, documents/media, provider outages, burst/soak/quota, backup/restore/update and BETA/STABLE isolation.
 
 Physical company laptop/network/PDA evidence is mandatory before final BETA PASS/STABLE proposal.
 
@@ -295,8 +304,9 @@ Never rename BETA to STABLE and never copy BETA runtime/business data as promoti
 ## Current parallel execution set
 
 Can run immediately and in parallel:
-- knowledge/contract reconciliation except the two ROOT semantics;
+- authority/contract reconciliation through V6;
 - Worker multi-module packaging design/source;
+- V6 auth state-machine/runtime/test implementation;
 - shared domain-core interfaces/vectors;
 - V3 reconciliation migration design/source;
 - LAN runtime/edge skeleton;
@@ -309,9 +319,7 @@ Requires later physical environment:
 - company LAN reachability/domain/no-admin regression;
 - real MT90 scanner/network regression.
 
-Requires Owner answer before final implementation:
-- ROOT TOTP enable/disable requirement;
-- ROOT email OTP lifetime/unused rotation semantics.
+No known ROOT factor/lifetime Owner decision remains open after `DECISIONS_V6.md`.
 
 Requires Owner/provider interaction only if missing when reached:
 - STABLE provider credentials/interactive Google/GAS setup;
