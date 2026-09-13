@@ -3,66 +3,88 @@
 Baseline: `REPO-RESET-20260912-01`
 Updated: 2026-09-13
 
-## Google Gateway BETA — FOUNDATION PASS
+## Execution rule
 
-Google Cloud/OAuth, GitHub Environment `beta`, source synchronization, runtime bootstrap, immutable versioning, managed deployment and `/exec` verification are complete. Gateway remains foundation-only: business projection/outbox handling is not yet live and the BETA projection workbook remains `PROVISIONED_NOT_LIVE`.
+The active operating mode is autonomous and parallel. The default state is `CONTINUE`.
 
-## Cloudflare D1 BETA — BUSINESS_CORE_V3 PASS
+Overall progress requests Owner interaction only for:
+- `OWNER_PERMISSION_REQUIRED`: an Owner-controlled permission/access/consent/secret-store action is required to continue the affected operation; or
+- `OWNER_DECISION_REQUIRED`: a material business/authority contradiction has multiple valid outcomes and cannot be resolved from current Owner instruction, provider evidence or GitHub authority.
 
-Evidence:
-- guarded migration run `34752340290` — SUCCESS;
-- independent post-migration inspection `34752381290` — SUCCESS;
-- D1 `vhdchy-data-beta` / `37eb7d59-05c0-4ba2-8162-cb6a9fe5d492`;
-- schema `business_core_v3`;
-- target tables/seeds/integrity PASS;
-- business rows remain zero.
+A technical error, failed CI, tool limitation, unavailable local tooling, physical-lane pause or blocked single lane does not stop independent safe work.
 
-## Cloudflare Worker BETA — V3 DEPLOY + HEALTH PASS
+## Provider baseline — PASS
 
-Evidence:
-- deploy workflow validation after CI correction `34752890965` — SUCCESS;
-- guarded deploy run `34752917714` — SUCCESS;
-- independent provider verification `34752966242` — SUCCESS;
-- Worker `vhdchy-beta` on `https://beta.supra.cc.cd`;
-- workers.dev disabled;
-- DB binding targets verified BETA D1;
-- `/health`, `/health/deep`, `/api/v1/meta`, `/api/v1/capabilities` PASS;
-- deployed runtime `BUSINESS_CORE_V3`, schema `business_core_v3`;
-- Google Gateway was healthy during deep-health verification.
+Cloudflare BETA:
+- D1 `vhdchy-data-beta` is `business_core_v3`; migration/integrity/independent verification PASS.
+- Worker `vhdchy-beta` is deployed at `https://beta.supra.cc.cd`; public health and independent provider verification PASS.
+- Existing deployed business/admin APIs remain fail-closed, which is intentional until auth/runtime enforcement passes.
 
-The first Worker deploy attempt `34752843601` failed before provider upload because of CI Node script-format ambiguity. It is superseded by the successful corrected deployment and must not be retried.
+Google BETA:
+- Projection workbook remains `PP1291_SHEETS_BETA_V1` / `PROVISIONED_NOT_LIVE`.
+- Managed Apps Script deployment is immutable version `3`; run `34753872034` PASS.
+- Version 3 contains fail-closed `VHDCHY_PROJECTION_V1` batch/upsert handling. Projection writes remain disabled until secure cross-service authentication + enable gate + end-to-end tests pass.
 
-## Immediate priority — authentication/session/effective permissions
+## Parallel Lane A — Auth / session / permission
 
-1. Implement password verification/reset contract consistent with Owner policy: minimum 8 characters, common-password blocking, long passphrases allowed, no forced periodic rotation absent incident, temporary reset password forces change.
-2. Implement authenticated sessions using `auth_sessions`, expiry/revocation, device linkage where available and security-epoch invalidation.
-3. Implement effective permissions from role grants plus direct user grants, with ALLOW/DENY handling and cluster/module scope. SUPERADMIN is business/all-cluster equivalent to ROOT but cannot change locked ROOT security/recovery policy.
-4. Enforce account status and one-active-account-per-employee invariant; historical accounts remain retained/closed rather than hard-deleted.
-5. Keep ROOT MFA structures fail-closed. TOTP/email OTP/SMS recovery secret values/destinations remain outside public source; only hashes/refs/policy metadata belong in D1.
-6. Keep `/api/v1/data/*` and `/api/v1/admin/*` closed until authentication and authorization tests PASS. Open each business command only with explicit permission checks and immutable event/outbox transaction behavior.
-7. Add CI tests for login/session revocation/expiry, permission scopes, DENY precedence, same-level grant constraints, ROOT protection and anonymous rejection.
-8. Deploy only after source/CI PASS using the existing guarded Worker BETA deploy bridge, then rerun public health/runtime verification.
+Completed foundation:
+- password policy/hash, bearer utilities and TOTP verifier;
+- session token resolution, expiry/revocation/device-security-epoch checks;
+- scoped role/direct permission loading;
+- ROOT/SUPERADMIN boundary and explicit DENY precedence;
+- password login/session issuance foundation for non-ROOT accounts;
+- ROOT password stage fails closed to `ROOT_MFA_REQUIRED` rather than issuing a password-only session;
+- automated Worker unit/contract validation PASS through run `34754126291`.
 
-## Parallel priority — projection/outbox foundation
+Next executable work:
+1. implement remaining ROOT MFA/recovery state machine only to the extent already resolved by authority; do not invent unresolved recovery/login semantics;
+2. integrate authenticated context into protected Worker routes once deploy packaging supports the reviewed module set;
+3. add login/logout/me/change-password route acceptance tests;
+4. add account-administration grantor/self-protection enforcement and tests;
+5. provision BETA bootstrap identities only after exact locked identity inputs are authoritative.
 
-- Define fixed GAS BETA projection request contract and idempotency behavior.
-- Worker/Service reads `projection_outbox` asynchronously; Google failure must not roll back D1 business state.
-- Writer target is the verified BETA workbook; closed-quarter corrections originate in D1 then re-project.
-- Implement retry/checkpoint/dead-letter behavior before marking projection business-live.
-- Keep Sheets projection-only, never canonical authority.
+## Parallel Lane B — Projection / outbox
 
-## Following gates
+Completed foundation:
+- `projection.js` outbox envelope, bounded reads, PROCESSING/ACK/PENDING/DEAD transitions and retry backoff;
+- GAS version 3 fixed allowed-sheet mapping, key-based idempotent upsert, unknown-column rejection, bounded batch and ScriptLock serialization;
+- live workbook `00_CONTROL` records projection protocol/version/deploy evidence while keeping `projection_status=PROVISIONED_NOT_LIVE`.
 
-After auth + projection foundations PASS: implement attendance/session/resource/labor/dropped-goods/document business commands, Web same-origin flows and automated BETA acceptance scenarios from `DECISIONS.md`. Mark BETA business-live only after end-to-end acceptance passes.
+Next executable work:
+1. establish a coordinated secret/authentication design for Worker -> GAS that keeps raw secret values outside source/chat;
+2. prefer an automated coordinated rotation/provisioning bridge using existing GitHub Environment/provider credentials where safe, rather than requiring laptop-local tooling;
+3. implement Worker outbox send/ACK/failure behavior against the Gateway;
+4. test Google unavailable/retry/dead-letter and prove no rollback of canonical D1 state;
+5. only then change projection status from `PROVISIONED_NOT_LIVE`.
 
-## Autonomous execution model
+## Parallel Lane C — Shared Service API / mutation model
 
-Routine project execution must not depend on installing tools on a laptop. Execution preference is direct connected action -> GitHub-hosted CI -> minimum Owner permission/UI consent -> local/physical execution only when inherently required or explicitly requested. When a provider permission is missing, request the exact least-privilege grant and resume automation after it is granted.
+Completed foundation:
+- `docs/SERVICE_API_CONTRACT.md` defines bearer/session rules, effective permissions, idempotency, same-origin boundary, errors, and required canonical state + immutable event + outbox transaction behavior.
 
-## Android / LAN
+Next executable work:
+1. implement/test the reusable D1 mutation transaction helper;
+2. implement business commands in dependency order after Auth enforcement is executable;
+3. cover BETA scenarios from `DECISIONS.md`: IN/OUT/repeated IN, MNV reuse, PICK/PACK mixed tasks, resource changes/reissue/borrow, labor, dropped goods, documents and degraded projection.
 
-Android signing verification and physical LAN regression remain separate physical/local lanes. Service work continues independently. Keep `backup/pre-zero-20260912` until retained Android/LAN source/evidence is reviewed and restored or deliberately rejected.
+## Parallel Lane D — LAN / Android review
+
+- Physical regression remains paused until actual company network/PDA access is available.
+- Source review is not paused: retained pilot transport concepts were reviewed in `docs/LAN_SOURCE_REVIEW_20260913.md`.
+- Reusable queue/device-sequence/discovery/hysteresis/diagnostic concepts may be restored behind BETA transport boundaries.
+- Cleartext `VHDCHY_LAN_PILOT_V1` remains test-only and must not carry business credentials/PII/canonical mutations.
+- Business LAN requires reviewed pairing/authentication and the same Service command/event/idempotency semantics before activation.
+
+## Known packaging constraint
+
+The current Cloudflare deploy bridge uploads the single foundation `index.js`. Auth/session/permission/projection modules on `main` are source/CI PASS but are not yet deployed runtime. Do not import them into deployed `index.js` until the packaging path is reconciled and independently verifiable. Preserve current fail-closed business routes meanwhile.
+
+If platform write-safety blocks one implementation path, do not bypass it through lower-level Git/API tricks. Continue independent lanes and use another reviewed high-level execution path when available. Such a platform block is not itself an Owner permission blocker.
+
+## Android signing
+
+Signing material verification remains device/key-material dependent. Never expose keystore bytes/passwords in chat or repository. This does not block Service/Projection work.
 
 ## STABLE
 
-Blocked until full BETA PASS and explicit Owner approval. Do not copy BETA credentials/IDs into STABLE.
+STABLE remains a lane-specific gate: no promotion until full BETA PASS plus explicit Owner approval. Reaching that gate does not stop unrelated BETA/LAN/Android work that is still actionable.
