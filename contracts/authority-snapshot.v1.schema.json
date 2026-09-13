@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "VHDCHY_AUTHORITY_SNAPSHOT_V1",
+  "title": "VHDCHY LAN Authority Snapshot V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "permissionCatalogVersion",
+    "users",
+    "roles",
+    "permissions",
+    "rolePermissionGrants",
+    "userRoleGrants",
+    "userPermissionGrants"
+  ],
+  "properties": {
+    "schemaVersion": {"const": "VHDCHY_AUTHORITY_SNAPSHOT_V1"},
+    "permissionCatalogVersion": {"const": "VHDCHY_PERMISSION_CATALOG_V1"},
+    "users": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["userId", "status", "securityLevel"],
+        "properties": {
+          "userId": {"type": "string", "minLength": 1, "maxLength": 160},
+          "status": {"enum": ["ACTIVE", "DISABLED", "LOCKED", "CLOSED", "ARCHIVED"]},
+          "securityLevel": {"enum": ["NORMAL", "SUPERADMIN", "ROOT"]}
+        }
+      }
+    },
+    "roles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["roleId", "status"],
+        "properties": {
+          "roleId": {"type": "string", "minLength": 1, "maxLength": 160},
+          "status": {"enum": ["ACTIVE", "INACTIVE", "ARCHIVED"]}
+        }
+      }
+    },
+    "permissions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["permissionId", "resource", "action", "status"],
+        "properties": {
+          "permissionId": {"type": "string", "minLength": 1, "maxLength": 200},
+          "resource": {"type": "string", "minLength": 1, "maxLength": 160},
+          "action": {"type": "string", "minLength": 1, "maxLength": 160},
+          "status": {"enum": ["ACTIVE", "INACTIVE"]}
+        }
+      }
+    },
+    "rolePermissionGrants": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["roleId", "permissionId", "effect"],
+        "properties": {
+          "roleId": {"type": "string", "minLength": 1, "maxLength": 160},
+          "permissionId": {"type": "string", "minLength": 1, "maxLength": 200},
+          "effect": {"enum": ["ALLOW", "DENY"]}
+        }
+      }
+    },
+    "userRoleGrants": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/userRoleGrant"}
+    },
+    "userPermissionGrants": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/userPermissionGrant"}
+    }
+  },
+  "$defs": {
+    "scopeFields": {
+      "type": "object",
+      "properties": {
+        "clusterId": {"type": ["string", "null"], "minLength": 1, "maxLength": 160},
+        "moduleId": {"type": ["string", "null"], "minLength": 1, "maxLength": 160},
+        "status": {"enum": ["ACTIVE", "REVOKED", "EXPIRED"]},
+        "effectiveFrom": {"type": ["string", "null"], "format": "date-time"},
+        "effectiveTo": {"type": ["string", "null"], "format": "date-time"}
+      }
+    },
+    "userRoleGrant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["grantId", "userId", "roleId", "clusterId", "moduleId", "status"],
+      "properties": {
+        "grantId": {"type": "string", "minLength": 1, "maxLength": 200},
+        "userId": {"type": "string", "minLength": 1, "maxLength": 160},
+        "roleId": {"type": "string", "minLength": 1, "maxLength": 160},
+        "clusterId": {"type": ["string", "null"], "minLength": 1, "maxLength": 160},
+        "moduleId": {"type": ["string", "null"], "minLength": 1, "maxLength": 160},
+        "status": {"enum": ["ACTIVE", "REVOKED", "EXPIRED"]},
+        "effectiveFrom": {"type": ["string", "null"], "format": "date-time"},
+        "effectiveTo": {"type": ["string", "null"], "format": "date-time"}
+      }
+    },
+    "userPermissionGrant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["grantId", "userId", "permissionId", "clusterId", "moduleId", "effect", "status"],
+      "properties": {
+        "grantId": {"type": "string", "minLength": 1, "maxLength": 200},
+        "userId": {"type": "string", "minLength": 1, "maxLength": 160},
+        "permissionId": {"type": "string", "minLength": 1, "maxLength": 200},
+        "clusterId": {"type": ["string", "null"], "minLength": 1, "maxLength": 160},
+        "moduleId": {"type": ["string", "null"], "minLength": 1, "maxLength": 160},
+        "effect": {"enum": ["ALLOW", "DENY"]},
+        "status": {"enum": ["ACTIVE", "REVOKED", "EXPIRED"]},
+        "effectiveFrom": {"type": ["string", "null"], "format": "date-time"},
+        "effectiveTo": {"type": ["string", "null"], "format": "date-time"}
+      }
+    }
+  }
+}
