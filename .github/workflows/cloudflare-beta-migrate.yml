@@ -1,0 +1,488 @@
+name: Cloudflare D1 BETA migrate business_core_v3
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/dispatch/cloudflare-beta-migrate.json'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudflare-d1-beta-migrate
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    environment: beta
+
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      D1_DATABASE_NAME: vhdchy-data-beta
+      D1_DATABASE_ID: 37eb7d59-05c0-4ba2-8162-cb6a9fe5d492
+
+    steps:
+      - name: Checkout authoritative main
+        uses: actions/checkout@v4
+
+      - name: Validate fixed dispatch
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          test "$GITHUB_REF" = "refs/heads/main"
+
+          if [ "$GITHUB_EVENT_NAME" = "push" ]; then
+            jq -e '
+              .enabled == true and
+              .target == "beta" and
+              .operation == "migrate_business_core_v3"
+            ' .github/dispatch/cloudflare-beta-migrate.json >/dev/null
+          fi
+
+      - name: Read-only provider preflight
+        shell: bash
+        run: |
+          set -euo pipefail
+          node .github/scripts/cloudflare-verify.mjs \
+            | tee "$RUNNER_TEMP/d1-preflight.log"
+
+      - name: Enforce exact V1 zero-business precondition
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          node <<'NODE'
+          const fs = require('fs');
+
+          const log = fs.readFileSync(
+            `${process.env.RUNNER_TEMP}/d1-preflight.log`,
+            'utf8'
+          );
+
+          function value(prefix) {
+            const line = log
+              .split(/\r?\n/)
+              .find(x => x.startsWith(prefix));
+
+            if (!line) {
+              throw new Error(`Missing preflight evidence: ${prefix}`);
+            }
+
+            return line.slice(prefix.length);
+          }
+
+          const expectedId =
+            '37eb7d59-05c0-4ba2-8162-cb6a9fe5d492';
+
+          if (value('D1_DATABASE_ID=') !== expectedId) {
+            throw new Error('PRECHECK D1 database ID mismatch');
+          }
+
+          if (value('D1_SCHEMA_VERSION=') !== 'business_core_v1') {
+            throw new Error('PRECHECK schema is not business_core_v1');
+          }
+
+          const expectedTables = [
+            'clusters',
+            'conflict_corrections',
+            'd1_migrations',
+            'document_metadata',
+            'domain_events',
+            'dropped_goods',
+            'employee_cluster_memberships',
+            'employees',
+            'import_audit',
+            'labor_records',
+            'projection_catalog',
+            'projection_outbox',
+            'resources',
+            'session_resource_bindings',
+            'shift_definitions',
+            'vhdchy_meta',
+            'work_sessions'
+          ].sort();
+
+          const actualTables =
+            JSON.parse(value('D1_READ_ONLY_TABLES='))
+              .filter(x => x !== '_cf_KV')
+              .sort();
+
+          if (
+            JSON.stringify(actualTables) !==
+            JSON.stringify(expectedTables)
+          ) {
+            throw new Error(
+              `PRECHECK table set mismatch: ${JSON.stringify(actualTables)}`
+            );
+          }
+
+          const counts =
+            JSON.parse(value('D1_READ_ONLY_ROW_COUNTS='));
+
+          const businessTables =
+            expectedTables.filter(
+              x => !['d1_migrations', 'vhdchy_meta'].includes(x)
+            );
+
+          for (const table of businessTables) {
+            if (counts[table] !== 0) {
+              throw new Error(
+                `PRECHECK business data exists: ${table}=${counts[table]}`
+              );
+            }
+          }
+
+          if (
+            counts.d1_migrations !== 1 ||
+            counts.vhdchy_meta !== 3
+          ) {
+            throw new Error(
+              `PRECHECK bookkeeping mismatch: ${JSON.stringify({
+                d1_migrations: counts.d1_migrations,
+                vhdchy_meta: counts.vhdchy_meta
+              })}`
+            );
+          }
+
+          console.log(
+            'D1_PRECHECK_GATE_PASS business_core_v1 / zero business rows'
+          );
+          NODE
+
+      - name: Apply reviewed business_core_v3 migration batch
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          node <<'NODE'
+          const fs = require('fs');
+
+          const files = [
+            'service/worker/migrations/0000_beta_zero_business_rebuild.sql',
+            'service/worker/migrations/0001_initial.sql',
+            'service/worker/migrations/0002_auth_core.sql',
+            'service/worker/migrations/0003_auth_security.sql',
+            'service/worker/migrations/0004_attendance_sessions.sql',
+            'service/worker/migrations/0005_resources.sql',
+            'service/worker/migrations/0006_business_records.sql',
+            'service/worker/migrations/0007_events_projection.sql',
+            'service/worker/migrations/0008_seed_core.sql'
+          ];
+
+          const sql = files
+            .map(file => {
+              const content = fs.readFileSync(file, 'utf8').trim();
+
+              if (!content) {
+                throw new Error(`Empty migration file: ${file}`);
+              }
+
+              return `-- BEGIN ${file}\n${content}\n-- END ${file}`;
+            })
+            .join('\n\n');
+
+          const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+          const token = process.env.CLOUDFLARE_API_TOKEN;
+          const databaseId = process.env.D1_DATABASE_ID;
+
+          if (!accountId || !token || !databaseId) {
+            throw new Error('Missing approved BETA Cloudflare credentials');
+          }
+
+          const url =
+            `https://api.cloudflare.com/client/v4/accounts/` +
+            `${encodeURIComponent(accountId)}/d1/database/` +
+            `${encodeURIComponent(databaseId)}/query`;
+
+          async function main() {
+            console.log(
+              `D1_MIGRATION_BEGIN files=${files.length} bytes=${Buffer.byteLength(sql)}`
+            );
+
+            const response = await fetch(url, {
+              method: 'POST',
+              headers: {
+                authorization: `Bearer ${token}`,
+                'content-type': 'application/json'
+              },
+              body: JSON.stringify({ sql })
+            });
+
+            let payload;
+
+            try {
+              payload = await response.json();
+            } catch {
+              throw new Error(
+                `Cloudflare returned non-JSON HTTP ${response.status}`
+              );
+            }
+
+            if (!response.ok || payload?.success !== true) {
+              throw new Error(
+                `D1 migration API failed HTTP ${response.status}: ` +
+                JSON.stringify(payload?.errors || []).slice(0, 1500)
+              );
+            }
+
+            const results = Array.isArray(payload.result)
+              ? payload.result
+              : [payload.result];
+
+            if (
+              !results.length ||
+              results.some(item => !item || item.success !== true)
+            ) {
+              throw new Error(
+                'D1 migration batch contains a failed statement'
+              );
+            }
+
+            console.log(
+              `D1_MIGRATION_BATCH_PASS results=${results.length}`
+            );
+          }
+
+          main().catch(error => {
+            console.error(error.message);
+            process.exit(1);
+          });
+          NODE
+
+      - name: Read-only post-migration inspection
+        shell: bash
+        run: |
+          set -euo pipefail
+          node .github/scripts/cloudflare-verify.mjs \
+            | tee "$RUNNER_TEMP/d1-postflight.log"
+
+      - name: Enforce business_core_v3 target contract
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          node <<'NODE'
+          const fs = require('fs');
+
+          const log = fs.readFileSync(
+            `${process.env.RUNNER_TEMP}/d1-postflight.log`,
+            'utf8'
+          );
+
+          function value(prefix) {
+            const line = log
+              .split(/\r?\n/)
+              .find(x => x.startsWith(prefix));
+
+            if (!line) {
+              throw new Error(`Missing postflight evidence: ${prefix}`);
+            }
+
+            return line.slice(prefix.length);
+          }
+
+          if (value('D1_SCHEMA_VERSION=') !== 'business_core_v3') {
+            throw new Error(
+              `POSTCHECK wrong schema: ${value('D1_SCHEMA_VERSION=')}`
+            );
+          }
+
+          const files = [
+            'service/worker/migrations/0001_initial.sql',
+            'service/worker/migrations/0002_auth_core.sql',
+            'service/worker/migrations/0003_auth_security.sql',
+            'service/worker/migrations/0004_attendance_sessions.sql',
+            'service/worker/migrations/0005_resources.sql',
+            'service/worker/migrations/0006_business_records.sql',
+            'service/worker/migrations/0007_events_projection.sql',
+            'service/worker/migrations/0008_seed_core.sql'
+          ];
+
+          const source = files
+            .map(file => fs.readFileSync(file, 'utf8'))
+            .join('\n');
+
+          const expectedSet = new Set();
+
+          for (
+            const match of source.matchAll(
+              /CREATE\s+TABLE\s+IF\s+NOT\s+EXISTS\s+([A-Za-z_][A-Za-z0-9_]*)/gi
+            )
+          ) {
+            expectedSet.add(match[1]);
+          }
+
+          const expected = [...expectedSet].sort();
+
+          const actual =
+            JSON.parse(value('D1_READ_ONLY_TABLES='))
+              .filter(x => x !== '_cf_KV')
+              .sort();
+
+          if (
+            JSON.stringify(actual) !==
+            JSON.stringify(expected)
+          ) {
+            throw new Error(
+              `POSTCHECK table contract mismatch. ` +
+              `expected=${JSON.stringify(expected)} ` +
+              `actual=${JSON.stringify(actual)}`
+            );
+          }
+
+          const counts =
+            JSON.parse(value('D1_READ_ONLY_ROW_COUNTS='));
+
+          const requiredCounts = {
+            clusters: 1,
+            modules: 1,
+            cluster_modules: 1,
+            module_domain_registry: 6,
+            resource_type_catalog: 4,
+            labor_type_catalog: 4,
+            root_security_policy: 1,
+            vhdchy_meta: 8
+          };
+
+          for (const [table, expectedCount] of Object.entries(requiredCounts)) {
+            if (counts[table] !== expectedCount) {
+              throw new Error(
+                `POSTCHECK seed mismatch ${table}: ` +
+                `expected ${expectedCount}, got ${counts[table]}`
+              );
+            }
+          }
+
+          const zeroBusinessTables = [
+            'employees',
+            'auth_users',
+            'attendance_events',
+            'work_sessions',
+            'session_tasks',
+            'resource_registry',
+            'resource_assignments',
+            'resource_daily_usage',
+            'labor_records',
+            'dropped_goods',
+            'documents',
+            'document_media',
+            'domain_events',
+            'projection_outbox',
+            'import_audit'
+          ];
+
+          for (const table of zeroBusinessTables) {
+            if (counts[table] !== 0) {
+              throw new Error(
+                `POSTCHECK unexpected business rows: ` +
+                `${table}=${counts[table]}`
+              );
+            }
+          }
+
+          for (
+            const legacy of [
+              'resources',
+              'session_resource_bindings',
+              'document_metadata',
+              'd1_migrations'
+            ]
+          ) {
+            if (actual.includes(legacy)) {
+              throw new Error(
+                `POSTCHECK legacy table remains: ${legacy}`
+              );
+            }
+          }
+
+          console.log(
+            `D1_POSTCHECK_SCHEMA_PASS tables=${actual.length}`
+          );
+          NODE
+
+      - name: Provider integrity checks
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          node <<'NODE'
+          const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+          const token = process.env.CLOUDFLARE_API_TOKEN;
+          const databaseId = process.env.D1_DATABASE_ID;
+
+          const url =
+            `https://api.cloudflare.com/client/v4/accounts/` +
+            `${encodeURIComponent(accountId)}/d1/database/` +
+            `${encodeURIComponent(databaseId)}/query`;
+
+          async function query(sql) {
+            const response = await fetch(url, {
+              method: 'POST',
+              headers: {
+                authorization: `Bearer ${token}`,
+                'content-type': 'application/json'
+              },
+              body: JSON.stringify({ sql })
+            });
+
+            const payload = await response.json();
+
+            if (!response.ok || payload?.success !== true) {
+              throw new Error(
+                `Integrity query failed: ` +
+                JSON.stringify(payload?.errors || [])
+              );
+            }
+
+            const first = Array.isArray(payload.result)
+              ? payload.result[0]
+              : payload.result;
+
+            if (!first || first.success !== true) {
+              throw new Error('Integrity query result failed');
+            }
+
+            return Array.isArray(first.results)
+              ? first.results
+              : [];
+          }
+
+          async function main() {
+            const fk = await query('PRAGMA foreign_key_check');
+
+            if (fk.length !== 0) {
+              throw new Error(
+                `foreign_key_check failed: ${JSON.stringify(fk)}`
+              );
+            }
+
+            const quick = await query('PRAGMA quick_check');
+            const first = quick[0] || {};
+            const result = String(
+              first.quick_check ??
+              first.integrity_check ??
+              Object.values(first)[0] ??
+              ''
+            ).toLowerCase();
+
+            if (result !== 'ok') {
+              throw new Error(
+                `quick_check failed: ${JSON.stringify(quick)}`
+              );
+            }
+
+            console.log(
+              'D1_BETA_MIGRATION_PASS schema=business_core_v3 integrity=PASS'
+            );
+          }
+
+          main().catch(error => {
+            console.error(error.message);
+            process.exit(1);
+          });
+          NODE
