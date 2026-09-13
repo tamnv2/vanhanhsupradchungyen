@@ -1,0 +1,26 @@
+{
+  "target_worker": "vhdchy-beta",
+  "source": "service/worker/src/index.js",
+  "compatibility_date": "2026-09-13",
+  "public_origin": "https://beta.supra.cc.cd",
+  "workers_dev_expected": false,
+  "d1_binding": {
+    "name": "DB",
+    "database_name": "vhdchy-data-beta",
+    "database_id": "37eb7d59-05c0-4ba2-8162-cb6a9fe5d492"
+  },
+  "vars": {
+    "APP_ENV": "BETA",
+    "GAS_EXEC_URL": "https://script.google.com/macros/s/AKfycbzxRzxjeFyPpYQ39T3MJRL_sSKrhJhHXLY5LgGy16CnxuPEIFoJo8vr9XijrsxZttRtjQ/exec"
+  },
+  "expected_runtime": {
+    "schema_version": "business_core_v3",
+    "runtime_state": "BUSINESS_CORE_V3"
+  },
+  "health_paths": [
+    "/health",
+    "/health/deep",
+    "/api/v1/meta",
+    "/api/v1/capabilities"
+  ]
+}
