@@ -3,10 +3,20 @@
 checkpoint_version: 25
 protocol: AI_AUTHORITY_RESUME_V2
 status: EXECUTING_PRODUCT_V6_BETA
-reconciled_through_commit: c79ae02bf524c078f42e0340f8b12f265681a44c
+reconciled_through_commit: 637025b787b18e518a4e35d40c25af776ec12314
 action_mode: AUTONOMOUS_PARALLEL
 active_lanes: REPO_GOVERNANCE / SHARED_DOMAIN / CLOUD_SERVICE / LAN_FULL_SERVICE / AUTH / GOOGLE_SYNC / WEB / ANDROID_APK / RECONCILIATION / STABLE_PREPARATION
 paused_lanes: PHYSICAL_CORPORATE_LAN_REGRESSION
+
+authority_base_ref: DECISIONS.md
+authority_v3_ref: DECISIONS_V3.md
+authority_v4_ref: DECISIONS_V4.md
+authority_v5_ref: DECISIONS_V5.md
+authority_v6_ref: DECISIONS_V6.md
+service_contract_ref: docs/SERVICE_API_CONTRACT_V3.md
+lan_edge_ref: docs/LAN_EDGE_STATE_V2.md
+delivery_plan_ref: docs/DELIVERY_PLAN_V4.md
+context_index_ref: CONTEXT_INDEX.md
 
 ## Authority
 
@@ -40,8 +50,14 @@ paused_lanes: PHYSICAL_CORPORATE_LAN_REGRESSION
 - Only one ACTIVE authority snapshot is allowed; replaced generations remain retained.
 - Every later LAN business event is required to record the active authority version used.
 - Harness run `34785834984`: SUCCESS for activation, replay, conflict, rollback, compatibility and restart persistence.
-- Clean baseline for the same HEAD `c79ae02bf524c078f42e0340f8b12f265681a44c`, run `34785835026`: SUCCESS.
+- Clean baseline for HEAD `c79ae02bf524c078f42e0340f8b12f265681a44c`, run `34785835026`: SUCCESS.
 - Authority presence alone does not make the LAN business runtime READY; operational state + shared domain transaction proof are still required.
+
+## In progress
+
+- `lan-service/LocalCommandStore.cs` now contains an internal storage transaction primitive for guarded current-state update + immutable edge event + reconciliation state + Cloud outbox + optional Google/Drive work.
+- `lan-service-harness/Program.cs` now exercises create, canonicalized replay, idempotency payload conflict, device-sequence collision, version conflict, update, authority evidence and rollback on downstream outbox failure.
+- These additions are NOT yet PASS until the new CI run completes successfully; public LAN mutation routes remain closed.
 
 ## Current provider / runtime facts
 
@@ -54,13 +70,10 @@ paused_lanes: PHYSICAL_CORPORATE_LAN_REGRESSION
 
 ## Immediate execution
 
-1. LAN/shared domain: implement an internal atomic local-command transaction primitive without opening a public mutation route.
-2. Primitive must require a compatible ACTIVE authority snapshot, enforce idempotency/device/entity-version guards, update `module_current_state`, append exactly one immutable `edge_event`, append `edge_reconciliation_state` + `cloud_sync_outbox`, and append optional Google/Drive outbox work in one SQLite transaction.
-3. Same idempotency + same normalized command returns the original acceptance; different payload conflicts; reused device sequence with a different logical command conflicts; any downstream insert failure rolls the whole local acceptance back.
-4. Add harness acceptance vectors against the real EdgeStore. Keep tests synthetic where business rules are not yet implemented; do not invent new business fields/rules.
-5. Only after authority + operational snapshot + shared local transaction acceptance pass may a reviewed LAN business route be enabled.
-6. Continue independent Cloud/Auth/permission/provider lanes only through allowed high-level actions; never bypass platform action-safety.
+1. Diagnose/fix CI for the local-command primitive until baseline + LAN harness pass.
+2. After PASS, record a new checkpoint and keep public mutation routes closed because operational snapshot readiness and local authz/business adapters remain incomplete.
+3. Next LAN dependency is atomic operational snapshot import/activation and readiness transition toward `EDGE_READY`, followed by a reviewed Slice-1 adapter that applies permission/business rules before calling the storage primitive.
+4. Continue independent Cloud/Auth/permission/provider lanes only through allowed high-level actions; never bypass platform action-safety.
 
-## do_not_repeat
-
+do_not_repeat:
 Do not treat memory as authority. Do not replay provider migrations. Do not claim `0010`/`0011` applied. Do not claim email/SMS delivery live. Do not bypass action-safety. Do not open LAN mutation routes before readiness/transaction acceptance. Do not mutate raw edge events. Do not make Google business authority. Do not silently last-write-wins conflicts. Do not treat CI as physical company-LAN proof. Do not promote STABLE without explicit Owner approval.
