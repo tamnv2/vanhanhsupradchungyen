@@ -1,13 +1,13 @@
 # CHECKPOINT — VHDCHY
 
-checkpoint_version: 9
+checkpoint_version: 10
 protocol: AI_AUTHORITY_RESUME_V2
 status: EXECUTING_SERVICE_BETA
 action_mode: AUTONOMOUS_CLOUD_CI
-active_lanes: WORKER_PACKAGING / SERVICE_AUTH / PROJECTION_OUTBOX / SERVICE_API
-paused_lanes: ANDROID / PHYSICAL_LAN
-approved_scope: Continue Website-Service-Google backend path autonomously. Android/PDA build and physical LAN/model work are paused by current Owner instruction until the required Android/company-laptop environment is available. Overall Owner interaction remains limited to OWNER_PERMISSION_REQUIRED or OWNER_DECISION_REQUIRED. STABLE remains separately gated by explicit Owner approval after BETA PASS.
-reconciled_through_commit: c03c62b7dc95f312e7e285f471a22ffda769fdf7
+active_lanes: WORKER_PACKAGING / SERVICE_AUTH / PROJECTION_OUTBOX / SERVICE_API / LAN_SOURCE_REUSE
+paused_lanes: ANDROID_BUILD / PHYSICAL_LAN
+approved_scope: Continue Website-Service-Google backend path autonomously and resume LAN source/model adaptation using the legacy repository as NON_AUTHORITY read-only reference. Android/PDA packaging/signing/physical regression and physical company-network LAN regression remain pending the required environment. Overall Owner interaction remains limited to OWNER_PERMISSION_REQUIRED or OWNER_DECISION_REQUIRED. STABLE remains separately gated by explicit Owner approval after BETA PASS.
+reconciled_through_commit: 6c2da4faeceff4766e6feff40d3eec139125ea81
 active_work_ref: NEXT_ACTIONS.md
 current_state_ref: CURRENT_STATE.md
 authority_ref: DECISIONS.md
@@ -17,6 +17,9 @@ packaging_plan_ref: docs/WORKER_PACKAGING_PLAN.md
 projection_auth_plan_ref: docs/PROJECTION_AUTH_PLAN.md
 canonical_mutation_plan_ref: docs/CANONICAL_MUTATION_PLAN.md
 beta_acceptance_ref: docs/BETA_ACCEPTANCE_MATRIX.md
+lan_source_review_ref: docs/LAN_SOURCE_REVIEW_20260913.md
+legacy_lan_reference_repo: tamnv2supra/vanhanhdchungyen
+legacy_lan_reference_commit: 7b4488a89f585812c1bccba5d07d86049482bf4c
 
 ## Completed provider gates
 
@@ -25,8 +28,7 @@ beta_acceptance_ref: docs/BETA_ACCEPTANCE_MATRIX.md
 - Google Gateway immutable version 3 with fail-closed `VHDCHY_PROJECTION_V1`: PASS.
 - Projection workbook remains intentionally `PROVISIONED_NOT_LIVE`.
 - Fresh Cloudflare read-only verification run `34754968801`: SUCCESS; exact Worker/D1 identity, schema, bindings, `workers.dev` state, custom domain and zero business rows reconfirmed.
-- Fresh clean-baseline validation run `34754968807`: SUCCESS.
-- Canonical mutation design validation run `34755193469`: SUCCESS.
+- Fresh clean-baseline validation run `34755317363`: SUCCESS after restoring checkpoint invariant.
 
 ## Packaging progress
 
@@ -53,11 +55,20 @@ beta_acceptance_ref: docs/BETA_ACCEPTANCE_MATRIX.md
 - Design includes in-transaction guarded-row assertion, idempotency race reconciliation, device-sequence collision handling and degraded-Google behavior.
 - Runtime helper/tests are not yet source-implemented because sensitive runtime-source writes are currently platform-blocked.
 
+## LAN source/model lane resumed
+
+- Legacy repo `tamnv2supra/vanhanhdchungyen` is accessible for read/reference; it is not current authority and has no required write role.
+- Fixed legacy V4 reference commit `7b4488a89f585812c1bccba5d07d86049482bf4c` is verified.
+- Legacy physical evidence confirms the old pilot materially reached two-MT90 `LAN_ACTIVE`, durable queue recovery, duplicate rejection and measured LAN performance, but final V4 physical regression remained pending.
+- Direct source review confirms reusable patterns: no-admin Agent, cached endpoint -> UDP -> manual recovery, health + anti-flapping hysteresis, durable `event_id + device_seq` queue, ACK-driven deletion, epoch/sequence resync, diagnostics/load/transfer instrumentation and bounded Android background work.
+- Current `docs/LAN_SOURCE_REVIEW_20260913.md` records the adoption boundary and explicitly keeps cleartext pilot endpoints/non-cryptographic identity checks out of current business transport.
+- LAN source/model/protocol adaptation is now ACTIVE; only Android build/signing and physical company-network/PDA regression remain paused.
+
 ## BETA acceptance contract
 
-- `docs/BETA_ACCEPTANCE_MATRIX.md` now defines dependency-ordered acceptance for Provider, Auth, Authorization, canonical mutation, attendance/presence, PICK/PACK/resources, labor/dropped goods, Drive/documents, Google projection, Web E2E and pre-STABLE durability.
+- `docs/BETA_ACCEPTANCE_MATRIX.md` defines dependency-ordered acceptance for Provider, Auth, Authorization, canonical mutation, attendance/presence, PICK/PACK/resources, labor/dropped goods, Drive/documents, Google projection, Web E2E and pre-STABLE durability.
 - Source presence alone is explicitly not runtime PASS; every PASS claim requires CI/provider/readback evidence.
-- Android/PDA and physical LAN acceptance are excluded from the current execution scope until Owner resumes those lanes.
+- LAN source-level acceptance will be extended from the legacy reference without claiming physical PASS until real-device/network regression occurs.
 
 ## Platform write-safety constraint
 
@@ -74,15 +85,18 @@ Current runtime remains safe: no post-manifest Worker deployment was triggered a
 - ROOT password-only login remains fail-closed to `ROOT_MFA_REQUIRED`.
 - Projection outbox envelope/retry/dead-letter foundation: source + CI PASS.
 - Shared Service API contract remains authoritative for client/runtime semantics.
+- LAN source/model adaptation can proceed in parallel from the fixed legacy V4 reference.
 
 ## Next execution order
 
 1. Safely enable reviewed multi-module Worker packaging through an allowed high-level write path; perform packaging-only deployment with business routes still fail-closed.
-2. Complete/runtime-integrate Auth/session/permission and acceptance tests.
-3. Provision Worker->GAS projection authentication, then sender/ACK/retry/dead-letter E2E while keeping Google non-canonical.
-4. Implement/test canonical mutation helper and business commands in dependency order using `BETA_ACCEPTANCE_MATRIX.md` as the acceptance contract.
-5. Implement Drive media/document flow.
-6. Start same-origin Web against real BETA Auth/business APIs.
+2. In parallel, define/adapt the current LAN command envelope, authenticated pairing requirements, durable queue/device-sequence contract and discovery/hysteresis/epoch-resync semantics from the legacy V4 reference.
+3. Complete/runtime-integrate Auth/session/permission and acceptance tests when sensitive-source write is available.
+4. Provision Worker->GAS projection authentication, then sender/ACK/retry/dead-letter E2E while keeping Google non-canonical.
+5. Implement/test canonical mutation helper and business commands in dependency order using `BETA_ACCEPTANCE_MATRIX.md`.
+6. Implement Drive media/document flow.
+7. Start same-origin Web against real BETA Auth/business APIs.
+8. When the real company laptop/PDA environment is available, run physical LAN/Android regression against the current adapted implementation.
 
 ## Owner stop conditions
 
@@ -93,4 +107,4 @@ Neither condition is currently established. Continue safe actionable work.
 
 ## do_not_repeat:
 
-Do not rerun V1->V3 migration. Do not recreate verified provider resources. Do not trigger Worker deployment while active deploy workflow is single-module. Do not open business APIs anonymously. Do not make Sheets canonical. Do not enable projection before secure auth + E2E PASS. Do not expose secrets in source/chat. Do not bypass platform safety guards. Do not build Android/PDA or physical LAN until Owner resumes those lanes. Do not promote STABLE before full BETA PASS plus explicit Owner approval.
+Do not rerun V1->V3 migration. Do not recreate verified provider resources. Do not trigger Worker deployment while active deploy workflow is single-module. Do not open business APIs anonymously. Do not make Sheets canonical. Do not enable projection before secure auth + E2E PASS. Do not expose secrets in source/chat. Do not bypass platform safety guards. Do not treat legacy repo as authority or runtime fallback. Do not copy legacy cleartext pilot endpoints into business transport. Do not claim physical LAN PASS from legacy evidence alone. Do not promote STABLE before full BETA PASS plus explicit Owner approval.
