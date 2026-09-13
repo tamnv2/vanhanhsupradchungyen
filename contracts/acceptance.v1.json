@@ -1,0 +1,51 @@
+{
+  "schemaVersion": "VHDCHY_ACCEPTANCE_V1",
+  "domainContractVersion": "VHDCHY_DOMAIN_V1",
+  "vectors": [
+    {
+      "id": "CLOUD_COMMIT_GOOGLE_PENDING",
+      "input": {"runtime": "CLOUD", "serviceAccepted": true, "googleRequired": true, "googleCompleted": false},
+      "expect": {"commitStatus": "CLOUD_COMMITTED", "googleOutputStatus": "PENDING"}
+    },
+    {
+      "id": "LAN_LOCAL_ACCEPTANCE_PENDING_SYNC",
+      "input": {"runtime": "LAN", "localServiceAccepted": true, "cloudReconciled": false},
+      "expect": {"commitStatus": "LAN_ACCEPTED_PENDING_SYNC"}
+    },
+    {
+      "id": "LAN_RECONCILED_TO_CLOUD",
+      "input": {"runtime": "LAN", "localServiceAccepted": true, "cloudReconciled": true},
+      "expect": {"commitStatus": "LAN_RECONCILED_CLOUD_COMMITTED"}
+    },
+    {
+      "id": "CLIENT_QUEUE_IS_NOT_SERVICE_ACCEPTANCE",
+      "input": {"cloudAccepted": false, "lanAccepted": false, "clientQueued": true},
+      "expect": {"commitStatus": "QUEUED_CLIENT_LOCAL"}
+    },
+    {
+      "id": "RECONCILIATION_CONFLICT_PRESERVED",
+      "input": {"edgeAccepted": true, "canonicalGuardSatisfied": false, "safeAutomaticResolution": false},
+      "expect": {"commitStatus": "SYNC_CONFLICT", "error": "SYNC_CONFLICT"}
+    },
+    {
+      "id": "IDEMPOTENCY_SAME_ID_DIFFERENT_PAYLOAD",
+      "input": {"sameIdempotencyKey": true, "sameCommand": true, "samePayloadHash": false},
+      "expect": {"httpStatus": 409, "error": "IDEMPOTENCY_PAYLOAD_CONFLICT"}
+    },
+    {
+      "id": "VERSION_GUARD_CONFLICT",
+      "input": {"expectedEntityVersionMatches": false},
+      "expect": {"httpStatus": 409, "error": "ENTITY_VERSION_CONFLICT"}
+    },
+    {
+      "id": "PERMISSION_DENIAL_PARITY",
+      "input": {"authenticated": true, "effectivePermissionAllowed": false},
+      "expect": {"httpStatus": 403, "error": "PERMISSION_DENIED"}
+    },
+    {
+      "id": "DEPENDENCY_UNAVAILABLE_PARITY",
+      "input": {"requiredRuntimeDependencyAvailable": false},
+      "expect": {"httpStatus": 503, "error": "RUNTIME_DEPENDENCY_UNAVAILABLE"}
+    }
+  ]
+}
