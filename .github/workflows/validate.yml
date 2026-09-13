@@ -14,21 +14,41 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Validate authority files
         run: |
           set -euo pipefail
-          test -s AI_ENTRYPOINT.md
-          test -s AI_OPERATING_CONTRACT.md
-          test -s CHECKPOINT.md
-          test -s CONTEXT_INDEX.md
-          test -s PROJECT_SCOPE.md
-          test -s SERVICE_AUTHORITY.md
-          test -s CURRENT_STATE.md
-          test -s NEXT_ACTIONS.md
-          test -s DECISIONS.md
-          test -s SECURITY.md
-          test -s CHANGELOG.md
+          for file in \
+            AI_ENTRYPOINT.md \
+            AI_OPERATING_CONTRACT.md \
+            CHECKPOINT.md \
+            CONTEXT_INDEX.md \
+            PROJECT_SCOPE.md \
+            SERVICE_AUTHORITY.md \
+            CURRENT_STATE.md \
+            NEXT_ACTIONS.md \
+            DECISIONS.md \
+            DECISIONS_V3.md \
+            DECISIONS_V4.md \
+            DECISIONS_V5.md \
+            DECISIONS_V6.md \
+            SECURITY.md \
+            CHANGELOG.md \
+            docs/OWNER_BUSINESS_RULES_V1.md \
+            docs/TARGET_PRODUCT_ARCHITECTURE_V3.md \
+            docs/SERVICE_API_CONTRACT_V3.md \
+            docs/LAN_EDGE_STATE_V2.md \
+            docs/DATA_MODEL_GUIDE_V2.md \
+            docs/NON_FUNCTIONAL_BASELINE_V1.md \
+            docs/BETA_ACCEPTANCE_MATRIX.md \
+            docs/DELIVERY_PLAN_V4.md \
+            docs/LAN_HOST_DOMAIN_V1.md \
+            docs/RELEASE_PROMOTION_V1.md
+          do
+            test -s "$file"
+          done
 
       - name: Validate AI authority/resume invariants
         run: |
@@ -36,17 +56,55 @@ jobs:
           grep -Fq 'AI_AUTHORITY_RESUME_V2' AI_ENTRYPOINT.md
           grep -Fq 'Tiếp tục VHDCHY' AI_ENTRYPOINT.md
           grep -Fq 'Rà soát toàn bộ dự án' AI_ENTRYPOINT.md
+          grep -Fq 'fetch this file from GitHub `main` in the current chat' AI_ENTRYPOINT.md
+          grep -Fq 'current GitHub `main` HEAD SHA' AI_ENTRYPOINT.md
+
           grep -Fq 'NON_AUTHORITY' AI_OPERATING_CONTRACT.md
           grep -Fq 'Evidence before PASS' AI_OPERATING_CONTRACT.md
           grep -Fq 'Fail closed' AI_OPERATING_CONTRACT.md
           grep -Fq 'OWNER_PERMISSION_REQUIRED' AI_OPERATING_CONTRACT.md
           grep -Fq 'OWNER_DECISION_REQUIRED' AI_OPERATING_CONTRACT.md
           grep -Fq 'D-041' DECISIONS.md
+
+          for decision in DECISIONS.md DECISIONS_V3.md DECISIONS_V4.md DECISIONS_V5.md DECISIONS_V6.md; do
+            grep -Fq "$decision" CONTEXT_INDEX.md
+          done
+          grep -Fq 'All five active decision layers above are mandatory resume reads.' CONTEXT_INDEX.md
+
           grep -Eq '^checkpoint_version: [1-9][0-9]*$' CHECKPOINT.md
           grep -Fq 'reconciled_through_commit:' CHECKPOINT.md
+          grep -Fq 'authority_v5_ref: DECISIONS_V5.md' CHECKPOINT.md
+          grep -Fq 'authority_v6_ref: DECISIONS_V6.md' CHECKPOINT.md
+          grep -Fq 'delivery_plan_ref: docs/DELIVERY_PLAN_V4.md' CHECKPOINT.md
+          grep -Fq 'service_contract_ref: docs/SERVICE_API_CONTRACT_V3.md' CHECKPOINT.md
           grep -Fq 'do_not_repeat:' CHECKPOINT.md
+
+          grep -Fq 'Execution plan: `docs/DELIVERY_PLAN_V4.md`' CURRENT_STATE.md
+          grep -Fq 'DECISIONS_V6.md' CURRENT_STATE.md
+          grep -Fq 'Authority: effective Owner decisions through V6' docs/SERVICE_API_CONTRACT_V3.md
+          grep -Fq 'decision layers V1/V3/V4/V5/V6' docs/DELIVERY_PLAN_V4.md
+
           if grep -Eq 'BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|Bearer [A-Za-z0-9._-]{12,}' CHECKPOINT.md; then
             echo 'Sensitive-looking value found in CHECKPOINT.md'
+            exit 1
+          fi
+
+      - name: Validate checkpoint authority freshness
+        run: |
+          set -euo pipefail
+          reconciled="$(awk -F': ' '/^reconciled_through_commit: / {print $2; exit}' CHECKPOINT.md)"
+          test -n "$reconciled"
+          git cat-file -e "${reconciled}^{commit}"
+          git merge-base --is-ancestor "$reconciled" HEAD
+
+          changed="$(git diff --name-only "${reconciled}..HEAD")"
+          printf '%s\n' "$changed"
+
+          stale_authority="$(printf '%s\n' "$changed" | grep -E '^(AI_ENTRYPOINT\.md|AI_OPERATING_CONTRACT\.md|CONTEXT_INDEX\.md|CURRENT_STATE\.md|NEXT_ACTIONS\.md|SERVICE_AUTHORITY\.md|PROJECT_SCOPE\.md|DECISIONS(_V[0-9]+)?\.md|docs/(OWNER_BUSINESS_RULES_V1|TARGET_PRODUCT_ARCHITECTURE_V3|SERVICE_API_CONTRACT_V3|LAN_EDGE_STATE_V2|DATA_MODEL_GUIDE_V2|NON_FUNCTIONAL_BASELINE_V1|BETA_ACCEPTANCE_MATRIX|DELIVERY_PLAN_V4|LAN_HOST_DOMAIN_V1|RELEASE_PROMOTION_V1)\.md)$' || true)"
+          if [ -n "$stale_authority" ]; then
+            echo 'Checkpoint is stale relative to active authority/current-guide changes:'
+            printf '%s\n' "$stale_authority"
+            echo 'Update CHECKPOINT.md after reconciling those changes.'
             exit 1
           fi
 
@@ -86,7 +144,7 @@ jobs:
           rm -f /tmp/vhdchy.db
           for migration in service/worker/migrations/*.sql; do
             echo "Applying ${migration}"
-            sqlite3 /tmp/vhdchy.db < "${migration}"
+            sqlite3 /tmp/vhdchy.db < "$migration"
           done
           test "$(sqlite3 /tmp/vhdchy.db "SELECT value FROM vhdchy_meta WHERE key='schema_version';")" = "business_core_v3"
           test "$(sqlite3 /tmp/vhdchy.db "SELECT count(*) FROM clusters WHERE cluster_id='PICK_PACK_1291';")" = "1"
