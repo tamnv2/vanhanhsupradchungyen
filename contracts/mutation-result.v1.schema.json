@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "VHDCHY_MUTATION_RESULT_V1",
+  "title": "VHDCHY successful mutation result",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["ok", "requestId", "commitStatus", "googleOutputStatus"],
+  "properties": {
+    "ok": {"const": true},
+    "requestId": {"type": "string", "minLength": 1},
+    "idempotencyKey": {"type": ["string", "null"]},
+    "runtime": {"enum": ["CLOUD", "LAN"]},
+    "commitStatus": {
+      "enum": [
+        "CLOUD_COMMITTED",
+        "LAN_ACCEPTED_PENDING_SYNC",
+        "LAN_RECONCILED_CLOUD_COMMITTED",
+        "QUEUED_CLIENT_LOCAL",
+        "SYNC_CONFLICT"
+      ]
+    },
+    "googleOutputStatus": {
+      "enum": [
+        "NOT_REQUIRED",
+        "PENDING",
+        "COMPLETED",
+        "FAILED_RETRYABLE",
+        "REVIEW_REQUIRED"
+      ]
+    },
+    "eventId": {"type": ["string", "null"]},
+    "entity": {
+      "type": ["object", "null"],
+      "additionalProperties": true,
+      "properties": {
+        "type": {"type": "string", "minLength": 1},
+        "id": {"type": "string", "minLength": 1},
+        "version": {"type": ["integer", "null"], "minimum": 1}
+      }
+    },
+    "cloud": {
+      "type": ["object", "null"],
+      "additionalProperties": true,
+      "properties": {
+        "canonicalEventId": {"type": ["string", "null"]},
+        "reconciledAt": {"type": ["string", "null"]}
+      }
+    },
+    "lan": {
+      "type": ["object", "null"],
+      "additionalProperties": true,
+      "properties": {
+        "edgeEventId": {"type": ["string", "null"]},
+        "edgeInstanceId": {"type": ["string", "null"]},
+        "edgeEpoch": {"type": ["string", "null"]},
+        "authoritySnapshotVersion": {"type": ["string", "null"]}
+      }
+    }
+  }
+}
