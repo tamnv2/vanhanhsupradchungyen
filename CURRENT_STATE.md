@@ -8,8 +8,8 @@ Baseline: `REPO-RESET-20260912-01`
 - Active repository: `tamnv2/vanhanhsupradchungyen` (PUBLIC), default branch `main`.
 - Pre-zero snapshot retained temporarily at `backup/pre-zero-20260912`.
 - `AI_AUTHORITY_RESUME_V2` is active.
-- Owner-approved 2026-09-13 business/data decisions are persisted in `DECISIONS.md` and supersede stale business-schema assumptions from the 2026-09-12 baseline.
-- Owner execution policy is now explicit in `AI_OPERATING_CONTRACT.md`: direct connected action first; otherwise GitHub-hosted CI; request only exact missing permission/consent; do not require laptop-local tooling for routine cloud/provider operations.
+- Owner-approved 2026-09-13 business/data decisions are persisted in `DECISIONS.md`.
+- Owner execution policy is active: direct connected action first; otherwise GitHub-hosted CI; request only exact missing permission/consent; do not require laptop-local tooling for routine cloud/provider operations.
 - Secret values remain outside repository source.
 
 ## GitHub BETA environment
@@ -17,8 +17,7 @@ Baseline: `REPO-RESET-20260912-01`
 - Environment `beta` is the provider execution boundary.
 - Google CI credentials/variables are configured and proven by successful Apps Script automation.
 - Cloudflare credentials are configured as Environment secret/variable; raw token values are not exposed to source or chat.
-- `.github/workflows/cloudflare-beta-verify.yml` provides an automated GitHub Actions bridge for Cloudflare identity verification plus read-only D1 inspection.
-- A dedicated guarded D1 write/migration workflow is the current missing execution bridge. Attempted creation through the connected GitHub action was blocked by the platform action-safety guard; this was not bypassed.
+- Read-only Cloudflare inspection, guarded D1 migration and guarded Worker deployment are available through GitHub-hosted Actions.
 
 ## Google / Drive / Sheets / GAS
 
@@ -30,38 +29,39 @@ Baseline: `REPO-RESET-20260912-01`
 - GAS BETA foundation: PASS.
 - Business `doPost()` remains foundation-only; Google projection is not yet business-live.
 
-## Cloudflare BETA — final pre-write inspection PASS
+## Cloudflare D1 BETA — BUSINESS_CORE_V3 PASS
 
-Verified target resources:
 - Account ID: `1b1695e4f2a3abfe08dc475b352c7f42`.
-- Worker: `vhdchy-beta` — FOUND.
-- D1: `vhdchy-data-beta` — FOUND.
+- D1: `vhdchy-data-beta`.
 - D1 database ID: `37eb7d59-05c0-4ba2-8162-cb6a9fe5d492`.
+- Guarded migration run `34752340290` — SUCCESS.
+- Independent post-migration verification run `34752381290` — SUCCESS.
+- Provider schema: `business_core_v3`.
+- Full V3 table contract and baseline seeds verified.
+- Business rows remain zero.
+- Foreign-key and quick integrity checks passed.
 
-Latest automated read-only pre-write evidence:
-- GitHub Actions run `34749417468` — SUCCESS.
-- D1 `schema_version`: `business_core_v1`.
-- User tables observed: `clusters`, `conflict_corrections`, `d1_migrations`, `document_metadata`, `domain_events`, `dropped_goods`, `employee_cluster_memberships`, `employees`, `import_audit`, `labor_records`, `projection_catalog`, `projection_outbox`, `resources`, `session_resource_bindings`, `shift_definitions`, `vhdchy_meta`, `work_sessions` (plus D1 internal `_cf_KV`).
-- All measured business tables contain `0` rows.
-- Bookkeeping only: `d1_migrations=1`, `vhdchy_meta=3`.
-- Classification: `BUSINESS_CORE_V1 / ZERO_BUSINESS_ROWS / SCHEMA_MISMATCH`.
-- No business row contents were read and no INSERT/UPDATE/DELETE/DDL was issued by the inspection.
+## Cloudflare Worker BETA — V3 DEPLOYED + HEALTH PASS
 
-## Source/schema status
+- Worker: `vhdchy-beta`.
+- Public origin: `https://beta.supra.cc.cd`.
+- `workers.dev`: disabled and preserved disabled.
+- Binding names/types verified before and after deploy: `DB`/D1, `APP_ENV`/plain text, `BUILD_SHA`/plain text, `GAS_EXEC_URL`/plain text.
+- Guarded deploy run `34752917714` — SUCCESS.
+- Deployed build SHA: `6b23f7134e02c7b53571c0a151f97f27a86bcb2e`.
+- `/health`: PASS, environment `BETA`, D1 schema `business_core_v3`.
+- `/health/deep`: PASS; Google Gateway was healthy at verification time.
+- `/api/v1/meta`: PASS, runtime `BUSINESS_CORE_V3`.
+- `/api/v1/capabilities`: PASS, authority `D1`, anonymous mutation disabled.
+- Independent post-deploy provider inspection run `34752966242` — SUCCESS; routing, binding names/types and D1 V3 state remained correct.
 
-- Owner-approved `business_core_v3` source is now on `main` after PR #7; merge commit `c4c6e43f25c78625ebd816d1bdf5c54393a0f812`.
-- Ordered migration source is `0000_beta_zero_business_rebuild.sql` through `0008_seed_core.sql`.
-- Post-merge validation `34749181618` — SUCCESS.
-- D1-compatible rebuild-guard validation `34749393544` — SUCCESS.
-- Final main validation `34749417525` — SUCCESS.
-- No D1 migration/rebuild or V3 Worker deployment has been performed yet.
+## Service implementation state
 
-## Current execution gate
-
-- Establish a fixed-purpose GitHub-hosted CI migration bridge using Environment `beta`.
-- The bridge must verify exact provider identity and the V1 zero-business precondition immediately before write, apply only the reviewed V3 migration set, then verify `business_core_v3` plus target table/seed/integrity invariants.
-- Dispatch must not accept arbitrary SQL/provider commands.
-- Owner-local Wrangler/Git/Node installation is not part of the normal execution path.
+- D1 schema and Worker foundation are now live in BETA.
+- Business data/admin API paths intentionally remain closed with `AUTH_REQUIRED` until authenticated session and effective-permission enforcement are implemented.
+- Google projection/outbox processing is not business-live yet.
+- Web business flows are not business-live yet.
+- Next Service implementation gate is authentication/session/permission enforcement, followed by projection/outbox processing and business APIs/acceptance scenarios.
 
 ## Target architecture
 
