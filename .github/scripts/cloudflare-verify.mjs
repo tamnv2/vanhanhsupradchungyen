@@ -106,6 +106,20 @@ async function inspectD1ReadOnly(databaseId) {
   console.log('D1 read-only inspection PASS');
 }
 
+async function inspectWorkerRoutingReadOnly() {
+  const accountSubdomain = await cf(`/accounts/${encodeURIComponent(accountId)}/workers/subdomain`);
+  const workerSubdomain = await cf(`/accounts/${encodeURIComponent(accountId)}/workers/scripts/${encodeURIComponent(expectedWorker)}/subdomain`);
+  const subdomain = String(accountSubdomain?.result?.subdomain || '');
+  const enabled = workerSubdomain?.result?.enabled === true;
+  const previewsEnabled = workerSubdomain?.result?.previews_enabled === true;
+  console.log(`WORKERS_DEV_ACCOUNT_SUBDOMAIN=${subdomain}`);
+  console.log(`WORKERS_DEV_ENABLED=${enabled ? 'yes' : 'no'}`);
+  console.log(`WORKERS_DEV_PREVIEWS_ENABLED=${previewsEnabled ? 'yes' : 'no'}`);
+  if (subdomain && enabled) {
+    console.log(`WORKER_PUBLIC_URL=https://${expectedWorker}.${subdomain}.workers.dev`);
+  }
+}
+
 const tokenKind = await verifyToken();
 
 const workers = await cf(`/accounts/${encodeURIComponent(accountId)}/workers/scripts`);
@@ -127,6 +141,8 @@ if (database) console.log(`D1_DATABASE_ID=${database.uuid || database.id || ''}`
 if (!worker || !database) {
   throw new Error(`Cloudflare expected-resource mismatch: worker=${worker ? 'found' : 'missing'}, d1=${database ? 'found' : 'missing'}. Fail closed; no resources were created.`);
 }
+
+await inspectWorkerRoutingReadOnly();
 
 const databaseId = database.uuid || database.id;
 await inspectD1ReadOnly(databaseId);
