@@ -109,12 +109,17 @@ async function inspectD1ReadOnly(databaseId) {
 async function inspectWorkerRoutingReadOnly() {
   const accountSubdomain = await cf(`/accounts/${encodeURIComponent(accountId)}/workers/subdomain`);
   const workerSubdomain = await cf(`/accounts/${encodeURIComponent(accountId)}/workers/scripts/${encodeURIComponent(expectedWorker)}/subdomain`);
+  const domainsPayload = await cf(`/accounts/${encodeURIComponent(accountId)}/workers/domains`);
   const subdomain = String(accountSubdomain?.result?.subdomain || '');
   const enabled = workerSubdomain?.result?.enabled === true;
   const previewsEnabled = workerSubdomain?.result?.previews_enabled === true;
+  const domains = (Array.isArray(domainsPayload?.result) ? domainsPayload.result : [])
+    .filter(item => item?.service === expectedWorker)
+    .map(item => ({ hostname: item.hostname, zone_name: item.zone_name, environment: item.environment || null }));
   console.log(`WORKERS_DEV_ACCOUNT_SUBDOMAIN=${subdomain}`);
   console.log(`WORKERS_DEV_ENABLED=${enabled ? 'yes' : 'no'}`);
   console.log(`WORKERS_DEV_PREVIEWS_ENABLED=${previewsEnabled ? 'yes' : 'no'}`);
+  console.log(`WORKER_CUSTOM_DOMAINS=${JSON.stringify(domains)}`);
   if (subdomain && enabled) {
     console.log(`WORKER_PUBLIC_URL=https://${expectedWorker}.${subdomain}.workers.dev`);
   }
