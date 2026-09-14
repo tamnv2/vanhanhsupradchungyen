@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using Microsoft.Data.Sqlite;
 
 namespace Vhdchy.LanService;
@@ -24,12 +25,10 @@ public sealed class LanUserSessionStore
     public async Task EnsureAsync(CancellationToken cancellationToken = default)
     {
         await using var connection = await OpenAsync(cancellationToken);
-        await using var command = connection.CreateCommand();
-        command.CommandText = SchemaSql;
-        await command.ExecuteNonQueryAsync(cancellationToken);
+        await EnsureSchemaAsync(connection, cancellationToken);
     }
 
-    public async Task<LanUserSessionIssueResult> IssueAsync(
+    public async Task<LanUserSessionIssueResult> IssueFromAuthenticatedEvidenceAsync(
         string userId,
         string deviceId,
         string securityEpoch,
@@ -52,9 +51,16 @@ public sealed class LanUserSessionStore
         await EnsureSchemaAsync(connection, cancellationToken);
         var deviceError = await ValidateDeviceAsync(connection, deviceId, securityEpoch, cancellationToken);
         if (deviceError is not null) throw new LanUserSessionException(deviceError, deviceError);
+
         var activeAuthority = await ReadActiveAuthorityVersionAsync(connection, cancellationToken);
         if (!string.Equals(activeAuthority, authoritySnapshotVersion, StringComparison.Ordinal))
             throw new LanUserSessionException("AUTHORITY_REFRESH_REAUTH_REQUIRED", "Session issuance requires the current active authority generation.");
+
+        var userStatus = await ReadAuthorityUserStatusAsync(connection, authoritySnapshotVersion, userId, cancellationToken);
+        if (userStatus is null)
+            throw new LanUserSessionException("ACCOUNT_NOT_FOUND", "Authenticated user is absent from the active authority snapshot.");
+        if (!string.Equals(userStatus, "ACTIVE", StringComparison.Ordinal))
+            throw new LanUserSessionException("ACCOUNT_NOT_ACTIVE", "Authenticated user is not active in the current authority snapshot.");
 
         var sessionId = Guid.NewGuid().ToString("N");
         var rawToken = Base64Url(RandomNumberGenerator.GetBytes(32));
@@ -131,6 +137,10 @@ public sealed class LanUserSessionStore
         var activeAuthority = await ReadActiveAuthorityVersionAsync(connection, cancellationToken);
         if (!string.Equals(activeAuthority, authorityVersion, StringComparison.Ordinal)) return Deny("AUTHORITY_REFRESH_REAUTH_REQUIRED");
 
+        var userStatus = await ReadAuthorityUserStatusAsync(connection, authorityVersion, reader.GetString(1), cancellationToken);
+        if (userStatus is null) return Deny("ACCOUNT_NOT_FOUND");
+        if (!string.Equals(userStatus, "ACTIVE", StringComparison.Ordinal)) return Deny("ACCOUNT_NOT_ACTIVE");
+
         return new LanUserSessionDecision(
             true,
             "SESSION_AUTHENTICATED",
@@ -191,6 +201,37 @@ public sealed class LanUserSessionStore
         var value = reader.GetString(0);
         if (await reader.ReadAsync(cancellationToken)) return null;
         return value;
+    }
+
+    private static async Task<string?> ReadAuthorityUserStatusAsync(
+        SqliteConnection connection,
+        string authoritySnapshotVersion,
+        string userId,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.CommandText = "SELECT payload_json FROM authority_snapshots WHERE authority_version=$version AND status='ACTIVE' LIMIT 1";
+        command.Parameters.AddWithValue("$version", authoritySnapshotVersion);
+        var payload = Convert.ToString(await command.ExecuteScalarAsync(cancellationToken));
+        if (string.IsNullOrWhiteSpace(payload)) return null;
+        try
+        {
+            using var document = JsonDocument.Parse(payload);
+            if (!document.RootElement.TryGetProperty("users", out var users) || users.ValueKind != JsonValueKind.Array) return null;
+            foreach (var user in users.EnumerateArray())
+            {
+                if (user.ValueKind != JsonValueKind.Object) continue;
+                if (!user.TryGetProperty("userId", out var id) || id.ValueKind != JsonValueKind.String) continue;
+                if (!string.Equals(id.GetString(), userId, StringComparison.Ordinal)) continue;
+                if (!user.TryGetProperty("status", out var status) || status.ValueKind != JsonValueKind.String) return null;
+                return status.GetString()?.Trim().ToUpperInvariant();
+            }
+            return null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
     }
 
     private static string Base64Url(byte[] value) => Convert.ToBase64String(value).TrimEnd('=').Replace('+','-').Replace('/','_');
