@@ -1,0 +1,68 @@
+name: Validate LAN Windows DPAPI TLS storage
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'lan-service/**'
+      - 'lan-dpapi-tls-harness/**'
+      - '.github/workflows/lan-dpapi-tls-harness.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lan-dpapi-tls-harness
+  cancel-in-progress: true
+
+jobs:
+  dpapi-tls:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Build LAN runtime and DPAPI TLS harness
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          dotnet build lan-service/Vhdchy.LanService.csproj -c Release
+          dotnet build lan-dpapi-tls-harness/Vhdchy.LanDpapiTls.Harness.csproj -c Release
+
+      - name: Prove current-user DPAPI PFX and canonical-host validation
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $dataRoot = Join-Path $env:RUNNER_TEMP 'vhdchy-dpapi-tls'
+          if (Test-Path $dataRoot) { Remove-Item -Recurse -Force $dataRoot }
+          New-Item -ItemType Directory -Path $dataRoot | Out-Null
+
+          dotnet run --project lan-dpapi-tls-harness/Vhdchy.LanDpapiTls.Harness.csproj `
+            -c Release --no-build -- `
+            'lan-service/bin/Release/net8.0/VHDCHY.LanService.dll' `
+            $dataRoot `
+            17917 2>&1 | Tee-Object -FilePath (Join-Path $env:RUNNER_TEMP 'lan-dpapi-tls.log')
+
+          $log = Get-Content -Raw (Join-Path $env:RUNNER_TEMP 'lan-dpapi-tls.log')
+          foreach ($marker in @(
+            'LAN_DPAPI_TLS_HARNESS_PASS',
+            'dpapiCurrentUser=PASS',
+            'userSpacePfx=PASS',
+            'canonicalSan=PASS',
+            'wrongHostRejected=PASS',
+            'corruptBlobRejected=PASS',
+            'rawPfxDiskLeak=PASS'
+          )) {
+            if (-not $log.Contains($marker)) { throw "Missing marker: $marker" }
+          }
+
+      - name: Upload DPAPI TLS diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lan-dpapi-tls-diagnostics
+          if-no-files-found: ignore
+          path: ${{ runner.temp }}/lan-dpapi-tls.log
