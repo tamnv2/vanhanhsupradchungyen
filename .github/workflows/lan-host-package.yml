@@ -82,7 +82,7 @@ jobs:
           & './out/package/scripts/Manage-LanCertificate.ps1' `
             -Action SelfTest `
             -TargetEnvironment BETA `
-            -CertificateDataRoot $root 2>&1 | Tee-Object -FilePath (Join-Path $env:RUNNER_TEMP 'lan-host-script.log')
+            -CertificateDataRoot $root *>&1 | Tee-Object -FilePath (Join-Path $env:RUNNER_TEMP 'lan-host-script.log')
           if ($LASTEXITCODE -ne 0) { throw 'Host certificate launcher self-test failed.' }
           $log = Get-Content -LiteralPath (Join-Path $env:RUNNER_TEMP 'lan-host-script.log') -Raw
           foreach ($marker in @(
