@@ -11,7 +11,10 @@
     "permission-store.js",
     "projection.js",
     "runtime-contract.js",
-    "reconciliation.js"
+    "reconciliation.js",
+    "reconciliation-finality.js",
+    "reconciliation-request-auth.js",
+    "reconciliation-route.js"
   ],
   "compatibility_date": "2026-09-13",
   "public_origin": "https://beta.supra.cc.cd",
@@ -21,9 +24,14 @@
     "database_name": "vhdchy-data-beta",
     "database_id": "37eb7d59-05c0-4ba2-8162-cb6a9fe5d492"
   },
+  "inherit_bindings": [
+    "LAN_RECONCILIATION_KEY_ID",
+    "LAN_RECONCILIATION_SHARED_SECRET"
+  ],
   "vars": {
     "APP_ENV": "BETA",
-    "GAS_EXEC_URL": "https://script.google.com/macros/s/AKfycbzxRzxjeFyPpYQ39T3MJRL_sSKrhJhHXLY5LgGy16CnxuPEIFoJo8vr9XijrsxZttRtjQ/exec"
+    "GAS_EXEC_URL": "https://script.google.com/macros/s/AKfycbzxRzxjeFyPpYQ39T3MJRL_sSKrhJhHXLY5LgGy16CnxuPEIFoJo8vr9XijrsxZttRtjQ/exec",
+    "LAN_RECONCILIATION_FINALITY_V1": "disabled"
   },
   "expected_runtime": {
     "schema_version": "business_core_v3",
