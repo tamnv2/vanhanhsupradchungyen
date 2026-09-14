@@ -78,6 +78,44 @@ jobs:
           test "$(sqlite3 "$db" "PRAGMA quick_check;")" = "ok"
           test "$(sqlite3 "$db" "PRAGMA foreign_key_check;")" = ""
 
+      - name: Prove production runtime integration recovery and conflict status
+        shell: bash
+        run: |
+          set -euo pipefail
+          data_root="$RUNNER_TEMP/vhdchy-lan-sync"
+          db="$(cat "$RUNNER_TEMP/edge-db-path.txt")"
+
+          sqlite3 "$db" "UPDATE google_projection_outbox SET state='SENDING', next_attempt_at=NULL, last_error_code=NULL WHERE projection_key='PROJ-CLOUD-SYNC-RESTART';"
+          test "$(sqlite3 "$db" "SELECT COUNT(*) FROM google_projection_outbox WHERE projection_key='PROJ-CLOUD-SYNC-RESTART' AND state='SENDING';")" = "1"
+
+          VHDCHY_ENV=BETA \
+          VHDCHY_CLUSTER_ID=PICK_PACK_1291 \
+          VHDCHY_LAN_PORT=17912 \
+          VHDCHY_LAN_DATA_ROOT="$data_root" \
+            dotnet lan-service/bin/Release/net8.0/VHDCHY.LanService.dll > "$RUNNER_TEMP/lan-sync-runtime.log" 2>&1 &
+          pid=$!
+          trap 'kill ${pid:-0} 2>/dev/null || true' EXIT
+
+          ok=false
+          for i in $(seq 1 30); do
+            code=$(curl --noproxy '*' -sS -o "$RUNNER_TEMP/lan-sync-runtime-health.json" -w '%{http_code}' http://127.0.0.1:17912/health || true)
+            if [ "$code" = "200" ]; then ok=true; break; fi
+            if ! kill -0 "$pid" 2>/dev/null; then cat "$RUNNER_TEMP/lan-sync-runtime.log"; exit 1; fi
+            sleep 0.5
+          done
+          test "$ok" = "true"
+
+          jq -e '.recoveredInterruptedIntegrationOutput == 1 and .edgeStoreIntegrity == "PASS"' "$RUNNER_TEMP/lan-sync-runtime-health.json" >/dev/null
+          curl --noproxy '*' -fsS http://127.0.0.1:17912/api/v1/sync/status -o "$RUNNER_TEMP/lan-sync-runtime-status.json"
+          jq -e '.runtime == "LAN" and .pendingGoogleWork == 1 and .integrationOutputReviewRequired == 1 and .completedIntegrationReceipts == 4 and .reviewIntegrationReceipts == 1 and .conflictCount == 2' "$RUNNER_TEMP/lan-sync-runtime-status.json" >/dev/null
+          test "$(sqlite3 "$db" "SELECT COUNT(*) FROM google_projection_outbox WHERE projection_key='PROJ-CLOUD-SYNC-RESTART' AND state='RETRY_WAIT' AND last_error_code='PROCESS_RESTART';")" = "1"
+          test "$(sqlite3 "$db" "PRAGMA quick_check;")" = "ok"
+          test "$(sqlite3 "$db" "PRAGMA foreign_key_check;")" = ""
+
+          kill "$pid"
+          wait "$pid" || true
+          trap - EXIT
+
       - name: Run post-reconciliation rebase vectors
         shell: bash
         run: |
