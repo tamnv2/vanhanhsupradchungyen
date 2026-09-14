@@ -16,6 +16,8 @@ Full project audit:
 
 For any of these commands, AI must start from `AI_ENTRYPOINT.md` on `main`. AI memory/chat history is not project authority unless Owner explicitly requests its use.
 
+Current continuation handoff after the 2026-09-15 Web-auth / Android-transport work block is GitHub Issue **#8**. A fresh chat should bootstrap normally first, then use Issue #8 when reconciling the stale checkpoint with current `main`.
+
 ## Current scope
 
 VHDCHY is the DC Hưng Yên operations platform. `PICK_PACK_1291` is the first cluster/module, not the whole system.
