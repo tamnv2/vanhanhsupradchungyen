@@ -179,19 +179,46 @@ function toGatewayPayload(intent, eventId, context) {
   throw new Error(`PROJECTION_EVENT_UNSUPPORTED:${eventType || 'UNKNOWN'}`);
 }
 
-export async function materializeProjectionRows(db, rows) {
-  const input = Array.isArray(rows) ? rows : [];
-  if (!input.length) return [];
-  const parsed = input.map(row => ({ row, payload: parsePayload(row?.payload_json) }));
-  const employeeIds = parsed
-    .filter(item => needsEmployeeContext(item.payload))
-    .map(item => employeeIdForIntent(item.payload));
-  const context = await loadEmployeeContext(db, employeeIds);
+function parseRows(rows) {
+  return (Array.isArray(rows) ? rows : []).map(row => ({ row, payload: parsePayload(row?.payload_json) }));
+}
 
-  return parsed.map(({ row, payload }) => {
-    if (typeof payload.sheet === 'string' && isObject(payload.values)) return row;
-    const gatewayPayload = toGatewayPayload(payload, String(row?.event_id || ''), context);
-    if (!gatewayPayload) return row;
-    return { ...row, payload_json: JSON.stringify(gatewayPayload) };
-  });
+async function contextForParsed(db, parsed) {
+  return loadEmployeeContext(db, parsed
+    .filter(item => needsEmployeeContext(item.payload))
+    .map(item => employeeIdForIntent(item.payload)));
+}
+
+function materializeParsed(parsed, context) {
+  const { row, payload } = parsed;
+  if (typeof payload.sheet === 'string' && isObject(payload.values)) return row;
+  const gatewayPayload = toGatewayPayload(payload, String(row?.event_id || ''), context);
+  if (!gatewayPayload) return row;
+  return { ...row, payload_json: JSON.stringify(gatewayPayload) };
+}
+
+export async function materializeProjectionRows(db, rows) {
+  const parsed = parseRows(rows);
+  if (!parsed.length) return [];
+  const context = await contextForParsed(db, parsed);
+  return parsed.map(item => materializeParsed(item, context));
+}
+
+export async function materializeProjectionBatch(db, rows) {
+  const parsed = parseRows(rows);
+  if (!parsed.length) return { rows: [], failures: [] };
+  const context = await contextForParsed(db, parsed);
+  const materializedRows = [];
+  const failures = [];
+  for (const item of parsed) {
+    try {
+      materializedRows.push(materializeParsed(item, context));
+    } catch (error) {
+      failures.push({
+        row: item.row,
+        code: String(error?.message || 'PROJECTION_MATERIALIZATION_FAILED').slice(0, 128)
+      });
+    }
+  }
+  return { rows: materializedRows, failures };
 }
