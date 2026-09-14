@@ -171,8 +171,8 @@ async function handlePasswordLogin(request, env, requestId) {
 
   const username = typeof body.value.username === 'string' ? body.value.username.trim() : '';
   const password = typeof body.value.password === 'string' ? body.value.password : '';
-  if (!username || !password) {
-    return error('LOGIN_INPUT_REQUIRED', 'Username and password are required.', 422, requestId);
+  if (!username) {
+    return error('LOGIN_INPUT_REQUIRED', 'Username is required.', 422, requestId);
   }
 
   const result = await loginWithPassword(env.DB, username, password);
