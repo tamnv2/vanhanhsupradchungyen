@@ -39,6 +39,7 @@ var edgeEpoch = Guid.NewGuid().ToString("N");
 var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "dev";
 var edgeStore = new EdgeStore(Path.Combine(root, "edge.db"));
 await edgeStore.InitializeAsync(environment, clusterId, instanceId, edgeEpoch, DomainContractVersion);
+await EmployeeCodeUniqueClaimStore.EnsureAsync(edgeStore.DatabasePath);
 var startupIntegrity = await edgeStore.CheckIntegrityAsync();
 if (!startupIntegrity.Ok)
 {
