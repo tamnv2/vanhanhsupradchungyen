@@ -1,226 +1,82 @@
-# NEXT ACTIONS
+# NEXT ACTIONS — VHDCHY
 
-Baseline: `REPO-RESET-20260912-01`
-Updated: 2026-09-13
-Product architecture: `docs/TARGET_PRODUCT_ARCHITECTURE_V3.md`
-Execution plan: `docs/DELIVERY_PLAN_V3.md`
+Updated: 2026-09-14
+Delivery plan: `docs/DELIVERY_PLAN_V5.md`
+Progress: `docs/PROGRESS_TRACKING_V1.md`
+Current overall: **53%**
+Primary phase: **Phase 6 — LAN continuity/offline/reconcile**
 
 ## Execution rule
 
-Default state is `CONTINUE` with dependency-aware parallel execution.
+Default is `CONTINUE` with dependency-aware parallel execution. Do not serialize independent Web/App/Cloud/LAN work unnecessarily, but do not allow parallel lanes to invent different business contracts.
 
-Website, APK, Cloud Service, LAN Service, Google integration and reconciliation are all active product lanes. Final company-network hardware affects only physical evidence.
+Public business mutation paths remain fail-closed until the corresponding current readiness/security/domain acceptance gates are proven.
 
-## Gate 0 — V3 architecture correction — COMPLETE
+## Priority A — current LAN/business lane
 
-Locked:
-- Website + APK + Cloud Service + LAN Service are first-class deliverables;
-- APK is the PDA business client of the same domain contract as Website;
-- LAN is a full local Service substitute, not only transport/relay;
-- LAN may continue normal business processing while Cloud is unavailable;
-- LAN may write controlled Sheets projection and Drive media directly when Internet/Google is reachable;
-- Cloud synchronization consumes the LAN event journal/outbox, not Google as the business source;
-- LAN sync starts whenever Cloud becomes reachable, even if users remain routed through LAN;
-- offline login has no duration-only expiry and uses the latest synchronized local authority snapshot;
-- reconnect refresh applies new authority/configuration to future operations;
-- only SUPERADMIN/ROOT may deliberately force LAN while Cloud is healthy;
-- automatic retry/deduplication handles technical errors; unresolved business/data conflicts go to ADMIN+.
+1. Preserve the proven employee/MNV/attendance Slice-1 behavior, atomic uniqueness and durable staged-media primitives.
+2. Extend current LAN auth/pairing/security-epoch and permission enforcement; pilot identity hints are not sufficient security.
+3. Extend current business adapters and acceptance vectors beyond the existing Slice-1 subset according to `docs/DELIVERY_PLAN_V5.md`.
+4. Complete Cloud/LAN reconciliation identity, sync cursors/checkpoints, Google receipts/deduplication and explicit conflict evidence.
+5. Keep current public LAN mutations fail-closed until readiness explicitly links the complete reviewed business/auth path.
+6. Do not claim physical PASS from CI/source evidence.
 
-Do not return to V2 assumptions that defer all Google work until after D1 reconciliation or treat forced-LAN as relay-only.
+## Priority B — portrait Owner decision gate
 
-## Gate 1 — shared domain/API + reconciliation contract — ACTIVE NOW
+The existing portrait conflict remains genuinely unresolved:
 
-1. Normalize shared command/query/event naming.
-2. Lock request/response/error/idempotency/device/entity-version semantics.
-3. Lock client-visible statuses for:
-   - central commit;
-   - LAN local acceptance pending Cloud sync;
-   - Google projection/upload completed or pending;
-   - synchronization conflict;
-   - client-only queue.
-4. Define provider-neutral business transition/event output.
-5. Define LAN reconciliation envelope with stable event/command identity, edge instance/epoch, base version, authority snapshot/version and Google receipts.
-6. Build shared acceptance vectors executed against both Cloud and LAN adapters.
+- current business rule requires previous portrait deletion immediately;
+- offline/LAN media rules allow staging when Drive is unavailable.
 
-Exit gate: Cloud and LAN cannot legally implement different business meaning for the same command.
+Continue decision-independent media infrastructure, but do not silently choose offline portrait replacement semantics. When implementation reaches that exact mutation behavior, obtain explicit Owner authority, then implement and test the chosen lifecycle.
 
-## Gate 2 — Cloud Service runtime — PARALLEL
+## Priority C — Online Web + LAN Web V7 UI lane
 
-Existing foundation:
-- D1 `business_core_v3`: PASS;
-- Worker health/meta foundation: LIVE;
-- auth/session/permission source foundation: present/tested;
-- projection outbox foundation: present;
-- Google Gateway v3: deployed fail-closed.
+1. Build a shared VHDCHY Web design system from the V7 DNSHE-style direction without copying DNSHE branding/assets.
+2. Implement login shell and authenticated dashboard shell first.
+3. Keep Online/LAN as one UI product with shared navigation/hierarchy.
+4. Add explicit network/sync/queue states only where they affect behavior.
+5. Package LAN-critical fonts/icons/scripts/styles/images locally; no Internet-only dependency for continuity UI.
+6. Migrate business modules onto the shared shell as their Service/LAN contracts stabilize.
+7. Preserve Vietnamese / English / Chinese, default English.
 
-Next:
-1. safely complete multi-module Worker packaging through an allowed path;
-2. integrate protected runtime routes;
-3. implement shared domain core + D1 adapter/canonical transaction helper;
-4. add LAN reconciliation ingestion endpoints;
-5. accept Google projection/upload receipts from LAN sync so duplicate output is avoided;
-6. complete Worker -> Google sender/auth/retry/ACK;
-7. implement Drive metadata/readback flow;
-8. implement business commands by vertical slice.
+## Priority D — Android/PDA App V7 lane
 
-## Gate 3 — full LAN Service runtime — PARALLEL
+1. Surface and inspect the actual Pick Pack 1291 App UI source/artifacts from the authorized backup reference before finalizing visuals.
+2. Build the current VHDCHY PDA shell using that UI/UX direction, adapted to current workflows and permissions.
+3. Reuse only reviewed low-level legacy mechanics: discovery/cache/hysteresis, device sequence, durable queue, ACK deletion, reconnect/resync and bounded background work.
+4. Implement scanner-first warehouse flows only through the current domain commands.
+5. Integrate current durable media/camera behavior and current network-state UX.
+6. Verify final signed APK/update/background/battery behavior on real target devices.
 
-Build the real substitute Service:
+## Priority E — Cloud/Gateway/provider lane
 
-1. no-admin portable runtime package;
-2. same Service/domain API contract as Cloud;
-3. local edge current-state database;
-4. immutable local event journal;
-5. durable Cloud synchronization/reconciliation outbox;
-6. synchronized local authority/account/permission/configuration snapshot;
-7. resumable online operational snapshot/delta refresh;
-8. controlled direct Sheets projection when Google is reachable;
-9. direct Drive upload + receipt/hash metadata when Drive is reachable;
-10. queued/staged Google work when Internet/Google is unavailable;
-11. continuous/opportunistic Cloud sync whenever Cloud is reachable, independent of client route;
-12. explicit business conflict queue with full evidence;
-13. local Web bundle hosting;
-14. diagnostics/update/rollback/recovery without admin/router/firewall/DNS dependency.
+1. Continue current Service/API business coverage and provider-neutral adapters.
+2. Complete controlled Google Drive/Sheets projection/upload receipt, retry and readback behavior.
+3. Keep Sheets/Drive downstream only; never use them as canonical business authority.
+4. Complete current Gateway/provider failure/recovery and operator-visible diagnostics.
+5. Keep sensitive provider operations within allowed high-level action safety; never bypass provider/platform guards.
 
-The old `lan-agent/` transport prototype may donate reviewed mechanics only; it is not the LAN Service architecture.
+## Priority F — physical BETA acceptance when source is ready
 
-## Gate 4 — LAN security/authority continuity — PARALLEL
+Run against the intended company ordinary-user Windows laptop/network and real NLS-MT90 devices:
 
-1. secure local authentication/authorization snapshot storage;
-2. authenticated client <-> LAN channel;
-3. local authority/configuration snapshot versioning;
-4. reconnect refresh for subsequent operations;
-5. event evidence records which synchronized authority version accepted it;
-6. SUPERADMIN/ROOT-only manual LAN activation with audit trail;
-7. preserve existing ROOT-exclusive security/recovery boundary.
+1. LAN reachability/discovery/reacquisition under company network policy.
+2. Real PDA workflow latency/Wi-Fi behavior and queue recovery.
+3. >=60-minute Internet-cut continuity Window 2 under V6.
+4. Reconnect/reconciliation after restoration as a separate post-window test.
+5. Host restart/network-change and no-admin update/rollback.
+6. Background/battery behavior.
+7. Synthetic 10/25/50/100 load plus soak.
+8. Full Owner UAT across Online Web, LAN Web, App and Service/Gateway.
 
-Important: unlimited offline operation necessarily means remote account/permission changes cannot be seen until connectivity returns. Treat this as explicit evidence/state, not an impossible guarantee.
+## Priority G — STABLE after BETA acceptance only
 
-## Gate 5 — Website + APK foundations — PARALLEL
+- Prepare isolated STABLE infrastructure safely during development.
+- Do not activate production business traffic or promote until mandatory BETA gates pass and the Owner explicitly approves promotion.
+- Promote the exact accepted BETA release/artifacts.
+- Do not copy BETA runtime/business data into STABLE unless a separately approved migration requires it.
 
-### Website
-1. same domain client contract as APK;
-2. login/session shell;
-3. permission-aware navigation;
-4. Cloud/LAN endpoint selector;
-5. local Web build served by LAN Service;
-6. runtime/sync/Google-output indicators;
-7. ADMIN+ conflict-resolution surface.
+## Current execution line
 
-### APK
-1. real VHDCHY PDA business app;
-2. same auth/domain contract as Website;
-3. PDA-optimized screens/workflow;
-4. Cloud/LAN endpoint selector;
-5. QR/scanner integration through domain commands;
-6. durable retry queue only where contract permits;
-7. bounded background work;
-8. BETA signing/update after product behavior stabilizes.
-
-## Gate 6 — vertical business slices
-
-For each slice:
-
-`shared contract/core -> Cloud adapter -> LAN adapter -> Website -> APK -> Google outputs -> failover/reconciliation acceptance`
-
-### Slice 1 — identity / employee / attendance / presence
-- employee/MNV lifecycle;
-- user context;
-- IN/OUT/repeated IN;
-- current presence;
-- QR employee resolution;
-- local authority snapshot behavior;
-- LAN event -> Cloud reconciliation;
-- Google projection from Cloud or LAN with deduplication.
-
-### Slice 2 — work session / PICK / PACK / resources
-- MAIN/EXTRA sessions;
-- PICK/PDA/User Pick;
-- PACK table/User Pack;
-- assignment changes/history;
-- release/reissue;
-- cross-cluster borrow;
-- edge resource snapshot;
-- competing Cloud/LAN conflict detection and ADMIN+ resolution.
-
-### Slice 3 — labor / dropped goods
-- labor catalog/open/finish/correction;
-- cross-cluster labor;
-- dropped-goods manual/QR;
-- Cloud/LAN parity;
-- Google projection parity.
-
-### Slice 4 — documents/media
-- DRAFT metadata;
-- direct LAN Drive upload when reachable;
-- offline staging when unreachable;
-- hash/readback receipts;
-- later Cloud/D1 attachment without duplicate upload;
-- FINAL gate;
-- replacement/portrait semantics.
-
-## Gate 7 — failover / recovery acceptance
-
-Required drills:
-1. normal Cloud direct;
-2. SUPERADMIN/ROOT forced LAN while Cloud healthy;
-3. Cloud unavailable but Internet/Google available;
-4. full Internet loss with LAN available;
-5. Cloud returns while users remain on LAN;
-6. account/permission/configuration changed remotely during outage;
-7. LAN restart with pending events/Google work;
-8. duplicate/uncertain response retry;
-9. split-brain business conflict;
-10. both Cloud and LAN unavailable -> permitted client-local queue.
-
-## Gate 8 — reconciliation/conflict engine
-
-1. automatic duplicate/idempotent replay handling;
-2. automatic Google receipt deduplication;
-3. automatic non-conflicting Cloud ingestion;
-4. version/resource conflict detection;
-5. evidence-preserving conflict queue;
-6. ADMIN+ business conflict decision actions;
-7. ROOT-only security conflict boundary;
-8. immutable post-resolution audit event.
-
-## Gate 9 — backup / DR / packaging
-
-- D1 snapshot/restore;
-- LAN edge backup/recovery for unsynced events and staged media;
-- Google projection/readback/checksum controls;
-- LAN no-admin update/rollback;
-- APK signer/hash/update channel;
-- matching Cloud-hosted and LAN-hosted Website bundle versions.
-
-## Gate 10 — BETA product acceptance
-
-BETA PASS requires evidence for:
-- Website Cloud path;
-- APK Cloud path;
-- Website LAN path;
-- APK LAN path;
-- forced LAN while Cloud healthy;
-- LAN local business execution with Cloud down;
-- direct LAN Google output with Internet available;
-- full offline LAN operation;
-- long-duration offline login against the last synchronized authority snapshot;
-- authority/config refresh after reconnect;
-- LAN -> Cloud reconciliation;
-- Google row/file deduplication;
-- ADMIN+ unresolved business conflict resolution;
-- all required business slices;
-- final company-network/no-admin/PDA regression;
-- backup/restore/update gates.
-
-STABLE remains blocked until full BETA PASS + explicit Owner approval.
-
-## Current exact next work
-
-1. Extend `docs/SERVICE_API_CONTRACT.md` for V3 local-acceptance/sync/Google-receipt semantics.
-2. Extend LAN edge-state design for authority snapshots, Google receipts and Cloud sync cursors.
-3. Define shared domain-core/adapters and runtime-neutral acceptance vectors.
-4. Continue every unblocked Cloud packaging/auth/projection task in parallel.
-5. Build the real LAN Service skeleton against the shared contract.
-6. Build Website/APK foundations against the same contract.
-7. Start Slice 1 once the parity boundaries are explicit enough to prevent divergence.
+`Overall: 53% | Current: Phase 6 — LAN continuity/offline/reconcile | Parallel: Phase 4/5 + V7 Web/App UI | Next gate: broader LAN business/auth/reconcile coverage -> current physical regression`
