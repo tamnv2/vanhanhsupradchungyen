@@ -20,6 +20,7 @@ jobs:
     env:
       CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      LAN_RECONCILIATION_SHARED_SECRET: ${{ secrets.LAN_RECONCILIATION_SHARED_SECRET }}
 
     steps:
       - uses: actions/checkout@v4
@@ -37,7 +38,7 @@ jobs:
             echo "WORKER_MULTI_MODULE_DISPATCH_DISABLED_NOOP"
           fi
 
-      - name: Validate reviewed module manifest
+      - name: Validate reviewed module and credential manifest
         if: steps.dispatch.outputs.enabled == 'true'
         shell: bash
         run: |
@@ -50,6 +51,12 @@ jobs:
             .d1_binding.database_name == "vhdchy-data-beta" and
             .d1_binding.database_id == "37eb7d59-05c0-4ba2-8162-cb6a9fe5d492" and
             .vars.APP_ENV == "BETA" and
+            .vars.LAN_RECONCILIATION_KEY_ID == "vhdchy-beta-lan-reconciliation-01" and
+            .vars.LAN_RECONCILIATION_FINALITY_V1 == "disabled" and
+            (.secret_env_bindings | length) == 1 and
+            .secret_env_bindings[0].name == "LAN_RECONCILIATION_SHARED_SECRET" and
+            .secret_env_bindings[0].env == "LAN_RECONCILIATION_SHARED_SECRET" and
+            .secret_env_bindings[0].min_length >= 32 and
             .expected_runtime.schema_version == "business_core_v3" and
             .expected_runtime.runtime_state == "BUSINESS_CORE_V3"
           ' service/worker/deploy.beta.json >/dev/null
@@ -69,35 +76,20 @@ jobs:
           NODE
           for source in service/worker/src/*.js; do node --input-type=module --check < "$source"; done
 
-      - name: Read-only provider preflight
-        if: steps.dispatch.outputs.enabled == 'true'
-        shell: bash
-        run: node .github/scripts/cloudflare-verify.mjs | tee "$RUNNER_TEMP/provider-preflight.log"
-
-      - name: Enforce exact BETA precondition
+      - name: Require reconciliation secret-store input
         if: steps.dispatch.outputs.enabled == 'true'
         shell: bash
         run: |
           set -euo pipefail
-          node <<'NODE'
-          const fs = require('fs');
-          const log = fs.readFileSync(`${process.env.RUNNER_TEMP}/provider-preflight.log`, 'utf8');
-          const lines = log.split(/\r?\n/);
-          const value = (prefix) => {
-            const line = lines.find(x => x.startsWith(prefix));
-            if (!line) throw new Error(`Missing preflight evidence: ${prefix}`);
-            return line.slice(prefix.length);
-          };
-          if (value('WORKER_FOUND=') !== 'yes') throw new Error('BETA Worker missing');
-          if (value('D1_DATABASE_ID=') !== '37eb7d59-05c0-4ba2-8162-cb6a9fe5d492') throw new Error('D1 identity mismatch');
-          if (value('D1_SCHEMA_VERSION=') !== 'business_core_v3') throw new Error('D1 schema mismatch');
-          if (value('WORKERS_DEV_ENABLED=') !== 'no') throw new Error('unexpected workers.dev state');
-          const domains = JSON.parse(value('WORKER_CUSTOM_DOMAINS='));
-          if (domains.length !== 1 || domains[0]?.hostname !== 'beta.supra.cc.cd') throw new Error(`unexpected domains ${JSON.stringify(domains)}`);
-          console.log('WORKER_MULTI_MODULE_PRECHECK_PASS');
-          NODE
+          test "${#LAN_RECONCILIATION_SHARED_SECRET}" -ge 32
+          echo 'RECONCILIATION_SECRET_STORE_INPUT_PASS'
 
-      - name: Upload reviewed Worker modules
+      - name: Read-only provider preflight before first credential provisioning
+        if: steps.dispatch.outputs.enabled == 'true'
+        shell: bash
+        run: node .github/scripts/cloudflare-worker-predeploy.mjs
+
+      - name: Upload reviewed Worker modules and machine credential
         if: steps.dispatch.outputs.enabled == 'true'
         shell: bash
         run: node .github/scripts/cloudflare-worker-upload.mjs service/worker/deploy.beta.json
@@ -125,6 +117,9 @@ jobs:
           if (value('WORKERS_DEV_ENABLED=') !== 'no') throw new Error('workers.dev changed');
           const domains = JSON.parse(value('WORKER_CUSTOM_DOMAINS='));
           if (domains.length !== 1 || domains[0]?.hostname !== 'beta.supra.cc.cd') throw new Error('custom domain changed');
+          if (!log.includes('WORKER_RECONCILIATION_BINDINGS_PASS')) throw new Error('reconciliation bindings did not pass postflight');
+          if (!log.includes('D1_RECONCILIATION_TABLES_PASS')) throw new Error('reconciliation tables did not pass postflight');
+          if (!log.includes('D1_EDGE_INGEST_COLUMNS_PASS')) throw new Error('reconciliation columns did not pass postflight');
           console.log('WORKER_MULTI_MODULE_POSTCHECK_PASS');
           NODE
 
