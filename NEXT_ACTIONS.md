@@ -3,50 +3,48 @@
 Updated: 2026-09-14
 Delivery plan: `docs/DELIVERY_PLAN_V5.md`
 Progress: `docs/PROGRESS_TRACKING_V1.md`
-Current overall: **55% displayed / 54.6% exact**
+Current overall: **55% displayed / 55.4% exact**
 Primary phase: **Phase 6 — LAN continuity/offline/reconcile**
 
 ## Execution rule
 
 Default is `CONTINUE` with a mandatory ready-queue scheduler. Execute independent safe work in parallel where tools permit; serialize dependency-bound or same-resource writes. A failed node must not stall unrelated ready work.
 
-Public business mutation paths remain fail-closed until the corresponding current readiness/security/domain acceptance gates are proven. Evidence is required before PASS.
+Public business mutation paths remain fail-closed unless the corresponding current transport/readiness/security/domain acceptance gates are satisfied. Evidence is required before PASS.
 
 ## Ready queue NOW
 
-### A — Secure LAN login transport + public HTTP adapter — PRIMARY
+### A — Publicly trusted LAN HTTPS + real-device acceptance — PRIMARY
 
-Already proven:
+Secure transport/source work now proven:
 
-- signed-client pairing/request verification, replay defense and security-epoch fencing;
-- durable user-session binding;
-- authority snapshot V2 primary credential verification;
-- primary credential -> authenticated evidence -> LAN session chain;
-- integrated readiness through the reviewed route-wiring stage;
-- signed session -> authorization/domain -> Slice-1 business coordinator;
-- public HTTP mutation remains deliberately closed.
+- user-space Kestrel HTTPS transport with PFX/private key;
+- no-PFX fallback remains `HTTP_READ_ONLY` and mutation 503;
+- paired signed normal-user login over HTTPS;
+- durable device/security-epoch/authority-bound LAN session;
+- signed session -> authorization/domain -> Slice-1 public business HTTP adapter;
+- replay, signed-body tamper, wrong password and restart-session behavior;
+- no password in captured service diagnostics;
+- portrait mutation remains closed.
 
 Evidence:
 
-- primary auth workflow `34805395079` at `583b3d0329166804b207332dadf6d449b07c0abf` — **SUCCESS**;
-- integrated readiness workflow `34808274815` — **SUCCESS**;
-- baseline paired with readiness `34808274819` — **SUCCESS**;
-- signed route-wiring workflow `34808936937` at `a469d29325ee83f8e19070234c1186ca23474a1c` — **SUCCESS**;
-- baseline at same route-wiring commit `34808937077` — **SUCCESS**.
-
-Route-wiring CI covers positive execution and replay, signed-body binding, wrong target, device/session mismatch, permission DENY, unsupported command, must-change-password, stale authority and portrait fail-closed vectors.
+- secure HTTP workflow `34811861697`, job/check `103874646267`, commit `63ceeb6a8db865ced1870209c7cb74d4f65baea1` — **SUCCESS**;
+- same-HEAD clean baseline workflow `34811861613` — **SUCCESS**;
+- detailed boundary: `docs/LAN_SECURE_HTTP_V1.md`.
 
 Next dependency chain:
 
-1. define a secure credential transport for LAN login that does not expose reusable passwords over plaintext HTTP;
-2. ensure the design remains compatible with ordinary-user/no-admin host constraints and does not require changes to company certificate stores, firewall/router/AP/internal DNS or policy;
-3. implement the reviewed login/session HTTP adapter only after that secure transport is proven;
-4. wire public LAN business HTTP handling to `LanBusinessRouteCoordinator` so the exact signed raw body, device proof, session and current authority remain mandatory;
-5. add HTTP-level negative/E2E vectors and restart/re-auth behavior;
-6. keep `EMPLOYEE_PORTRAIT_REPLACE` closed until the Owner portrait semantic gate is resolved;
-7. only then consider opening the approved public LAN business subset.
+1. provision a publicly trusted BETA certificate for `lan-beta.supra.cc.cd` using an approach compatible with ordinary-user/no-admin operation; DNS-01/automated issuance is preferred where provider capability permits because it does not require inbound Internet reachability to the laptop;
+2. keep the PFX/private key outside GitHub and define renewal/rotation handling without requiring company Windows certificate-store changes;
+3. prove canonical LAN hostname resolution/reachability and certificate trust from the intended ordinary-user company Windows laptop/network;
+4. prove HTTPS/login/business-route behavior from the real NLS-MT90/PDA path, including Wi-Fi/LAN reacquisition;
+5. add public ROOT email-OTP flow; do not introduce a permanent ROOT password;
+6. add reviewed normal-user must-change/password-change/recovery route(s) so a session marked `mustChangePassword` can recover legitimately rather than bypass the gate;
+7. keep `EMPLOYEE_PORTRAIT_REPLACE` closed until the Owner portrait semantic gate is resolved;
+8. include the approved secure public subset in later physical Internet-cut continuity evidence.
 
-Do not mistake request signing for confidentiality: P-256 signatures authenticate/integrity-protect the request but do not encrypt the password.
+CI self-signed/thumbprint-pinned TLS is test evidence only. Do not use browser certificate warning click-through or install an ad-hoc company-device trust root as the production solution.
 
 ### B — Cloud/LAN reconciliation E2E — PARALLEL
 
@@ -76,13 +74,15 @@ Next dependency chain:
 
 Current shared V7 shell and Web contract have PASS evidence in product-foundation workflow `34801611019`.
 
-Continue with actual authenticated login/recovery against real Service routes, then employee/attendance Slice-1 screens and later ADMIN+ conflict-resolution surfaces. Preserve Online/LAN parity, local/offline-safe critical assets and **Vietnamese-only** current UI. Do not fake login success.
+Continue actual authenticated login/recovery against current Service/LAN routes, then employee/attendance Slice-1 screens and later ADMIN+ conflict-resolution surfaces. Preserve Online/LAN parity, local/offline-safe critical assets and **Vietnamese-only** current UI. Do not fake login success.
+
+LAN Web integration must respect the new HTTPS/read-only runtime distinction and must not bypass paired-device/session/readiness controls.
 
 ### D — Android/PDA App — PARALLEL WHERE NOT BLOCKED
 
 Current APK foundation builds and visible text is Vietnamese-only.
 
-Continue non-visual current-contract work that does not depend on missing Pick Pack visual evidence: Service/LAN endpoint abstraction, scanner-to-domain-command boundary, durable retry mechanics, network/sync state and authenticated session handling. Continue locating the actual final Pick Pack 1291 UI source/artifacts; do not invent unavailable screen details.
+Continue non-visual current-contract work that does not depend on missing Pick Pack visual evidence: Service/LAN endpoint abstraction, scanner-to-domain-command boundary, durable retry mechanics, network/sync state, authenticated session handling and HTTPS certificate-validating LAN access. Continue locating the actual final Pick Pack 1291 UI source/artifacts; do not invent unavailable screen details.
 
 ### E — Cloud/Gateway/Google — PARALLEL
 
@@ -92,9 +92,9 @@ Continue provider-neutral business coverage and controlled Google projection/upl
 
 The existing portrait conflict remains unresolved: immediate deletion of the previous portrait versus offline staging while Drive is unavailable. Continue decision-independent media infrastructure, but do not choose offline portrait-replacement semantics without explicit Owner authority.
 
-## Physical BETA acceptance — later, when source is ready
+## Physical BETA acceptance — later, when source/provider path is ready
 
-Physical evidence remains required on the intended ordinary-user company Windows laptop/network and real NLS-MT90 devices: reachability/discovery/reacquisition, PDA workflow/Wi-Fi recovery, **>=60-minute** Internet-cut Window 2, restoration reconciliation, host restart/update rollback, battery/background behavior, synthetic 10/25/50/100 load + soak, and Owner UAT.
+Physical evidence remains required on the intended ordinary-user company Windows laptop/network and real NLS-MT90 devices: trusted HTTPS/reachability/discovery/reacquisition, PDA workflow/Wi-Fi recovery, **>=60-minute** Internet-cut Window 2, restoration reconciliation, host restart/update rollback, battery/background behavior, synthetic 10/25/50/100 load + soak, and Owner UAT.
 
 ## STABLE
 
@@ -102,4 +102,4 @@ STABLE may be prepared safely in isolation, but no production business activatio
 
 ## Current execution line
 
-`Overall: 55% displayed / 54.6% exact | Current: Phase 6 — LAN continuity/offline/reconcile | Primary next gate: secure LAN login transport -> HTTP adapter -> public LAN route E2E | Parallel: Cloud reconciliation machine-auth/network E2E + Phase 4/5 + V7 Web/App`
+`Overall: 55% displayed / 55.4% exact | Current: Phase 6 — LAN continuity/offline/reconcile | Primary next gate: public CA certificate + canonical DNS/real Windows/PDA HTTPS acceptance | Parallel: ROOT/must-change account-security routes + Cloud reconciliation machine-auth/network E2E + V7 Web/App`
