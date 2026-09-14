@@ -6,8 +6,60 @@
   <meta name="color-scheme" content="light">
   <title>VẬN HÀNH DC HƯNG YÊN</title>
   <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/auth.css">
 </head>
-<body>
+<body class="auth-locked">
+  <section id="authGate" class="auth-gate" aria-labelledby="authTitle">
+    <div class="auth-card">
+      <div class="auth-brand">
+        <span class="brand-mark">V</span>
+        <span><strong>VHDCHY</strong><small>VẬN HÀNH DC HƯNG YÊN</small></span>
+      </div>
+
+      <div class="auth-heading">
+        <div>
+          <p class="eyebrow">BETA Console</p>
+          <h1 id="authTitle">Đăng nhập hệ thống</h1>
+          <p>Web Online và Web LAN dùng chung giao diện; Service quyết định runtime, phiên và quyền.</p>
+        </div>
+        <span id="authRuntimeBadge" class="auth-runtime">Đang kiểm tra</span>
+      </div>
+
+      <form id="loginForm" class="auth-form" autocomplete="on">
+        <div class="auth-field">
+          <label for="usernameInput">Tài khoản</label>
+          <input id="usernameInput" name="username" type="text" autocomplete="username" maxlength="240" required>
+        </div>
+        <div class="auth-field">
+          <label for="passwordInput">Mật khẩu</label>
+          <input id="passwordInput" name="password" type="password" autocomplete="current-password" maxlength="1024" required>
+        </div>
+        <div class="auth-actions">
+          <button id="loginButton" class="primary-button" type="submit">Đăng nhập</button>
+          <button id="recoveryButton" class="text-button" type="button">Lấy lại mật khẩu</button>
+        </div>
+        <p id="authSecurityNote" class="auth-security-note">Thông tin xác thực chỉ được gửi tới Service qua contract bảo mật hiện hành. Web không lưu mật khẩu.</p>
+        <p id="authMessage" class="auth-message" aria-live="polite">Đang xác định runtime và khả năng đăng nhập…</p>
+      </form>
+
+      <section id="passwordChangePanel" class="auth-change-panel" hidden aria-labelledby="passwordChangeTitle">
+        <h2 id="passwordChangeTitle">Thiết lập mật khẩu mới</h2>
+        <p>Tài khoản đang ở trạng thái bắt buộc đổi mật khẩu. Các chức năng vận hành vẫn bị khóa cho tới khi hoàn tất.</p>
+        <form id="passwordChangeForm" class="auth-form">
+          <div class="auth-field">
+            <label for="newPasswordInput">Mật khẩu mới</label>
+            <input id="newPasswordInput" name="newPassword" type="password" autocomplete="new-password" maxlength="1024" required>
+          </div>
+          <div class="auth-field">
+            <label for="confirmPasswordInput">Nhập lại mật khẩu mới</label>
+            <input id="confirmPasswordInput" name="confirmPassword" type="password" autocomplete="new-password" maxlength="1024" required>
+          </div>
+          <button id="passwordChangeButton" class="primary-button" type="submit">Lưu mật khẩu mới</button>
+        </form>
+      </section>
+    </div>
+  </section>
+
   <div class="shell">
     <aside id="sidebar" class="sidebar">
       <div class="brand"><span class="brand-mark">V</span><span><strong>VHDCHY</strong><small>VẬN HÀNH DC HƯNG YÊN</small></span></div>
@@ -35,6 +87,7 @@
         <div class="topbar-actions">
           <span id="runtimeStatus" class="runtime-status">Runtime: chưa xác định</span>
           <div class="account-chip"><span class="account-avatar" id="accountInitial">?</span><span><strong id="accountName">Chưa đăng nhập</strong><small id="accountRole">Phiên xác thực chưa có</small></span></div>
+          <button id="logoutButton" class="secondary-button compact-button" type="button" hidden>Đăng xuất</button>
         </div>
       </header>
 
