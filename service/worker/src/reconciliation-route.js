@@ -5,6 +5,7 @@ import {
   FINALITY_ENABLED_VALUE,
   RECONCILIATION_FINALITY_VERSION
 } from './reconciliation-finality.js';
+import { verifyReconciliationPayloadHash } from './reconciliation-payload-integrity.js';
 import { verifyReconciliationRequestSignature } from './reconciliation-request-auth.js';
 
 const MAX_RECONCILIATION_BODY_BYTES = 256 * 1024;
@@ -85,6 +86,11 @@ export async function handleReconciliationIngestRoute(request, env, requestId) {
   }
   if (!envelope || typeof envelope !== 'object' || Array.isArray(envelope)) {
     return failure('REQUEST_JSON_OBJECT_REQUIRED', 'ENVELOPE_OBJECT_REQUIRED', 400, requestId);
+  }
+
+  const payloadIntegrity = await verifyReconciliationPayloadHash(envelope);
+  if (!payloadIntegrity.ok) {
+    return failure(payloadIntegrity.code, payloadIntegrity.reason, payloadIntegrity.status || 422, requestId);
   }
 
   let result;
