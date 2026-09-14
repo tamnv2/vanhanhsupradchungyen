@@ -55,10 +55,7 @@ public sealed class Slice1BusinessAdapter
             {
                 new Slice1BusinessAdapterBlocker(
                     "PORTRAIT_MEDIA_LIFECYCLE_REQUIRED",
-                    "Employee portrait replacement remains fail-closed until staged media upload, durable readback, and prior-portrait deletion are linked atomically to the reviewed command flow."),
-                new Slice1BusinessAdapterBlocker(
-                    "EMPLOYEE_CODE_ATOMIC_UNIQUENESS_REQUIRED",
-                    "Sequential MNV validation is implemented, but concurrent active-code uniqueness must still be proven inside the same SQLite transaction before Slice-1 readiness can open.")
+                    "Employee portrait replacement remains fail-closed until staged media upload, durable readback, and prior-portrait deletion are linked atomically to the reviewed command flow.")
             });
     }
 
@@ -132,22 +129,33 @@ public sealed class Slice1BusinessAdapter
             cancellationToken);
         try
         {
-            var result = await _commandStore.ExecuteAsync(
-                new LanLocalCommandEnvelope(
-                    RequestId: request.RequestId,
-                    IdempotencyKey: request.IdempotencyKey,
-                    ModuleId: ModuleId,
-                    CommandCode: request.CommandCode,
-                    EventCode: eventCode,
-                    EntityType: entityType,
-                    EntityId: request.EntityId,
-                    StateKey: prepared.StateKey,
-                    ExpectedBaseVersion: request.ExpectedEntityVersion,
-                    PayloadJson: request.PayloadJson,
-                    NextStateJson: prepared.NextStateJson,
-                    DeviceId: request.DeviceId,
-                    DeviceSeq: request.DeviceSeq),
-                cancellationToken);
+            LanLocalCommandResult result;
+            try
+            {
+                result = await _commandStore.ExecuteAsync(
+                    new LanLocalCommandEnvelope(
+                        RequestId: request.RequestId,
+                        IdempotencyKey: request.IdempotencyKey,
+                        ModuleId: ModuleId,
+                        CommandCode: request.CommandCode,
+                        EventCode: eventCode,
+                        EntityType: entityType,
+                        EntityId: request.EntityId,
+                        StateKey: prepared.StateKey,
+                        ExpectedBaseVersion: request.ExpectedEntityVersion,
+                        PayloadJson: request.PayloadJson,
+                        NextStateJson: prepared.NextStateJson,
+                        DeviceId: request.DeviceId,
+                        DeviceSeq: request.DeviceSeq),
+                    cancellationToken);
+            }
+            catch (LanLocalCommandException error) when (IsEmployeeCodeUniqueClaimConflict(error))
+            {
+                throw new Slice1BusinessException(
+                    "RESOURCE_NOT_AVAILABLE",
+                    "The requested active employee-code identity is no longer available because another accepted mutation owns the required uniqueness claim.",
+                    error);
+            }
 
             var actor = await _actorEvidence.ReadActorAsync(result.EventId, cancellationToken);
             if (!string.Equals(actor, request.AuthenticatedUserId, StringComparison.Ordinal))
@@ -344,11 +352,6 @@ public sealed class Slice1BusinessAdapter
         RequireExpectedVersion(request.ExpectedEntityVersion, current);
         var currentState = ParseState(current.StateJson);
         var presence = RequireString(currentState, "currentState");
-
-        // Owner authority explicitly allows multiple IN events on one business date.
-        // A new IN while already IN is therefore a new immutable attendance event that
-        // advances the local presence version while leaving currentState=IN.
-        // OUT remains guarded: a second OUT without a new preceding IN is invalid.
         if (targetState == "OUT" && !string.Equals(presence, "IN", StringComparison.Ordinal))
             throw Invalid("ATTENDANCE_OUT requires a valid preceding IN presence state.");
 
@@ -592,6 +595,11 @@ public sealed class Slice1BusinessAdapter
         if (status is not ("ACTIVE" or "INACTIVE" or "LEFT" or "ARCHIVED"))
             throw Invalid("Employee status must be ACTIVE, INACTIVE, LEFT, or ARCHIVED.");
     }
+
+    private static bool IsEmployeeCodeUniqueClaimConflict(LanLocalCommandException error) =>
+        string.Equals(error.Code, "LOCAL_COMMAND_COMMIT_FAILED", StringComparison.Ordinal) &&
+        error.InnerException is SqliteException sqlite &&
+        sqlite.Message.Contains("VHDCHY_EMPLOYEE_CODE_", StringComparison.Ordinal);
 
     private static void RequireBounded(string? value, string code, int min, int max)
     {
