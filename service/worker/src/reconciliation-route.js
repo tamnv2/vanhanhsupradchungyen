@@ -1,4 +1,10 @@
 import { createD1ReconciliationStore, ingestReconciliationEnvelope } from './reconciliation.js';
+import {
+  createD1ReconciliationFinalityStore,
+  finalizeReconciliationEnvelope,
+  FINALITY_ENABLED_VALUE,
+  RECONCILIATION_FINALITY_VERSION
+} from './reconciliation-finality.js';
 import { verifyReconciliationRequestSignature } from './reconciliation-request-auth.js';
 
 const MAX_RECONCILIATION_BODY_BYTES = 256 * 1024;
@@ -96,12 +102,47 @@ export async function handleReconciliationIngestRoute(request, env, requestId) {
     return reply({ ok: false, error: { code: result.code, reason: result.reason, details: result } }, result.status || 409, requestId);
   }
 
+  let finality = null;
+  const finalityEnabled = String(env.LAN_RECONCILIATION_FINALITY_V1 || '').trim().toLowerCase() === FINALITY_ENABLED_VALUE;
+  if (finalityEnabled) {
+    try {
+      finality = await finalizeReconciliationEnvelope(
+        createD1ReconciliationFinalityStore(env.DB),
+        envelope
+      );
+    } catch {
+      return failure('RECONCILIATION_UNAVAILABLE', 'FINALITY_STORE_FAILURE', 503, requestId);
+    }
+
+    if (!finality.ok) {
+      return reply({
+        ok: false,
+        error: {
+          code: finality.code,
+          reason: finality.reason,
+          details: finality.details || null
+        },
+        edgeEventId: result.edgeEventId,
+        finalityVersion: RECONCILIATION_FINALITY_VERSION
+      }, finality.status || 409, requestId);
+    }
+  }
+
+  const reconciliationStatus = finality?.reconciliationStatus || result.reconciliationStatus;
+  const finalized = finality?.finalized === true;
+  const duplicate = Boolean(result.duplicate || finality?.duplicate);
+
   return reply({
     ok: true,
-    reconciliationStatus: result.reconciliationStatus,
+    reconciliationStatus,
     edgeEventId: result.edgeEventId,
-    duplicate: result.duplicate,
+    duplicate,
     attachedReceiptCount: result.attachedReceiptCount,
-    machineAuthVersion: auth.authVersion
-  }, result.duplicate ? 200 : 202, requestId);
+    machineAuthVersion: auth.authVersion,
+    finalityEnabled,
+    finalityVersion: finalityEnabled ? RECONCILIATION_FINALITY_VERSION : null,
+    finalityPendingReason: finality?.pendingReason || null,
+    canonicalEventId: finality?.canonicalEventId || null,
+    canonicalCommittedAt: finality?.canonicalCommittedAt || null
+  }, finalized || duplicate ? 200 : 202, requestId);
 }
