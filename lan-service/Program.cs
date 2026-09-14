@@ -1,5 +1,4 @@
 using System.Reflection;
-using System.Security.Cryptography.X509Certificates;
 using Vhdchy.LanService;
 
 const string ServiceName = "VHDCHY_LAN_SERVICE";
@@ -21,23 +20,9 @@ var port = int.TryParse(portText, out var configuredPort) && configuredPort is >
     : DefaultPort;
 
 var canonicalLanHost = environment == "BETA" ? "lan-beta.supra.cc.cd" : "lan.supra.cc.cd";
-var tlsPfxPath = Environment.GetEnvironmentVariable("VHDCHY_LAN_TLS_PFX_PATH")?.Trim();
-var tlsPfxPassword = Environment.GetEnvironmentVariable("VHDCHY_LAN_TLS_PFX_PASSWORD") ?? string.Empty;
-var secureHttpEnabled = !string.IsNullOrWhiteSpace(tlsPfxPath);
-X509Certificate2? tlsCertificate = null;
-if (secureHttpEnabled)
-{
-    var fullTlsPath = Path.GetFullPath(tlsPfxPath!);
-    if (!File.Exists(fullTlsPath)) throw new InvalidOperationException("VHDCHY_LAN_TLS_PFX_PATH does not exist");
-    tlsCertificate = new X509Certificate2(
-        fullTlsPath,
-        tlsPfxPassword,
-        X509KeyStorageFlags.EphemeralKeySet);
-    if (!tlsCertificate.HasPrivateKey) throw new InvalidOperationException("LAN TLS certificate must include its private key");
-    var now = DateTimeOffset.UtcNow;
-    if (now < tlsCertificate.NotBefore.ToUniversalTime() || now >= tlsCertificate.NotAfter.ToUniversalTime())
-        throw new InvalidOperationException("LAN TLS certificate is outside its validity window");
-}
+var tlsLoadResult = LanTlsCertificateLoader.LoadFromEnvironment(environment, canonicalLanHost);
+var tlsCertificate = tlsLoadResult?.Certificate;
+var secureHttpEnabled = tlsCertificate is not null;
 
 var rootOverride = Environment.GetEnvironmentVariable("VHDCHY_LAN_DATA_ROOT")?.Trim();
 var root = string.IsNullOrWhiteSpace(rootOverride)
@@ -114,6 +99,8 @@ app.MapGet("/health", async (CancellationToken cancellationToken) =>
         canonicalLanHost,
         transport = secureHttpEnabled ? "HTTPS" : "HTTP_READ_ONLY",
         secureMutationTransportEnabled = secureHttpEnabled,
+        tlsCertificateStorageMode = tlsLoadResult?.StorageMode,
+        tlsCertificateNotAfterUtc = tlsLoadResult?.NotAfterUtc,
         domainContractVersion = DomainContractVersion,
         edgeSchemaVersion = EdgeStore.SchemaVersion,
         edgeStoreReady = true,
@@ -142,6 +129,8 @@ app.MapGet("/api/v1/meta", async (CancellationToken cancellationToken) =>
         canonicalLanHost,
         transport = secureHttpEnabled ? "HTTPS" : "HTTP_READ_ONLY",
         secureMutationTransportEnabled = secureHttpEnabled,
+        tlsCertificateStorageMode = tlsLoadResult?.StorageMode,
+        tlsCertificateNotAfterUtc = tlsLoadResult?.NotAfterUtc,
         domainContractVersion = DomainContractVersion,
         edgeSchemaVersion = EdgeStore.SchemaVersion,
         readiness = state.Readiness
@@ -177,6 +166,7 @@ app.MapGet("/api/v1/capabilities", async (CancellationToken cancellationToken) =
             "SIGNED_PAIRED_CLIENT_REQUESTS",
             "TLS_GATED_PRIMARY_LOGIN",
             "TLS_GATED_SLICE1_BUSINESS_ROUTE",
+            "WINDOWS_DPAPI_CURRENT_USER_TLS_PFX",
             "CLOUD_RECONCILIATION_TRANSPORT_PLANNED",
             "DIRECT_GOOGLE_SENDER_PLANNED"
         }
@@ -227,9 +217,20 @@ app.MapMethods("/api/v1/{**path}", new[] { "POST", "PUT", "PATCH", "DELETE" }, (
 
 Console.WriteLine($"{ServiceName} {version} environment={environment} cluster={clusterId}");
 Console.WriteLine($"Listening on {(secureHttpEnabled ? "https" : "http")}://0.0.0.0:{port}; canonicalHost={canonicalLanHost}; data={root}; webRoot={webRoot}; edgeSchema={EdgeStore.SchemaVersion}");
+if (tlsLoadResult is not null)
+{
+    Console.WriteLine($"TLS certificate loaded from {tlsLoadResult.StorageMode}; notAfterUtc={tlsLoadResult.NotAfterUtc:O}.");
+}
 Console.WriteLine($"Cloud sync queue recovery active; interruptedClaimsRecovered={recoveredInterruptedCloudSync}; transport remains PLANNED.");
 Console.WriteLine(secureHttpEnabled
     ? "Secure LAN login and reviewed Slice-1 business routes are TLS-gated; runtime readiness still fails closed on missing synchronized authority/operational/security prerequisites."
     : "LAN runtime is HTTP read-only. All business mutation remains FAIL_CLOSED until a reviewed TLS certificate is configured.");
 
-await app.RunAsync();
+try
+{
+    await app.RunAsync();
+}
+finally
+{
+    tlsCertificate?.Dispose();
+}
