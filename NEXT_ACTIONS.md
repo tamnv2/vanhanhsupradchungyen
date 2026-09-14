@@ -1,46 +1,47 @@
 # NEXT ACTIONS — VHDCHY
 
 Updated: 2026-09-14
-Progress: **55% displayed / 55.4% exact**
+Progress: **56% displayed / 56.2% exact**
 Primary phase: **Phase 6 — LAN continuity/offline/reconcile**
 
 ## Execution rule
 
 Default is `CONTINUE` with dependency-aware parallel execution. Evidence is required before PASS. A blocked lane does not stop unrelated ready work.
 
-## A — Cloud operational snapshot/delta route — IMMEDIATE
+## A — Live BETA LAN -> Cloud credential/provider proof — OWNER_PERMISSION_REQUIRED
 
-Current gap: Cloud accepts signed reconciliation input but does not yet expose an accepted operational snapshot/delta response for LAN post-reconciliation refresh.
+Current source/CI PASS:
 
-Next:
+- machine-authenticated Cloud operational snapshot/coverage route;
+- real Slice-1 D1 state response for employees, employee codes and presence;
+- explicit canonical coverage with fail-closed identity rules;
+- LAN signed snapshot client and refresh coordinator/pump;
+- atomic authoritative snapshot import;
+- post-reconciliation rebase confirmation;
+- fail-closed readiness while canonical events remain unre-based;
+- restart-safe coverage using persistent `edgeInstanceId` with current `edgeEpoch` request identity;
+- integration run `34851773729`: SUCCESS;
+- same-source clean baseline `34851772963`: SUCCESS.
 
-- implement machine-authenticated operational snapshot/delta route using the existing request-auth model;
-- bind it to exact edge/environment/cluster identity;
-- return real Slice-1 D1 current state for employees, employee codes and presence;
-- return explicit canonical reconciliation coverage sufficient for LAN rebase verification;
-- add route/store tests for auth failure, wrong identity, empty state, valid state and coverage semantics;
-- do not fabricate/default canonical coverage.
+Still required for live provider acceptance:
 
-## B — LAN post-reconciliation runtime rebase — NEXT DEPENDENCY
+- Owner-controlled machine credential/environment setup;
+- guarded provider preflight without exposing secrets;
+- real LAN -> Cloud signed request to the BETA endpoint;
+- verify exact environment/cluster/edge linkage and provider evidence;
+- verify real snapshot/coverage response, LAN atomic import, covered rebase and readiness recovery;
+- provider postflight and diagnostics proving no fabricated/default coverage.
 
-Current PASS:
+Do not ask for raw credential material in chat. Do not infer credential-store values. Do not claim live provider PASS from hosted harness evidence.
 
-- `PostReconciliationRebaseTracker` source/harness behavior;
-- dedicated run `34844270179`: SUCCESS;
-- stale snapshot rejection;
-- incomplete coverage rejection;
-- full coverage cursor advance;
-- later canonical event reopening only new pending work.
+## B — Independent reconciliation/provider source work — READY IN PARALLEL
 
-Still required:
+While A is blocked, continue source work that does not depend on Owner credentials:
 
-- LAN client/consumer for the Cloud snapshot/delta route;
-- authoritative refresh import after canonical reconciliation;
-- fail-closed business readiness while canonical events remain unre-based;
-- readiness recovery only after verified coverage;
-- restart/idempotency acceptance for the complete refresh/rebase path.
-
-The earlier direct security-gate integration attempt was blocked by platform safety guard; do not bypass that guard.
+- harden Google/Drive projection receipt, deduplication, retry and readback handling around reconciled events;
+- close operator-visible conflict/recovery diagnostics and bounded failure states;
+- keep canonical business authority in Cloud/LAN domain state rather than Google outputs;
+- extend automated vectors where current contracts expose an untested restart/race/idempotency edge.
 
 ## C — Cloud schema parity — COMPLETE FOR CURRENT NODE
 
@@ -54,27 +55,22 @@ Evidence:
 - final column/metadata/integrity checks PASS;
 - migration dispatch returned to disabled state.
 
-Do not replay migration 0014.
+Do not replay migration `0014_employee_code_entity_version.sql`.
 
-## D — Worker reconciliation credential lane — OWNER_PERMISSION_REQUIRED
-
-This lane remains blocked on an Owner-controlled GitHub Environment setup step. Do not ask for raw credential material in chat. Continue all independent source/CI work.
-
-After the permission/setup exists, resume the already-reviewed guarded provisioning workflow and require provider preflight/postflight evidence before any finality activation claim.
-
-## E — Physical LAN trust/continuity — PENDING
+## D — Physical LAN trust/continuity — PENDING
 
 Still required:
 
 - intended ordinary-user Windows host acceptance;
 - canonical company-LAN reachability/trust;
-- real PDA HTTPS/reconnect evidence;
+- publicly trusted certificate/DNS/browser path;
+- real NLS-MT90/PDA HTTPS/reconnect evidence;
 - >=60-minute Internet-cut continuity acceptance;
 - restoration reconciliation evidence.
 
 Do not infer physical PASS from GitHub-hosted CI.
 
-## F — Parallel product lanes
+## E — Parallel product lanes
 
 Continue when ready and independent:
 
@@ -90,4 +86,4 @@ Continue when ready and independent:
 
 ## Current execution line
 
-`Overall: 55% displayed / 55.4% exact | Phase 6: 60% | Immediate: Cloud operational snapshot/delta + canonical coverage | Then: LAN runtime refresh/rebase/readiness E2E | Credential lane: OWNER_PERMISSION_REQUIRED | Physical: real Windows/PDA + >=60-minute outage pending`
+`Overall: 56% displayed / 56.2% exact | Phase 6: 65% | Source/CI operational refresh+rebase: PASS | Live credential/provider proof: OWNER_PERMISSION_REQUIRED | Immediate independent source lane: Google receipts + conflict/recovery hardening | Physical: real Windows/PDA + >=60-minute outage pending`
