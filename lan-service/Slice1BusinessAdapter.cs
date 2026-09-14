@@ -46,6 +46,7 @@ public sealed class Slice1BusinessAdapter
             .Where(code => !string.Equals(code, "EMPLOYEE_PORTRAIT_REPLACE", StringComparison.Ordinal))
             .OrderBy(code => code, StringComparer.Ordinal)
             .ToArray();
+
         return new Slice1BusinessAdapterInspection(
             Ready: false,
             CatalogCommandCount: catalog.CommandCount,
@@ -54,7 +55,10 @@ public sealed class Slice1BusinessAdapter
             {
                 new Slice1BusinessAdapterBlocker(
                     "PORTRAIT_MEDIA_LIFECYCLE_REQUIRED",
-                    "Employee portrait replacement remains fail-closed until staged media upload, durable readback, and prior-portrait deletion are linked atomically to the reviewed command flow.")
+                    "Employee portrait replacement remains fail-closed until staged media upload, durable readback, and prior-portrait deletion are linked atomically to the reviewed command flow."),
+                new Slice1BusinessAdapterBlocker(
+                    "EMPLOYEE_CODE_ATOMIC_UNIQUENESS_REQUIRED",
+                    "Sequential MNV validation is implemented, but concurrent active-code uniqueness must still be proven inside the same SQLite transaction before Slice-1 readiness can open.")
             });
     }
 
@@ -115,8 +119,8 @@ public sealed class Slice1BusinessAdapter
             "EMPLOYEE_PORTRAIT_REPLACE" => throw new Slice1BusinessException(
                 "RUNTIME_DEPENDENCY_UNAVAILABLE",
                 "Employee portrait replacement remains closed until the reviewed staged-media and prior-file deletion lifecycle is implemented."),
-            "ATTENDANCE_IN" => await PrepareAttendanceAsync(request, payload, "IN", correction: false, cancellationToken),
-            "ATTENDANCE_OUT" => await PrepareAttendanceAsync(request, payload, "OUT", correction: false, cancellationToken),
+            "ATTENDANCE_IN" => await PrepareAttendanceAsync(request, payload, "IN", cancellationToken),
+            "ATTENDANCE_OUT" => await PrepareAttendanceAsync(request, payload, "OUT", cancellationToken),
             "ATTENDANCE_CORRECT" => await PrepareAttendanceCorrectionAsync(request, payload, cancellationToken),
             _ => throw new Slice1BusinessException("INVALID_INPUT", "Unsupported Slice-1 business command.")
         };
@@ -245,7 +249,7 @@ public sealed class Slice1BusinessAdapter
         var employee = await RequireStateAsync(EmployeeStateKey(employeeId), "employee", cancellationToken);
         var employeeState = ParseState(employee.StateJson);
         if (!string.Equals(OptionalString(employeeState, "status"), "ACTIVE", StringComparison.Ordinal))
-            throw Invalid("An active employee is required before assigning an active employee code.");
+            throw Invalid("An ACTIVE employee is required before assigning an active employee code.");
 
         var stateKey = EmployeeCodeStateKey(request.EntityId);
         var current = await _commandStore.ReadCurrentStateAsync(stateKey, cancellationToken);
@@ -256,9 +260,27 @@ public sealed class Slice1BusinessAdapter
         }
         else
         {
-            if (!string.Equals(current.EntityType, "employee_code", StringComparison.Ordinal))
-                throw Invalid("Employee-code state key is bound to an incompatible entity type.");
+            if (!string.Equals(current.ModuleId, ModuleId, StringComparison.Ordinal) ||
+                !string.Equals(current.EntityType, "employee_code", StringComparison.Ordinal))
+            {
+                throw new Slice1BusinessException(
+                    "RUNTIME_DEPENDENCY_UNAVAILABLE",
+                    "Employee-code state identity is incompatible with the Slice-1 adapter.");
+            }
             RequireExpectedVersion(request.ExpectedEntityVersion, current);
+
+            var currentCodeState = ParseState(current.StateJson);
+            var priorEmployeeId = RequireString(currentCodeState, "employeeId");
+            if (!string.Equals(priorEmployeeId, employeeId, StringComparison.Ordinal))
+            {
+                var priorEmployee = await RequireStateAsync(EmployeeStateKey(priorEmployeeId), "employee", cancellationToken);
+                var priorEmployeeState = ParseState(priorEmployee.StateJson);
+                var priorStatus = RequireString(priorEmployeeState, "status");
+                if (priorStatus is not ("INACTIVE" or "LEFT"))
+                {
+                    throw Invalid("An employee code cannot be reassigned while its previous holder is still ACTIVE or otherwise not explicitly inactive/left.");
+                }
+            }
         }
 
         var activeCodes = await ReadActiveEmployeeCodesAsync(cancellationToken);
@@ -266,7 +288,7 @@ public sealed class Slice1BusinessAdapter
         {
             if (string.Equals(active.EntityId, request.EntityId, StringComparison.Ordinal)) continue;
             if (string.Equals(active.EmployeeCode, employeeCode, StringComparison.Ordinal))
-                throw Invalid("The requested employee code is already active for another identity.");
+                throw Invalid("The requested employee code is already active for another employee-code identity.");
             if (string.Equals(active.EmployeeId, employeeId, StringComparison.Ordinal))
                 throw Invalid("The employee already has another active employee code. Explicit release/reassignment evidence is required before replacement.");
         }
@@ -287,10 +309,8 @@ public sealed class Slice1BusinessAdapter
         Slice1BusinessCommandRequest request,
         JsonObject payload,
         string targetState,
-        bool correction,
         CancellationToken cancellationToken)
     {
-        _ = correction;
         RejectUnknown(payload, AttendanceScanFields);
         RequirePayloadEntity(payload, "employeeId", request.EntityId);
         var businessDate = RequireString(payload, "businessDate");
@@ -313,13 +333,24 @@ public sealed class Slice1BusinessAdapter
                 BuildPresenceState(payload, request.EntityId, targetState, businessDate, 1).ToJsonString());
         }
 
-        if (!string.Equals(current.EntityType, "attendance", StringComparison.Ordinal))
-            throw Invalid("Attendance state key is bound to an incompatible entity type.");
+        if (!string.Equals(current.ModuleId, ModuleId, StringComparison.Ordinal) ||
+            !string.Equals(current.EntityType, "attendance", StringComparison.Ordinal))
+        {
+            throw new Slice1BusinessException(
+                "RUNTIME_DEPENDENCY_UNAVAILABLE",
+                "Attendance state identity is incompatible with the Slice-1 adapter.");
+        }
+
         RequireExpectedVersion(request.ExpectedEntityVersion, current);
         var currentState = ParseState(current.StateJson);
         var presence = RequireString(currentState, "currentState");
-        if (string.Equals(presence, targetState, StringComparison.Ordinal))
-            throw Invalid($"Employee presence is already {targetState}; only an exact idempotent replay may repeat the same logical scan.");
+
+        // Owner authority explicitly allows multiple IN events on one business date.
+        // A new IN while already IN is therefore a new immutable attendance event that
+        // advances the local presence version while leaving currentState=IN.
+        // OUT remains guarded: a second OUT without a new preceding IN is invalid.
+        if (targetState == "OUT" && !string.Equals(presence, "IN", StringComparison.Ordinal))
+            throw Invalid("ATTENDANCE_OUT requires a valid preceding IN presence state.");
 
         var next = BuildPresenceState(
             payload,
