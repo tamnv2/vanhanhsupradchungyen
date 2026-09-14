@@ -1,16 +1,16 @@
-# BETA ACCEPTANCE MATRIX — PRODUCT V3
+# BETA ACCEPTANCE MATRIX — PRODUCT V3/V7
 
 Status: ACTIVE TEST CONTRACT
-Updated: 2026-09-13
-Authority: `docs/TARGET_PRODUCT_ARCHITECTURE_V3.md`, `docs/DELIVERY_PLAN_V3.md`, current business decisions.
+Updated: 2026-09-14
+Authority: `docs/TARGET_PRODUCT_ARCHITECTURE_V3.md`, `docs/DELIVERY_PLAN_V5.md`, `DECISIONS.md` + V3..V7.
 
-Website, APK, Cloud Service, LAN Service, Google output and reconciliation are all inside product acceptance scope.
+Online Web, LAN Web, Android/PDA App, Cloud Service, LAN Service, Google output and reconciliation are all inside product acceptance scope.
 
 ## Evidence rule
 
-A PASS claim requires reproducible evidence: CI, provider readback, D1/LAN DB query, Google readback, Web/APK E2E log, reconciliation evidence or physical test record as applicable.
+A PASS claim requires reproducible evidence: CI, provider readback, D1/LAN DB query, Google readback, Web/App E2E log, reconciliation evidence or physical test record as applicable.
 
-Compilation alone is never business/runtime PASS. Legacy/prototype evidence is reference only.
+Compilation alone is never business/runtime PASS. Legacy/prototype evidence is reference only. CI/source PASS is not physical company-network/PDA PASS.
 
 ## Gate order
 
@@ -26,10 +26,11 @@ Compilation alone is never business/runtime PASS. Legacy/prototype evidence is r
 10. Work session + PICK/PACK/resources
 11. Labor/dropped-goods
 12. Documents/media
-13. Website Cloud/LAN E2E
-14. APK Cloud/LAN E2E
-15. Failure/recovery/long-offline acceptance
-16. Backup/update/restore + physical company-network gate
+13. Online Web + LAN Web E2E/V7 UI parity
+14. Android/PDA App Cloud/LAN E2E/V7 UI
+15. Failure/recovery/>=60-minute offline continuity acceptance
+16. Backup/update/restore + physical company-network/capacity gate
+17. Owner UAT and exact BETA release acceptance
 
 ## A — Provider/runtime identity
 
@@ -49,7 +50,7 @@ Compilation alone is never business/runtime PASS. Legacy/prototype evidence is r
 | invalid business vector | same stable validation/business error semantics |
 | same command retried across paths | same idempotency/device identity retained |
 | provider-specific adapter | cannot redefine business rules |
-| Web/APK compatibility | both consume the reviewed shared contract |
+| Web/App compatibility | both consume the reviewed shared contract |
 
 ## C — Cloud authentication/authorization
 
@@ -63,12 +64,13 @@ Compilation alone is never business/runtime PASS. Legacy/prototype evidence is r
 | SUPERADMIN ordinary business | allowed per current hierarchy |
 | SUPERADMIN ROOT-security action | denied |
 | ROOT security boundary | current ROOT-only rules preserved |
+| V6 one-time login/recovery cases | exact current V6 factor, single-use, cooldown/lifetime and restricted-state semantics are enforced |
 
 ## D — LAN synchronized authority / offline login
 
 | Scenario | Expected result |
 |---|---|
-| LAN has synchronized authority snapshot | user can authenticate locally according to that snapshot |
+| LAN has synchronized authority snapshot | user can authenticate locally according to that snapshot and current implemented security capability |
 | long Internet outage | login does not fail merely because offline duration is long |
 | user permission valid in local snapshot | allowed business operation executes locally |
 | account/permission changes remotely during outage | LAN cannot claim knowledge before reconnect; event records authority snapshot/version used |
@@ -76,6 +78,7 @@ Compilation alone is never business/runtime PASS. Legacy/prototype evidence is r
 | prior offline accepted event after refresh | not silently deleted/re-written; reconciles with evidence |
 | manual LAN activation while Cloud healthy by ordinary user/admin | denied |
 | manual LAN activation by SUPERADMIN/ROOT | allowed with audited scope/reason/time |
+| auth/pairing/security epoch unavailable | affected public mutation remains fail-closed |
 
 ## E — Cloud mutation/idempotency
 
@@ -98,7 +101,9 @@ Compilation alone is never business/runtime PASS. Legacy/prototype evidence is r
 | same local command retried | one edge event only |
 | LAN restart | edge state, pending events and staged Google work survive |
 | Cloud reachable while users stay on LAN | LAN begins/continues background Cloud sync without requiring route switch |
-| Cloud unavailable | local business operation continues |
+| Cloud unavailable | approved local business operation continues |
+| active MNV/code race | one valid winner; loser rolls back without partial state/event/outbox |
+| actor evidence | authenticated actor context is captured immutably without becoming client-authoritative payload |
 
 ## G — Direct LAN Google projection/upload
 
@@ -108,7 +113,7 @@ Compilation alone is never business/runtime PASS. Legacy/prototype evidence is r
 | same LAN event projected twice | stable projection key prevents duplicate logical row |
 | LAN media upload + Drive reachable | file uploaded once; local logical-file ID, Drive file ID and hash receipt retained |
 | same media retried | receipt/hash prevents duplicate logical upload |
-| Google unavailable | LAN business event remains valid locally; Google work queues/stages |
+| Google unavailable | approved Google work queues/stages; no false provider-success claim |
 | Google succeeds before Cloud sync | later D1 reconciliation attaches existing receipt and does not duplicate row/file |
 | Sheets/Drive queried as business source | prohibited; LAN event journal remains sync source |
 
@@ -170,64 +175,80 @@ Compilation alone is never business/runtime PASS. Legacy/prototype evidence is r
 |---|---|
 | create DRAFT | allowed |
 | LAN + Drive reachable | direct upload/readback/hash receipt retained locally |
-| LAN offline | file staged durably with logical ID/hash |
+| LAN offline | file staged durably with stable logical ID/hash when that business mutation permits staging |
 | Drive unavailable | no false durable-upload claim |
+| restart with staged media | identity/path/hash/state remain recoverable |
+| duplicate/hash identity | deterministic duplicate behavior; no uncontrolled second logical upload |
 | later upload | staged file uploaded once and receipt attached to Cloud/D1 on reconciliation |
 | FINAL gate | follows current durable-file rule |
-| replacement/portrait lifecycle | current business/audit semantics retained |
+| portrait replacement while Drive unavailable | remains fail-closed until Owner resolves immediate-delete vs offline-staging semantic conflict |
 
-## M — Website Cloud/LAN E2E
+## M — Online Web + LAN Web E2E / V7 UI
 
 | Scenario | Expected result |
 |---|---|
 | Cloud path | normal authenticated business flow works |
 | forced LAN by SUPERADMIN/ROOT | client uses LAN while LAN may continue background Cloud sync |
-| Cloud unavailable, Internet available | Web uses LAN; LAN continues business + Google where available |
-| full Internet loss | compatible Web bundle loads locally and uses LAN Service |
+| Cloud unavailable, Internet available | Web uses LAN; LAN continues approved business + Google where available |
+| full Internet loss | compatible LAN Web bundle loads locally and uses LAN Service |
 | LAN accepted pending Cloud | UI shows local/sync state clearly |
 | conflict | ADMIN+ receives actionable conflict UI |
+| V7 shared design | Online/LAN use the same VHDCHY design system/navigation hierarchy in the approved DNSHE-inspired direction |
+| branding | no DNSHE brand/proprietary asset copying |
+| LAN critical assets | login/shell/business continuity UI does not require Internet-only font/icon/script/style/image assets |
+| language | Vietnamese / English / Chinese available; default English |
+| responsive target | supported desktop/smaller-screen layouts remain readable/operable |
 
-## N — APK Cloud/LAN E2E
+## N — Android/PDA App E2E / V7 UI
 
 | Scenario | Expected result |
 |---|---|
-| Cloud path | same domain/permission semantics as Website |
+| Cloud path | same domain/permission semantics as Web |
 | LAN path | same business command semantics through local Service |
 | offline LAN | normal approved PDA workflow continues under local authority snapshot |
 | scanner/QR | produces domain command, not direct DB shortcut |
 | app restart | permitted local pending work survives deterministically |
 | sync/Google state | user can distinguish pending/confirmed/conflict states where relevant |
+| V7 visual/interaction direction | uses actual Pick Pack 1291 UI/UX reference where reviewed, adapted to VHDCHY rather than copying legacy business logic |
+| languages | Vietnamese / English / Chinese available; default English |
+| real PDA | NLS-MT90 layout/scanner/performance/background behavior accepted physically |
 
-## O — Failure/recovery/long-offline acceptance
+## O — Failure/recovery / canonical >=60-minute continuity
 
 Required drills:
 
-1. Internet disconnected mid-command.
-2. Cloud Service unavailable while Internet/Google remains usable.
-3. SUPERADMIN/ROOT forces LAN while Cloud remains healthy.
-4. Users stay on LAN after Cloud recovers; background synchronization still resumes.
-5. Long-duration offline period with repeated logins/normal business operations.
-6. Remote account/permission/config changes occur during the outage; reconnect applies refreshed state prospectively.
-7. LAN Service restarts with pending events/media/Google work.
-8. Duplicate/uncertain response retries.
-9. Cloud and LAN create conflicting resource/entity changes during partition.
-10. Google already contains LAN output before D1 reconciliation.
-11. Both Cloud and LAN unavailable -> client-local queue only where explicitly permitted.
+1. Warm up the current system in connected state.
+2. Cut public Internet while preserving valid LAN connectivity.
+3. Keep approved App + LAN Web + LAN Service business operation usable for **Window 2 >=60 minutes**.
+4. External Internet embeds/provider content may fail during the timed window without failing local continuity.
+5. Restore Internet after the timed window and separately verify Cloud/Google reconciliation/retry without duplicate logical output.
+6. Separately test Cloud Service unavailable while Internet/Google remains usable.
+7. Separately test SUPERADMIN/ROOT forced LAN while Cloud remains healthy.
+8. Separately test users staying on LAN after Cloud recovers while background synchronization resumes.
+9. Separately test remote account/permission/config changes during outage and prospective refresh behavior after reconnect.
+10. Separately test LAN Service restart with pending events/media/Google work.
+11. Separately test duplicate/uncertain response retries and partition conflicts.
+12. Separately test both Cloud and LAN unavailable -> client-local queue only where explicitly permitted.
 
-Every case must preserve immutable evidence and explicit runtime/sync status.
+Host restart/power loss is not part of the 60-minute continuity timer; it is a separate recovery gate. Every case must preserve immutable evidence and explicit runtime/sync status.
 
-## P — Pre-STABLE durability / physical gate
+## P — Pre-STABLE durability / physical / capacity gate
 
 Before STABLE promotion can be proposed:
 
 - required business slices pass through Cloud and LAN;
-- Website/APK E2E pass against both runtime paths;
-- long-offline login/operation acceptance passes;
+- Online Web/LAN Web/App E2E pass against both runtime paths;
+- V7 UI/language behavior passes Owner UAT;
+- >=60-minute LAN continuity acceptance passes on current target environment;
 - LAN -> Cloud reconciliation and Google receipt deduplication pass;
 - conflict/admin-resolution acceptance passes;
 - D1 snapshot/restore tested;
 - LAN edge pending-event/staged-media recovery tested;
-- LAN/APK update/rollback channels tested;
-- real company laptop/network/PDA no-admin regression passes;
+- LAN host/App update/rollback channels tested;
+- real company ordinary-user laptop/network/NLS-MT90 no-admin regression passes;
+- synthetic 10/25/50/100 capacity plus soak evidence collected;
 - quota/retention evidence collected;
-- explicit Owner approval for STABLE promotion.
+- exact accepted BETA release/artifacts are identified;
+- explicit Owner approval for STABLE promotion is recorded.
+
+STABLE must promote the exact accepted BETA release and must not inherit BETA business/runtime data by default.
