@@ -1,9 +1,11 @@
+import { changePermanentPassword, loginWithPassword } from './auth-service.js';
 import { authenticateRequest } from './session.js';
 import { permissionSummary } from './permission-store.js';
 
 const API_VERSION = "v1";
 const CORE_SCHEMA_VERSION = "business_core_v3";
 const RUNTIME_STATE = "BUSINESS_CORE_V3";
+const MAX_AUTH_BODY_BYTES = 16 * 1024;
 
 function json(payload, status = 200, requestId = null) {
   const body = requestId ? { ...payload, requestId } : payload;
@@ -20,6 +22,52 @@ function error(code, message, status, requestId, details = undefined) {
   const payload = { ok: false, error: { code, message } };
   if (details !== undefined) payload.error.details = details;
   return json(payload, status, requestId);
+}
+
+async function readJsonObject(request, requestId) {
+  const declaredLength = Number(request.headers.get('content-length') || 0);
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_AUTH_BODY_BYTES) {
+    return {
+      response: error('REQUEST_BODY_TOO_LARGE', 'Request body is too large.', 413, requestId),
+      value: null
+    };
+  }
+
+  let text;
+  try {
+    text = await request.text();
+  } catch {
+    return {
+      response: error('REQUEST_BODY_INVALID', 'Request body could not be read.', 400, requestId),
+      value: null
+    };
+  }
+
+  if (new TextEncoder().encode(text).byteLength > MAX_AUTH_BODY_BYTES) {
+    return {
+      response: error('REQUEST_BODY_TOO_LARGE', 'Request body is too large.', 413, requestId),
+      value: null
+    };
+  }
+
+  let value;
+  try {
+    value = JSON.parse(text || '{}');
+  } catch {
+    return {
+      response: error('REQUEST_JSON_INVALID', 'Request body must be valid JSON.', 400, requestId),
+      value: null
+    };
+  }
+
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return {
+      response: error('REQUEST_JSON_OBJECT_REQUIRED', 'Request body must be a JSON object.', 400, requestId),
+      value: null
+    };
+  }
+
+  return { response: null, value };
 }
 
 async function readCoreSchema(env) {
@@ -116,6 +164,75 @@ async function requirePrincipal(request, env, requestId) {
   return { response: null, principal: auth.principal };
 }
 
+async function handlePasswordLogin(request, env, requestId) {
+  if (!env?.DB) return error('AUTH_DB_UNAVAILABLE', 'Authentication is unavailable.', 503, requestId);
+  const body = await readJsonObject(request, requestId);
+  if (body.response) return body.response;
+
+  const username = typeof body.value.username === 'string' ? body.value.username.trim() : '';
+  const password = typeof body.value.password === 'string' ? body.value.password : '';
+  if (!username || !password) {
+    return error('LOGIN_INPUT_REQUIRED', 'Username and password are required.', 422, requestId);
+  }
+
+  const result = await loginWithPassword(env.DB, username, password);
+  if (!result.ok) {
+    if (result.code === 'ROOT_EMAIL_OTP_REQUIRED') {
+      return error(
+        'ROOT_EMAIL_OTP_REQUIRED',
+        'ROOT authentication requires the reviewed email one-time-password flow.',
+        401,
+        requestId,
+        { requiredMethod: 'EMAIL_OTP' }
+      );
+    }
+    return authError(result, requestId);
+  }
+
+  return json({
+    ok: true,
+    principal: {
+      userId: result.user.userId,
+      username: result.user.username,
+      employeeId: result.user.employeeId,
+      displayName: result.user.displayName,
+      securityLevel: result.user.securityLevel,
+      mustChangePassword: result.session.mustChangePassword,
+      authMethodCode: 'PASSWORD'
+    },
+    session: {
+      token: result.session.token,
+      issuedAt: result.session.issuedAt,
+      expiresAt: result.session.expiresAt,
+      mustChangePassword: result.session.mustChangePassword
+    }
+  }, 200, requestId);
+}
+
+async function handlePasswordChange(request, env, requestId) {
+  const auth = await requirePrincipal(request, env, requestId);
+  if (auth.response) return auth.response;
+
+  const body = await readJsonObject(request, requestId);
+  if (body.response) return body.response;
+  const newPassword = typeof body.value.newPassword === 'string' ? body.value.newPassword : '';
+  if (!newPassword) {
+    return error('PASSWORD_REQUIRED', 'A new permanent password is required.', 422, requestId);
+  }
+
+  const result = await changePermanentPassword(env.DB, auth.principal, newPassword);
+  if (!result.ok) {
+    const status = result.code === 'ROOT_PASSWORD_NOT_APPLICABLE' ? 403 : 422;
+    return error(result.code, 'Password change was not accepted.', status, requestId);
+  }
+
+  return json({
+    ok: true,
+    changedAt: result.changedAt,
+    mustChangePassword: false
+  }, 200, requestId);
+}
+
 export async function handleRequest(request, env) {
   const url = new URL(request.url);
   const requestId = crypto.randomUUID();
@@ -174,6 +291,14 @@ export async function handleRequest(request, env) {
 
   if (url.pathname === "/api/v1/capabilities" && request.method === "GET") {
     return json(publicCapabilities(), 200, requestId);
+  }
+
+  if (url.pathname === "/api/v1/auth/login" && request.method === "POST") {
+    return handlePasswordLogin(request, env, requestId);
+  }
+
+  if (url.pathname === "/api/v1/auth/change-password" && request.method === "POST") {
+    return handlePasswordChange(request, env, requestId);
   }
 
   if (url.pathname === "/api/v1/auth/me" && request.method === "GET") {
