@@ -9,6 +9,12 @@ public sealed record LanTlsCertificateLoadResult(
     string StorageMode,
     DateTimeOffset NotAfterUtc);
 
+public sealed record LanTlsCertificateMetadata(
+    string ThumbprintSha256,
+    DateTimeOffset NotBeforeUtc,
+    DateTimeOffset NotAfterUtc,
+    string CanonicalHost);
+
 public static class LanTlsCertificateLoader
 {
     public const string PlainPfxPathVariable = "VHDCHY_LAN_TLS_PFX_PATH";
@@ -37,42 +43,7 @@ public static class LanTlsCertificateLoader
 
         if (!string.IsNullOrWhiteSpace(protectedPath))
         {
-            if (!OperatingSystem.IsWindows())
-            {
-                throw new InvalidOperationException("DPAPI-protected LAN TLS PFX is supported only on Windows");
-            }
-
-            var fullPath = Path.GetFullPath(protectedPath);
-            if (!File.Exists(fullPath))
-            {
-                throw new InvalidOperationException("VHDCHY_LAN_TLS_PROTECTED_PFX_PATH does not exist");
-            }
-
-            var protectedBytes = File.ReadAllBytes(fullPath);
-            byte[]? pfxBytes = null;
-            try
-            {
-                pfxBytes = ProtectedData.Unprotect(
-                    protectedBytes,
-                    BuildEntropy(environment, canonicalHost),
-                    DataProtectionScope.CurrentUser);
-#pragma warning disable SYSLIB0057
-                certificate = new X509Certificate2(
-                    pfxBytes,
-                    (string?)null,
-                    RuntimeTlsKeyStorageFlags());
-#pragma warning restore SYSLIB0057
-            }
-            catch (CryptographicException exception)
-            {
-                throw new InvalidOperationException("LAN TLS protected PFX could not be decrypted or loaded for the current Windows user", exception);
-            }
-            finally
-            {
-                if (pfxBytes is not null) CryptographicOperations.ZeroMemory(pfxBytes);
-                CryptographicOperations.ZeroMemory(protectedBytes);
-            }
-
+            certificate = LoadProtectedCertificate(protectedPath, environment, canonicalHost);
             storageMode = "WINDOWS_DPAPI_CURRENT_USER";
         }
         else
@@ -90,6 +61,7 @@ public static class LanTlsCertificateLoader
                 password,
                 RuntimeTlsKeyStorageFlags());
 #pragma warning restore SYSLIB0057
+        
             storageMode = "PLAIN_PFX_COMPATIBILITY";
         }
 
@@ -106,6 +78,20 @@ public static class LanTlsCertificateLoader
             certificate.Dispose();
             throw;
         }
+    }
+
+    public static LanTlsCertificateMetadata InspectProtectedPfx(
+        string protectedPfxPath,
+        string environment,
+        string canonicalHost)
+    {
+        using var certificate = LoadProtectedCertificate(protectedPfxPath, environment, canonicalHost);
+        ValidateCertificate(certificate, canonicalHost, DateTimeOffset.UtcNow);
+        return new LanTlsCertificateMetadata(
+            certificate.GetCertHashString(HashAlgorithmName.SHA256),
+            new DateTimeOffset(certificate.NotBefore.ToUniversalTime(), TimeSpan.Zero),
+            new DateTimeOffset(certificate.NotAfter.ToUniversalTime(), TimeSpan.Zero),
+            canonicalHost);
     }
 
     public static byte[] ProtectPfxForCurrentWindowsUser(
@@ -163,13 +149,50 @@ public static class LanTlsCertificateLoader
         }
     }
 
+    private static X509Certificate2 LoadProtectedCertificate(
+        string protectedPfxPath,
+        string environment,
+        string canonicalHost)
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            throw new InvalidOperationException("DPAPI-protected LAN TLS PFX is supported only on Windows");
+        }
+
+        var fullPath = Path.GetFullPath(protectedPfxPath);
+        if (!File.Exists(fullPath))
+        {
+            throw new InvalidOperationException("VHDCHY_LAN_TLS_PROTECTED_PFX_PATH does not exist");
+        }
+
+        var protectedBytes = File.ReadAllBytes(fullPath);
+        byte[]? pfxBytes = null;
+        try
+        {
+            pfxBytes = ProtectedData.Unprotect(
+                protectedBytes,
+                BuildEntropy(environment, canonicalHost),
+                DataProtectionScope.CurrentUser);
+#pragma warning disable SYSLIB0057
+            return new X509Certificate2(
+                pfxBytes,
+                (string?)null,
+                RuntimeTlsKeyStorageFlags());
+#pragma warning restore SYSLIB0057
+        }
+        catch (CryptographicException exception)
+        {
+            throw new InvalidOperationException("LAN TLS protected PFX could not be decrypted or loaded for the current Windows user", exception);
+        }
+        finally
+        {
+            if (pfxBytes is not null) CryptographicOperations.ZeroMemory(pfxBytes);
+            CryptographicOperations.ZeroMemory(protectedBytes);
+        }
+    }
+
     private static X509KeyStorageFlags RuntimeTlsKeyStorageFlags()
     {
-        // Windows Schannel cannot reliably use TLS server certificates whose private
-        // keys were imported with EphemeralKeySet. UserKeySet gives Schannel a
-        // temporary current-user key container without installing the certificate
-        // into a certificate store or requiring administrator rights. Without
-        // PersistKeySet, the temporary key material is released with the cert/process.
         return OperatingSystem.IsWindows()
             ? X509KeyStorageFlags.UserKeySet
             : X509KeyStorageFlags.EphemeralKeySet;
