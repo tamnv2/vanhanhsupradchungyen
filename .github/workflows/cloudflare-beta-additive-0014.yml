@@ -1,0 +1,187 @@
+name: Cloudflare D1 BETA additive migration 0014 employee-code entity version
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/dispatch/cloudflare-beta-additive-0014.json'
+      - '.github/workflows/cloudflare-beta-additive-0014.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudflare-d1-beta-additive-0014
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    environment: beta
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      D1_DATABASE_ID: 37eb7d59-05c0-4ba2-8162-cb6a9fe5d492
+      MIGRATION_FILE: service/worker/migrations/0014_employee_code_entity_version.sql
+      MIGRATION_BLOB_SHA: b5af01373893e22cbc0f827f153364d696eeab44
+
+    steps:
+      - name: Checkout authoritative main
+        uses: actions/checkout@v4
+
+      - name: Read fixed dispatch state
+        id: dispatch
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main"
+          jq -e '
+            .target == "beta" and
+            .operation == "migrate_employee_code_entity_version_0014" and
+            (.enabled == true or .enabled == false)
+          ' .github/dispatch/cloudflare-beta-additive-0014.json >/dev/null
+          enabled="$(jq -r '.enabled' .github/dispatch/cloudflare-beta-additive-0014.json)"
+          echo "enabled=${enabled}" >> "$GITHUB_OUTPUT"
+
+      - name: Validate reviewed migration source identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$MIGRATION_FILE"
+          actual="$(git hash-object "$MIGRATION_FILE")"
+          test "$actual" = "$MIGRATION_BLOB_SHA"
+          echo "MIGRATION_SOURCE_IDENTITY_PASS blob=${actual}"
+
+      - name: Exact BETA D1 read-only preflight
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+          const token = process.env.CLOUDFLARE_API_TOKEN;
+          const databaseId = process.env.D1_DATABASE_ID;
+          const expectedAccount = '1b1695e4f2a3abfe08dc475b352c7f42';
+          const expectedDb = '37eb7d59-05c0-4ba2-8162-cb6a9fe5d492';
+          if (accountId !== expectedAccount || databaseId !== expectedDb || !token) throw new Error('PRECHECK fixed provider identity mismatch');
+          const base = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}`;
+          async function api(path, body) {
+            const response = await fetch(`${base}${path}`, {
+              method: body ? 'POST' : 'GET',
+              headers: { authorization: `Bearer ${token}`, ...(body ? {'content-type':'application/json'} : {}) },
+              ...(body ? { body: JSON.stringify(body) } : {})
+            });
+            const payload = await response.json();
+            if (!response.ok || payload?.success !== true) throw new Error(`PRECHECK Cloudflare API failed ${response.status}`);
+            return payload;
+          }
+          async function query(sql, params=[]) {
+            const payload = await api(`/d1/database/${encodeURIComponent(databaseId)}/query`, { sql, params });
+            const first = Array.isArray(payload.result) ? payload.result[0] : payload.result;
+            if (!first || first.success !== true) throw new Error('PRECHECK D1 query failed');
+            return first.results || [];
+          }
+          const dbs = await api(`/d1/database?name=${encodeURIComponent('vhdchy-data-beta')}&per_page=100`);
+          const db = (dbs.result || []).find(x => x?.name === 'vhdchy-data-beta');
+          if ((db?.uuid || db?.id || '') !== expectedDb) throw new Error('PRECHECK D1 database identity mismatch');
+          const schema = await query('SELECT value FROM vhdchy_meta WHERE key=? LIMIT 1', ['schema_version']);
+          if (String(schema[0]?.value || '') !== 'business_core_v3') throw new Error('PRECHECK schema_version mismatch');
+          const employeeCodesTable = await query("SELECT name FROM sqlite_schema WHERE type='table' AND name='employee_codes' LIMIT 1");
+          if (employeeCodesTable.length !== 1) throw new Error('PRECHECK employee_codes table missing');
+          const columns = await query('PRAGMA table_info(employee_codes)');
+          const entityVersion = columns.filter(x => String(x.name) === 'entity_version');
+          if (entityVersion.length > 1) throw new Error('PRECHECK duplicate entity_version column metadata');
+          let state = 'ABSENT';
+          if (entityVersion.length === 1) {
+            const col = entityVersion[0];
+            const type = String(col.type || '').toUpperCase();
+            const notnull = Number(col.notnull || 0);
+            const dflt = String(col.dflt_value ?? '').replace(/[()'\s]/g, '');
+            if (type !== 'INTEGER' || notnull !== 1 || dflt !== '1') {
+              throw new Error(`PRECHECK unexpected entity_version shape ${JSON.stringify(col)}`);
+            }
+            state = 'FINAL';
+          }
+          const rowCountRows = await query('SELECT COUNT(*) AS row_count FROM employee_codes');
+          const rowCount = Number(rowCountRows[0]?.row_count || 0);
+          const invalidVersionRows = state === 'FINAL'
+            ? Number((await query('SELECT COUNT(*) AS row_count FROM employee_codes WHERE entity_version < 1 OR entity_version IS NULL'))[0]?.row_count || 0)
+            : 0;
+          if (invalidVersionRows !== 0) throw new Error(`PRECHECK invalid employee-code versions ${invalidVersionRows}`);
+          fs.writeFileSync(`${process.env.RUNNER_TEMP}/d1-0014-pre.json`, JSON.stringify({ state, rowCount }));
+          console.log(`D1_ADDITIVE_0014_PRECHECK_PASS state=${state} employee_code_rows=${rowCount}`);
+          NODE
+
+      - name: Safe idle when disabled
+        if: steps.dispatch.outputs.enabled != 'true'
+        run: echo 'D1_ADDITIVE_0014_IDLE enabled=false; read-only preflight complete; provider mutation skipped'
+
+      - name: Apply reviewed additive migration 0014 when absent
+        if: steps.dispatch.outputs.enabled == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const pre = JSON.parse(fs.readFileSync(`${process.env.RUNNER_TEMP}/d1-0014-pre.json`, 'utf8'));
+          if (pre.state === 'FINAL') {
+            console.log('D1_ADDITIVE_0014_APPLY_SKIPPED state=FINAL');
+            process.exit(0);
+          }
+          if (pre.state !== 'ABSENT') throw new Error(`Unsafe pre-state ${pre.state}`);
+          const sql = fs.readFileSync(process.env.MIGRATION_FILE, 'utf8').trim();
+          const url = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(process.env.CLOUDFLARE_ACCOUNT_ID)}/d1/database/${encodeURIComponent(process.env.D1_DATABASE_ID)}/query`;
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: { authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`, 'content-type': 'application/json' },
+            body: JSON.stringify({ sql })
+          });
+          const payload = await response.json();
+          if (!response.ok || payload?.success !== true) throw new Error(`D1 additive migration failed HTTP ${response.status}: ${JSON.stringify(payload?.errors || []).slice(0,1000)}`);
+          const results = Array.isArray(payload.result) ? payload.result : [payload.result];
+          if (!results.length || results.some(x => !x || x.success !== true)) throw new Error('D1 additive migration contains failed statement');
+          console.log(`D1_ADDITIVE_0014_APPLY_PASS results=${results.length}`);
+          NODE
+
+      - name: Verify employee-code version post-state and invariants
+        if: steps.dispatch.outputs.enabled == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const pre = JSON.parse(fs.readFileSync(`${process.env.RUNNER_TEMP}/d1-0014-pre.json`, 'utf8'));
+          const url = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(process.env.CLOUDFLARE_ACCOUNT_ID)}/d1/database/${encodeURIComponent(process.env.D1_DATABASE_ID)}/query`;
+          async function query(sql, params=[]) {
+            const response = await fetch(url, {
+              method: 'POST',
+              headers: { authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`, 'content-type': 'application/json' },
+              body: JSON.stringify({ sql, params })
+            });
+            const payload = await response.json();
+            if (!response.ok || payload?.success !== true) throw new Error(`POSTCHECK query failed ${response.status}`);
+            const first = Array.isArray(payload.result) ? payload.result[0] : payload.result;
+            if (!first || first.success !== true) throw new Error('POSTCHECK D1 result failed');
+            return first.results || [];
+          }
+          const columns = await query('PRAGMA table_info(employee_codes)');
+          const col = columns.find(x => String(x.name) === 'entity_version');
+          if (!col) throw new Error('POSTCHECK entity_version missing');
+          const type = String(col.type || '').toUpperCase();
+          const notnull = Number(col.notnull || 0);
+          const dflt = String(col.dflt_value ?? '').replace(/[()'\s]/g, '');
+          if (type !== 'INTEGER' || notnull !== 1 || dflt !== '1') throw new Error(`POSTCHECK entity_version shape mismatch ${JSON.stringify(col)}`);
+          const rowCount = Number((await query('SELECT COUNT(*) AS row_count FROM employee_codes'))[0]?.row_count || 0);
+          if (rowCount !== Number(pre.rowCount)) throw new Error(`POSTCHECK row count changed ${pre.rowCount}->${rowCount}`);
+          const invalid = Number((await query('SELECT COUNT(*) AS row_count FROM employee_codes WHERE entity_version < 1 OR entity_version IS NULL'))[0]?.row_count || 0);
+          if (invalid !== 0) throw new Error(`POSTCHECK invalid employee-code versions ${invalid}`);
+          const meta = await query('SELECT value FROM vhdchy_meta WHERE key=? LIMIT 1', ['employee_code_version_model']);
+          if (String(meta[0]?.value || '') !== 'entity_version_v1') throw new Error('POSTCHECK version model metadata mismatch');
+          const schema = await query('SELECT value FROM vhdchy_meta WHERE key=? LIMIT 1', ['schema_version']);
+          if (String(schema[0]?.value || '') !== 'business_core_v3') throw new Error('POSTCHECK schema_version changed');
+          const fk = await query('PRAGMA foreign_key_check');
+          if (fk.length) throw new Error(`POSTCHECK foreign_key_check failed ${JSON.stringify(fk)}`);
+          const quick = await query('PRAGMA quick_check');
+          if (String(quick[0]?.quick_check ?? Object.values(quick[0] || {})[0] ?? '').toLowerCase() !== 'ok') throw new Error(`POSTCHECK quick_check failed ${JSON.stringify(quick)}`);
+          console.log(`D1_ADDITIVE_0014_PASS state=${pre.state}->FINAL employee_code_rows=${rowCount} integrity=PASS`);
+          NODE
