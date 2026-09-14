@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using Vhdchy.LanService;
 
 if (args.Length != 1 || string.IsNullOrWhiteSpace(args[0]))
@@ -45,5 +46,22 @@ Assert(report.BlockedCommandCodes.SequenceEqual(new[] { Slice1BusinessAdapter.Po
 Assert(report.Blockers.Count == 1, "READINESS_HAS_UNEXPECTED_BLOCKERS");
 Assert(report.Blockers[0].Code == "PUBLIC_CLIENT_SECURITY_REQUIRED", "READINESS_SECURITY_GATE_MISSING");
 
-Console.WriteLine("LAN_READINESS_HARNESS_PASS snapshots=PASS authorityLink=PASS requiredModules=PASS supportedSubset=PASS portraitScopedBlock=PASS securityGate=PASS ready=false");
+var clientSecurity = new LanClientSecurityStore(databasePath);
+var security = await clientSecurity.EnsureAsync();
+Assert(security.Ready, "CLIENT_SECURITY_STATE_NOT_READY");
+using var deviceKey = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+await clientSecurity.RegisterPairedDeviceAsync(
+    "PDA-READINESS-001",
+    Convert.ToBase64String(deviceKey.ExportSubjectPublicKeyInfo()),
+    "ROOT-READINESS-HARNESS");
+
+var afterClientSecurity = await evaluator.EvaluateAsync();
+Assert(!afterClientSecurity.Ready, "READINESS_MUST_REMAIN_FALSE_WITHOUT_USER_SESSION_AUTH");
+Assert(afterClientSecurity.SnapshotPrerequisitesReady, "SNAPSHOT_PREREQUISITES_REGRESSED");
+Assert(afterClientSecurity.SupportedCommandCodes.Count == 7, "SUPPORTED_SUBSET_REGRESSED");
+Assert(afterClientSecurity.BlockedCommandCodes.SequenceEqual(new[] { Slice1BusinessAdapter.PortraitCommandCode }), "PORTRAIT_BLOCK_SCOPE_REGRESSED");
+Assert(afterClientSecurity.Blockers.Count == 1, "READINESS_HAS_UNEXPECTED_POST_SECURITY_BLOCKERS");
+Assert(afterClientSecurity.Blockers[0].Code == "LAN_USER_SESSION_AUTH_REQUIRED", "USER_SESSION_GATE_NOT_REACHED");
+
+Console.WriteLine("LAN_READINESS_HARNESS_PASS snapshots=PASS authorityLink=PASS requiredModules=PASS supportedSubset=PASS portraitScopedBlock=PASS signedClientGate=PASS userSessionGate=PASS ready=false");
 return 0;
