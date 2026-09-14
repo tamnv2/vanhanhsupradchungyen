@@ -79,22 +79,23 @@ Next dependency chain:
 7. retain explicit conflict evidence and ADMIN+ resolution boundary;
 8. add sync cursor/delta/rebase after the transport path is stable.
 
-### C — Account security routes — PARALLEL / ACTIVE
+### C — Account security routes — PARALLEL / CURRENT ROUTE SLICE SOURCE-CI PASS
 
 Authority requires:
 
 - ROOT authentication through email OTP, no permanent ROOT password;
 - normal-user recovery/must-change state without bypassing authorization gates.
 
-Current source work completed in this continuation, pending final clean-baseline validation after checkpoint reconciliation:
+Current source/CI PASS:
 
 - public Cloud Worker `POST /api/v1/auth/login` for normal permanent-password login;
 - ROOT login bootstrap reaches `ROOT_EMAIL_OTP_REQUIRED` using username only and never creates a permanent-password session;
 - public authenticated `POST /api/v1/auth/change-password` for normal accounts, including `MUST_CHANGE_PASSWORD` sessions;
-- request JSON body bounds/parsing and route tests covering token handling, ROOT password exclusion and permanent-password establishment;
-- latest auth-route source/test commits in this lane: `2bffb170319f9bf6d6d5f1953655ce960115d35e` and `1f2d328f21af90d09c5e3b260ad6452af05835c6`.
+- bounded request JSON handling and route tests covering token handling, ROOT password exclusion and permanent-password establishment;
+- latest auth-route source/test commits `2bffb170319f9bf6d6d5f1953655ce960115d35e` and `1f2d328f21af90d09c5e3b260ad6452af05835c6`;
+- clean-baseline run `34830186926`, job/check `103931457439`, HEAD `3bb22252a53ce25d69901c3261efd2ee3c54f57d`: **SUCCESS**, including Worker syntax, auth crypto contract, Worker unit tests, clean D1 schema and schema/runtime contract.
 
-Continue after validation:
+Continue:
 
 1. add a reviewed email-delivery adapter and secure destination provisioning boundary; do **not** fabricate delivery success and do not put readable destination/provider secrets in public source;
 2. expose ROOT email-OTP request/verify route using the existing V6 OTP state machine;
@@ -150,4 +151,4 @@ STABLE may be prepared safely in isolation, but no production business activatio
 
 ## Current execution line
 
-`Overall: 55% displayed / 55.4% exact | Current: Phase 6 — LAN continuity/offline/reconcile | Primary physical gate: target Windows DNS credential + ACME staging -> production CA -> company Windows/PDA HTTPS acceptance | Parallel: Cloud auth routes/ROOT OTP provider + reconciliation machine-auth/network E2E + V7 Web/App`
+`Overall: 55% displayed / 55.4% exact | Current: Phase 6 — LAN continuity/offline/reconcile | Primary physical gate: target Windows DNS credential + ACME staging -> production CA -> company Windows/PDA HTTPS acceptance | Parallel: ROOT OTP provider/public flow + Cloud reconciliation machine-auth/network E2E + V7 Web/App`
