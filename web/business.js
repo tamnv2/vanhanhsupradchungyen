@@ -12,6 +12,18 @@ const SUPPORTED_COMMANDS = new Set([
   'ATTENDANCE_CORRECT'
 ]);
 
+const COMMIT_STATUSES = new Set([
+  'CLOUD_COMMITTED',
+  'LAN_ACCEPTED_PENDING_SYNC',
+  'LAN_RECONCILED_CLOUD_COMMITTED',
+  'QUEUED_CLIENT_LOCAL',
+  'SYNC_CONFLICT'
+]);
+
+const GOOGLE_OUTPUT_STATUSES = new Set([
+  'NOT_REQUIRED', 'PENDING', 'COMPLETED', 'FAILED_RETRYABLE', 'REVIEW_REQUIRED'
+]);
+
 const REQUIRED_LAN_PROOF_HEADERS = Object.freeze([
   'X-VHDCHY-Device-Id',
   'X-VHDCHY-Security-Epoch',
@@ -66,6 +78,47 @@ function validatedLanProofHeaders(proof) {
   return headers;
 }
 
+function normalizeMutationResult(response, runtime, submitted) {
+  const source = response?.result && typeof response.result === 'object' ? response.result : response;
+  const commitStatus = String(source?.commitStatus || '').toUpperCase();
+  const googleOutputStatus = String(source?.googleOutputStatus || '').toUpperCase();
+  if (!COMMIT_STATUSES.has(commitStatus) || !GOOGLE_OUTPUT_STATUSES.has(googleOutputStatus)) {
+    throw new WebAuthError('MUTATION_RESULT_INVALID', 'Service trả về mutation result không đúng contract VHDCHY.');
+  }
+
+  const version = source?.entity?.version ?? source?.resultingVersion ?? null;
+  const normalizedVersion = version === null || version === undefined ? null : Number(version);
+  if (normalizedVersion !== null && (!Number.isSafeInteger(normalizedVersion) || normalizedVersion < 1)) {
+    throw new WebAuthError('MUTATION_RESULT_INVALID', 'Service trả về entity version không hợp lệ.');
+  }
+
+  return Object.freeze({
+    ok: true,
+    requestId: String(response?.requestId || source?.requestId || submitted.requestId),
+    idempotencyKey: source?.idempotencyKey || submitted.idempotencyKey,
+    runtime,
+    commitStatus,
+    googleOutputStatus,
+    eventId: source?.eventId || null,
+    entity: source?.entity || {
+      type: source?.entityType || null,
+      id: source?.entityId || submitted.entityId,
+      version: normalizedVersion
+    },
+    cloud: source?.cloud || null,
+    lan: source?.lan || (runtime === 'LAN' ? {
+      authoritySnapshotVersion: source?.authoritySnapshotVersion || null
+    } : null),
+    alreadyAccepted: source?.alreadyAccepted === true,
+    submittedCommand: Object.freeze({
+      commandCode: submitted.commandCode,
+      entityId: submitted.entityId,
+      idempotencyKey: submitted.idempotencyKey,
+      expectedEntityVersion: submitted.expectedEntityVersion
+    })
+  });
+}
+
 export function createBusinessClient(authClient, options = {}) {
   if (!authClient || typeof authClient.request !== 'function') throw new Error('AUTH_CLIENT_REQUIRED');
   const getLanSigner = options.getLanSigner || (() => globalThis.VHDCHY_LAN_SIGNER);
@@ -90,14 +143,7 @@ export function createBusinessClient(authClient, options = {}) {
     const expectedEntityVersion = normalizeExpectedVersion(input.expectedEntityVersion);
     const deviceSeq = normalizeDeviceSeq(input.deviceSeq);
 
-    const envelope = {
-      requestId,
-      idempotencyKey,
-      commandCode,
-      entityId,
-      expectedEntityVersion,
-      payload
-    };
+    const envelope = { requestId, idempotencyKey, commandCode, entityId, expectedEntityVersion, payload };
     if (deviceSeq !== undefined) envelope.deviceSeq = deviceSeq;
 
     const rawBody = JSON.stringify(envelope);
@@ -106,7 +152,8 @@ export function createBusinessClient(authClient, options = {}) {
       'X-Request-Id': requestId
     });
 
-    if (String(authClient.runtime || '').toUpperCase() === 'LAN') {
+    const runtime = String(authClient.runtime || 'UNKNOWN').toUpperCase();
+    if (runtime === 'LAN') {
       const signer = getLanSigner?.();
       if (!signer || typeof signer.signRequest !== 'function') {
         throw new WebAuthError(
@@ -124,12 +171,7 @@ export function createBusinessClient(authClient, options = {}) {
       body: rawBody
     });
 
-    return {
-      ...response,
-      requestId: response?.requestId || requestId,
-      runtime: String(authClient.runtime || 'UNKNOWN').toUpperCase(),
-      submittedCommand: Object.freeze({ commandCode, entityId, idempotencyKey, expectedEntityVersion })
-    };
+    return normalizeMutationResult(response, runtime, { requestId, idempotencyKey, commandCode, entityId, expectedEntityVersion });
   }
 
   return Object.freeze({ submitCommand });
