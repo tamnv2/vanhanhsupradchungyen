@@ -1,20 +1,21 @@
 # LAN SOURCE REVIEW — 2026-09-13
 
-Status: ACTIVE SOURCE REUSE / PHYSICAL TEST STILL PAUSED
-Current authority: `DECISIONS.md`, `AI_OPERATING_CONTRACT.md`, `docs/SERVICE_API_CONTRACT.md`
+Status: ACTIVE SOURCE-REUSE BOUNDARY / CURRENT SOURCE MATERIALIZED / PHYSICAL ACCEPTANCE PENDING
+Reconciled: 2026-09-14
+Current authority: `DECISIONS.md`, `DECISIONS_V3.md`, `DECISIONS_V4.md`, `DECISIONS_V5.md`, `DECISIONS_V6.md`, `DECISIONS_V7.md`, `AI_OPERATING_CONTRACT.md`, `docs/SERVICE_API_CONTRACT_V3.md`, `docs/LAN_EDGE_STATE_V2.md`.
 
 ## Reference sources
 
-Two non-authority LAN references are now available:
+Two non-authority LAN references remain available:
 
 1. retained snapshot `backup/pre-zero-20260912` in the current project;
 2. legacy public repository `tamnv2supra/vanhanhdchungyen`, read-only reference only.
 
-The legacy repository is accessible for read/review and must never override current VHDCHY authority. The fixed final V4 source reference for comparison is commit `7b4488a89f585812c1bccba5d07d86049482bf4c` (`lan-pilot-beta-v0.3.36`). Do not depend on a moving `main` reference when restoring code.
+The legacy repository is evidence/reference only and never overrides current VHDCHY authority. The fixed final V4 source reference for comparison is commit `7b4488a89f585812c1bccba5d07d86049482bf4c` (`lan-pilot-beta-v0.3.36`). Do not depend on a moving legacy `main` reference when reviewing old mechanics.
 
 ## Verified legacy evidence
 
-The legacy checkpoint records a restricted ordinary-user corporate Windows laptop and exactly two Newland NLS-MT90 Android 11 devices reaching basic LAN feasibility before the final V4 regression:
+The legacy checkpoint recorded a restricted ordinary-user corporate Windows laptop and two Newland NLS-MT90 Android 11 devices reaching basic LAN feasibility before the final V4 regression:
 
 - Agent ran without Administrator/network-policy changes;
 - both physical PDA reached `LAN_ACTIVE` automatically against the LAN Agent;
@@ -26,92 +27,91 @@ The legacy checkpoint records a restricted ordinary-user corporate Windows lapto
 - duplicate event rejection was deterministic;
 - V4 automated build/package/sign/release gates reached PASS at release `lan-pilot-beta-v0.3.36`.
 
-This evidence proves the old pilot was materially implemented and physically exercised. It does not prove the current VHDCHY LAN business path because current auth/domain contracts differ and the final V4 physical regression was not completed.
+This proves the old pilot was materially implemented and physically exercised. It does **not** prove the current VHDCHY LAN business path because current auth/domain/authority contracts differ and the final V4 physical regression was not completed.
 
 ## Reusable implementation patterns confirmed from legacy source
 
-### Windows Agent
+### Windows Agent patterns
 
-`lan-agent/Vhdchy.LanAgent/PilotV4.cs` provides reusable patterns for:
+Legacy `lan-agent/Vhdchy.LanAgent/PilotV4.cs` supplied reviewed reference patterns for:
 
-- portable per-user Agent with single-instance guard and no-Admin operation;
+- portable per-user single-instance/no-admin host operation;
 - local Kestrel listener on a high user-space port;
-- UDP discovery request/reply with explicit service/environment/protocol identity;
-- health endpoint carrying instance/version/stream epoch/capabilities;
-- `streamEpoch + sequence` realtime cursor and explicit resync after restart/buffer gap;
-- bounded realtime buffer and signal-driven long polling;
-- local SQLite persistence and duplicate-safe event acceptance;
-- latency/error/client-cancel/network/resource metrics;
-- transfer/load-test/diagnostic endpoints;
-- diagnostics export that deliberately excludes canonical business payload/database;
-- staged no-admin update design with hash verification, health check and rollback path.
+- LAN discovery with explicit service/environment/protocol identity;
+- health/capability/instance/epoch reporting;
+- `streamEpoch + sequence` realtime resync concepts;
+- bounded realtime buffering;
+- durable SQLite persistence and duplicate-safe event handling;
+- latency/error/network/resource metrics and diagnostics export;
+- staged no-admin update/hash/health/rollback mechanics.
 
-### Android/PDA
+### Android/PDA patterns
 
-Legacy `MainActivityV4.java` and `PilotRepository.java` confirm reusable client patterns:
+Legacy `MainActivityV4.java` and `PilotRepository.java` supplied reviewed reference patterns for:
 
-- transport state machine: `CLOUD_ONLY / LAN_AVAILABLE / LAN_ACTIVE / LAN_LOST / RECONNECTING / LOCAL_QUEUE_ONLY`;
-- endpoint resolution order: cached healthy endpoint -> UDP discovery -> manual recovery endpoint;
-- anti-flapping hysteresis: two successful health samples before activation and two failures before fallback;
-- stable per-device identifier plus monotonically increasing `device_seq`;
-- SQLite durable pending queue keyed by `event_id` and ordered by `device_seq`;
-- ACK-driven deletion only after successful acceptance;
-- automatic queue recovery after LAN reacquisition;
+- transport state machine and endpoint cache/discovery/recovery ordering;
+- anti-flapping activation/fallback hysteresis;
+- stable device identity and monotonic `device_seq`;
+- durable pending queue ordered by device sequence;
+- ACK-driven deletion and automatic recovery after LAN reacquisition;
 - explicit epoch reset/resync after Agent restart;
-- foreground-only realtime and bounded finish-only background service for unfinished work/queue;
-- clock calibration for cross-device latency evidence rather than direct unsynchronized wall-clock subtraction.
+- foreground-first realtime and bounded background completion work;
+- calibrated latency evidence rather than naive cross-device wall-clock subtraction.
 
-## What may be adopted now
+## Current reuse outcome
 
-These concepts are compatible with the current architecture and can be adapted without physical devices:
+These concepts have now moved beyond “restoration work that can resume” into current VHDCHY source foundations where reviewed:
 
-- durable command queue and persistent device sequence;
-- LAN endpoint cache/discovery/hysteresis state machine;
-- Agent health/capability/epoch contract;
-- reconnect/resync logic;
-- diagnostics/metrics/export model;
-- synthetic Agent load generator approach;
-- no-admin packaging/runtime constraints;
-- bounded Android background-work policy as a future client requirement.
+- no-admin LAN host/runtime packaging;
+- LAN health/readiness and endpoint/domain contract foundations;
+- durable local operational state and immutable edge events;
+- idempotent replay and authenticated actor evidence;
+- durable staged media;
+- durable Cloud reconciliation queue/restart/conflict mechanics;
+- secure Kestrel HTTPS normal-user login/session + reviewed Slice-1 business route;
+- Windows DPAPI CurrentUser PFX custody;
+- separate user-space ACME DNS-01 certificate-manager source.
 
-The source must be adapted to the current shared Service/domain contract rather than copied wholesale.
+Current accepted automated evidence is tracked by `docs/PROGRESS_TRACKING_V1.md`, `docs/LAN_SECURE_HTTP_V1.md` and `docs/LAN_CERTIFICATE_MANAGER_V1.md`. Legacy evidence itself does not add current-product completion credit.
 
-## Items that remain pilot-only or must change
+## Items that remain pilot-only or forbidden as current authority
 
-`VHDCHY_LAN_PILOT_V1` and cleartext `/api/pilot/*` endpoints remain test-only. They must not carry business credentials, employee PII or canonical mutations.
+`VHDCHY_LAN_PILOT_V1` and cleartext `/api/pilot/*` behavior remain test/reference-only. They must not carry current business credentials, employee PII or canonical mutations.
 
-Legacy service/environment/protocol string checks are identity hints, not cryptographic authentication. Before business LAN activation, current VHDCHY requires reviewed pairing/authentication, security epoch handling, permission enforcement and the same idempotent command/event semantics used by the Service API.
+Legacy service/environment/protocol string checks are identity hints, not cryptographic authentication. Current VHDCHY requires reviewed pairing/authentication, security epoch handling, permission enforcement and the same domain/idempotency/error semantics as the current Service contract.
 
-Legacy local SQLite is appropriate for client/Agent queueing and transport evidence. It must not become a second canonical business authority; D1 remains canonical under current decisions.
+Legacy payload/business assumptions, old provider IDs, old Sheets authority, hard-coded shifts/auth rules and old runtime state/data are not inherited.
 
-Legacy Cloud health probing may remain diagnostic, but LAN/cloud selection must not fork business semantics or create separate authorities.
+## Correct current Cloud/LAN authority interpretation
 
-## Restoration work that can resume immediately
+The earlier statement “local SQLite must not become a second canonical business authority; D1 remains canonical” is too coarse under V3/V4 and must not be used to reject the approved LAN model.
 
-Physical availability is no longer a reason to pause source/model work. The following work is executable now from the legacy reference:
+Current authority is context-specific:
 
-1. define a transport-neutral LAN command envelope aligned with `docs/SERVICE_API_CONTRACT.md` and canonical `idempotency_key + device_id + device_seq` semantics;
-2. extract/adapt endpoint discovery, health validation and hysteresis into a current BETA LAN transport design;
-3. extract/adapt durable queue/device-sequence semantics without importing pilot payload/business assumptions;
-4. define `streamEpoch + sequence` reconnect/resync behavior for non-canonical realtime/status traffic;
-5. define diagnostics and synthetic-capacity acceptance compatible with the current BETA acceptance matrix;
-6. map Agent/PDA authentication and pairing requirements before any business-data transport is opened;
-7. prepare source/build structure for later physical regression without claiming physical PASS.
+- Cloud normal operation: Cloud Service/D1 is the normal central structured authority.
+- LAN operation: the LAN Service commits local current state + immutable edge event + required sync/output work durably; for commands accepted locally under the synchronized authority snapshot, that LAN edge state/event journal is the operational authority during the partition/LAN period.
+- After connectivity returns: Cloud reconciliation consumes the LAN immutable events/outbox and D1 becomes the central consolidated structured store after synchronization.
+- Google Sheets/Drive are downstream projection/storage and never reconstruction source truth.
+- Cloud/LAN do not fork business semantics; route changes preserve the same logical command/event identity.
 
-## Physical gate that still remains
+This is the required full local Service model, not the legacy relay/pilot model.
 
-The real company laptop/network and physical MT90 devices are still required to verify:
+## Current physical/provider gate
 
-- inbound reachability and UDP discovery under current company network policy;
-- automatic reacquisition after Agent restart/network changes;
-- real PDA realtime/transfer latency and Wi-Fi behavior;
-- queue recovery under Wi-Fi loss;
-- background lifecycle/battery footprint;
-- no-admin update behavior on the actual laptop;
-- synthetic 10/25/50/100 Agent capacity plus soak in the target environment.
+Source work is not paused by physical availability. The remaining target-environment acceptance still requires:
 
-Until those tests occur, classify LAN as `SOURCE/MODEL ACTIVE — PHYSICAL REGRESSION PENDING`, not final PASS.
+1. intended ordinary-user company Windows host;
+2. verified least-privilege DNS write credential outside GitHub/LAN Service;
+3. ACME staging DNS-01 issuance/cleanup for `lan-beta.supra.cc.cd`;
+4. production public-CA issuance only after staging passes;
+5. canonical DNS reachability and Windows/browser trust;
+6. real NLS-MT90/PDA HTTPS, reconnection and Wi-Fi/LAN reacquisition;
+7. host restart/network-change recovery and no-admin update/rollback;
+8. >=60-minute Internet-cut local continuity plus separate post-restoration reconciliation;
+9. synthetic 10/25/50/100 capacity and soak when the target environment is ready.
+
+Until these tests occur, classify the physical lane as `IMPLEMENTED_AUTOMATED / PHYSICAL-PROVIDER ACCEPTANCE PENDING`, not final PASS. Independent auth/business/provider/Web/App source lanes continue in parallel.
 
 ## Authority boundary
 
-The legacy repository is reference/evidence only. Current repo decisions, security rules and Service API contract remain authoritative. Any old behavior that conflicts with current authority must be discarded or adapted; no old repository resource may become runtime fallback or write target.
+The legacy repository is reference/evidence only. Current repo decisions, security rules and `docs/SERVICE_API_CONTRACT_V3.md` remain authoritative. Any old behavior that conflicts with current authority is discarded or deliberately adapted; no old repository resource becomes runtime fallback, write target or business authority automatically.
