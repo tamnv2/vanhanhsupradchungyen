@@ -108,4 +108,6 @@ await assert.rejects(() => invalidResultClient.submitCommand({
   commandCode: 'EMPLOYEE_CREATE', entityId: 'EMP-2', payload: { employeeId: 'EMP-2', fullName: 'B' }
 }), error => error?.code === 'MUTATION_RESULT_INVALID');
 
-console.log('WEB_SLICE1_CLIENT_PASS cloudContractShape=PASS lanContractNormalized=PASS lanSignedExactBody=PASS lanUnsignedNoNetwork=PASS portraitGate=PASS invalidResultFailClosed=PASS');
+await import('./slice1-ui.test.mjs');
+
+console.log('WEB_SLICE1_CLIENT_PASS cloudContractShape=PASS lanContractNormalized=PASS lanSignedExactBody=PASS lanUnsignedNoNetwork=PASS portraitGate=PASS invalidResultFailClosed=PASS surfaceStates=PASS');
