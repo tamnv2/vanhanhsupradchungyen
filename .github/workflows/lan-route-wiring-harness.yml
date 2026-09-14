@@ -1,0 +1,122 @@
+name: Validate LAN signed session route wiring
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'lan-service/**'
+      - 'lan-route-wiring-harness/**'
+      - '.github/workflows/lan-route-wiring-harness.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lan-route-wiring-harness
+  cancel-in-progress: true
+
+jobs:
+  route-wiring:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Build LAN runtime and route harness
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet build lan-service/Vhdchy.LanService.csproj -c Release
+          dotnet build lan-route-wiring-harness/Vhdchy.LanRouteWiring.Harness.csproj -c Release
+
+      - name: Initialize isolated EdgeStore
+        shell: bash
+        run: |
+          set -euo pipefail
+          data_root="$RUNNER_TEMP/vhdchy-route-wiring"
+          rm -rf "$data_root"
+          mkdir -p "$data_root"
+          echo "DATA_ROOT=$data_root" >> "$GITHUB_ENV"
+
+          VHDCHY_ENV=BETA \
+          VHDCHY_CLUSTER_ID=PICK_PACK_1291 \
+          VHDCHY_LAN_PORT=17912 \
+          VHDCHY_LAN_DATA_ROOT="$data_root" \
+            dotnet lan-service/bin/Release/net8.0/VHDCHY.LanService.dll > "$RUNNER_TEMP/lan-init.log" 2>&1 &
+          pid=$!
+          trap 'kill $pid 2>/dev/null || true' EXIT
+
+          ok=false
+          for i in $(seq 1 30); do
+            if ! kill -0 "$pid" 2>/dev/null; then
+              cat "$RUNNER_TEMP/lan-init.log" || true
+              exit 1
+            fi
+            code=$(curl --noproxy '*' -sS -o "$RUNNER_TEMP/health-init.json" -w '%{http_code}' http://127.0.0.1:17912/health || true)
+            if [ "$code" = "200" ]; then ok=true; break; fi
+            sleep 0.5
+          done
+          test "$ok" = "true"
+          jq -e '.readiness == "EDGE_EMPTY" and .businessMutationEnabled == false' "$RUNNER_TEMP/health-init.json" >/dev/null
+          kill "$pid"
+          wait "$pid" || true
+          trap - EXIT
+          test -s "$data_root/edge.db"
+
+      - name: Prove signed session-to-business chain
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet run --project lan-route-wiring-harness/Vhdchy.LanRouteWiring.Harness.csproj -c Release --no-build -- "$DATA_ROOT/edge.db" 2>&1 | tee "$RUNNER_TEMP/route-wiring.log"
+          grep -Fq 'LAN_ROUTE_WIRING_HARNESS_PASS' "$RUNNER_TEMP/route-wiring.log"
+          grep -Fq 'signedBodyBinding=PASS' "$RUNNER_TEMP/route-wiring.log"
+          grep -Fq 'sessionBinding=PASS' "$RUNNER_TEMP/route-wiring.log"
+          grep -Fq 'currentAuthority=PASS' "$RUNNER_TEMP/route-wiring.log"
+          grep -Fq 'authzDeny=PASS' "$RUNNER_TEMP/route-wiring.log"
+          grep -Fq 'portraitClosed=PASS' "$RUNNER_TEMP/route-wiring.log"
+          grep -Fq 'businessExecute=PASS' "$RUNNER_TEMP/route-wiring.log"
+          test "$(sqlite3 "$DATA_ROOT/edge.db" "PRAGMA foreign_key_check;")" = ""
+          test "$(sqlite3 "$DATA_ROOT/edge.db" "PRAGMA quick_check;")" = "ok"
+
+      - name: Prove public HTTP mutation remains closed
+        shell: bash
+        run: |
+          set -euo pipefail
+          VHDCHY_ENV=BETA \
+          VHDCHY_CLUSTER_ID=PICK_PACK_1291 \
+          VHDCHY_LAN_PORT=17912 \
+          VHDCHY_LAN_DATA_ROOT="$DATA_ROOT" \
+            dotnet lan-service/bin/Release/net8.0/VHDCHY.LanService.dll > "$RUNNER_TEMP/lan-restart.log" 2>&1 &
+          pid=$!
+          trap 'kill $pid 2>/dev/null || true' EXIT
+
+          ok=false
+          for i in $(seq 1 30); do
+            code=$(curl --noproxy '*' -sS -o "$RUNNER_TEMP/sync.json" -w '%{http_code}' http://127.0.0.1:17912/api/v1/sync/status || true)
+            if [ "$code" = "200" ]; then ok=true; break; fi
+            sleep 0.5
+          done
+          test "$ok" = "true"
+          code=$(curl --noproxy '*' -sS -o "$RUNNER_TEMP/mutation.json" -w '%{http_code}' -X POST http://127.0.0.1:17912/api/v1/data/commands -H 'content-type: application/json' --data '{}')
+          test "$code" = "503"
+          jq -e '.error.code == "RUNTIME_DEPENDENCY_UNAVAILABLE"' "$RUNNER_TEMP/mutation.json" >/dev/null
+          kill "$pid"
+          wait "$pid" || true
+          trap - EXIT
+
+      - name: Upload route-wiring diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lan-route-wiring-diagnostics
+          if-no-files-found: ignore
+          path: |
+            ${{ runner.temp }}/route-wiring.log
+            ${{ runner.temp }}/lan-init.log
+            ${{ runner.temp }}/lan-restart.log
+            ${{ runner.temp }}/health-init.json
+            ${{ runner.temp }}/sync.json
+            ${{ runner.temp }}/mutation.json
