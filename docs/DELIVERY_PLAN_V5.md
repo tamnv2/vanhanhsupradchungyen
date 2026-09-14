@@ -8,13 +8,13 @@ Supersedes: `docs/DELIVERY_PLAN_V4.md` for overall delivery sequencing/progress.
 
 ## Executive position
 
-The project is **55.4% complete (display: 55%)** against the complete target product.
+The project is **56.2% complete (display: 56%)** against the complete target product.
 
 Primary active phase: **Phase 6 — LAN continuity, local state, offline operation and reconciliation**.
 
 Parallel incomplete lanes: **Phase 4 — broader core business Service/API**, **Phase 5 — Gateway/integrations**, and **Phase 7/8 UI/App implementation**.
 
-The project is past initial scope/architecture/foundation. It is in the middle of implementation: a current LAN/business Slice-1, durable staged-media/reconciliation queue and secure LAN HTTP foundation exist with automated evidence, but the final Web/App surfaces, publicly trusted LAN certificate/target-host acceptance, 60-minute internet-cut acceptance, full business/provider coverage, BETA UAT/capacity, and STABLE production promotion remain incomplete.
+The project is past initial scope/architecture/foundation. It is in the middle of implementation: a current LAN/business Slice-1, durable staged-media/reconciliation queue, secure LAN HTTP foundation and automated signed operational refresh/rebase path exist with CI evidence, but live BETA machine credential/provider acceptance, final Web/App surfaces, publicly trusted LAN certificate/target-host acceptance, 60-minute internet-cut acceptance, full business/provider coverage, BETA UAT/capacity, and STABLE production promotion remain incomplete.
 
 ---
 
@@ -214,8 +214,8 @@ The project is past initial scope/architecture/foundation. It is in the middle o
 ## Phase 6 — LAN continuity, local state, offline operation and reconciliation
 
 **Weight:** 16%  
-**Current completion:** 60%  
-**Status:** PRIMARY ACTIVE PHASE — MATERIAL AUTOMATED FOUNDATION, PHYSICAL/PUBLIC-TRUST ACCEPTANCE PENDING
+**Current completion:** 65%  
+**Status:** PRIMARY ACTIVE PHASE — MATERIAL AUTOMATED FOUNDATION, LIVE PROVIDER/PHYSICAL/PUBLIC-TRUST ACCEPTANCE PENDING
 
 ### 6.1 No-admin Windows LAN host — MATERIAL SOURCE/CI PASS, target host pending
 
@@ -229,9 +229,11 @@ The project is past initial scope/architecture/foundation. It is in the middle o
 - Anti-flapping/reconnect/resync concepts are approved.
 - Current company-network physical proof remains required.
 
-### 6.3 Local operational state and snapshots — CURRENT WORKING SLICE
+### 6.3 Local operational state and snapshots — MATERIAL AUTOMATED SLICE
 
 - Current source includes LAN operational state materialization and an automated harness proving Slice-1 snapshot semantics.
+- Cloud now exposes a machine-authenticated operational snapshot response backed by real Slice-1 D1 state and explicit canonical reconciliation coverage.
+- LAN now has a signed snapshot client plus atomic authoritative import/rebase coordination; live provider acceptance is still separate.
 
 ### 6.4 Durable events, idempotent replay and actor evidence — CURRENT WORKING SLICE
 
@@ -255,10 +257,14 @@ The project is past initial scope/architecture/foundation. It is in the middle o
 - V7 requires LAN-critical UI assets to work without internet dependencies; current shared Web shell provides material local/offline-safe foundation.
 - Publicly trusted certificate issuance/renewal on the target host, canonical DNS resolution and real browser/PDA trust remain unaccepted.
 
-### 6.8 Reconciliation and conflict handling — MATERIAL PARTIAL
+### 6.8 Reconciliation and conflict handling — MATERIAL AUTOMATED SLICE / LIVE ACCEPTANCE PENDING
 
 - Durable Cloud-reconciliation queue mechanics, claim/retry/restart/conflict state and immutable edge envelope foundations have automated evidence.
-- Complete machine/service-authenticated Cloud network ingestion, exact provider linkage, Google receipts E2E and conflict-resolution workflow remain.
+- Machine-authenticated Cloud operational snapshot/coverage source and the LAN signed refresh/rebase/readiness path now have automated integration evidence.
+- Readiness fails closed while reconciled canonical events remain unre-based; incomplete coverage cannot replace the active snapshot; verified complete coverage advances the rebase cursor and permits recovery.
+- Restart-safe coverage is bound to persistent `edgeInstanceId` while current `edgeEpoch` remains part of machine identity/request evidence.
+- Dedicated integration run `34851773729` and clean-baseline run `34851772963` on source commit `42590dcf73ecbe8d1d8ee8dfbd6275aabf9d64fd` are SUCCESS.
+- Live BETA machine credential/provider LAN->Cloud acceptance, exact provider linkage, Google receipts E2E and broader conflict-resolution workflow remain open.
 
 ### 6.9 Physical internet-cut test — NOT YET ACCEPTED
 
@@ -277,7 +283,7 @@ The project is past initial scope/architecture/foundation. It is in the middle o
 - No-admin update/rollback on target laptop.
 - Synthetic 10/25/50/100 Agent/client capacity plus soak.
 
-**Next gate:** target company Windows host -> ACME staging -> production public CA -> Windows/browser trust -> real NLS-MT90 -> >=60-minute Internet-cut acceptance, while independent source lanes continue in parallel.
+**Next gate:** live BETA machine credential/provider LAN->Cloud proof when Owner-controlled setup is available, plus target company Windows host -> ACME staging -> production public CA -> Windows/browser trust -> real NLS-MT90 -> >=60-minute Internet-cut acceptance; independent source lanes continue in parallel.
 
 ---
 
@@ -513,7 +519,7 @@ The project is past initial scope/architecture/foundation. It is in the middle o
 The plan is not strictly serial: independent work should run in parallel when it does not create contract drift. The recommended current ordering is:
 
 1. **Primary physical gate:** target company Windows host -> ACME staging -> production public CA -> Windows/browser trust -> real NLS-MT90 -> >=60-minute continuity acceptance when target hardware/network and least-privilege DNS credentials are available.
-2. **Parallel source lane:** close Phase 3/4/5 auth/business/provider paths and tests, including ROOT email-OTP E2E and Cloud/LAN reconciliation transport.
+2. **Parallel source/provider lane:** complete live BETA machine credential/provider proof for the implemented LAN->Cloud operational refresh/rebase path, then close remaining Phase 3/4/5 auth/business/provider paths including ROOT email-OTP E2E, Google receipts and broader conflict handling.
 3. **Parallel UI lane:** wire authenticated/business Phase 7 Web flows; surface Pick Pack 1291 App UI evidence and continue Phase 8 App shell/business flows without inventing missing visuals.
 4. Execute Phase 11 physical target-network/PDA, load/soak and UAT gates when prerequisites are ready.
 5. Only after exact BETA acceptance, execute Phase 12 STABLE promotion/deployment/handover.
@@ -522,6 +528,6 @@ The plan is not strictly serial: independent work should run in parallel when it
 
 Current baseline:
 
-`Overall: 55% (55.4 exact) | Current: Phase 6 — LAN continuity/offline/reconcile | Parallel: Phase 3/4/5 auth/business/provider + Phase 7/8 Web/App | Next physical gate: target host -> public trust -> real PDA -> >=60-minute Internet cut`
+`Overall: 56% (56.2 exact) | Current: Phase 6 — LAN continuity/offline/reconcile | Parallel: Phase 3/4/5 auth/business/provider + Phase 7/8 Web/App | Next source/provider gate: live BETA machine credential LAN->Cloud proof | Next physical gate: target host -> public trust -> real PDA -> >=60-minute Internet cut`
 
 Update this line and `docs/PROGRESS_TRACKING_V1.md` whenever material accepted evidence changes.
