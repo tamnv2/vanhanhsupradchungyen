@@ -77,16 +77,18 @@ jobs:
           grep -Fq 'LAN_OPERATIONAL_SNAPSHOT_HARNESS_PASS' "$RUNNER_TEMP/base-harness.log"
           grep -Fq 'LAN_LOCAL_COMMAND_TRANSACTION_PASS' "$RUNNER_TEMP/base-harness.log"
 
-      - name: Prove readiness remains closed until reviewed Slice-1 adapter exists
+      - name: Prove readiness advances only to reviewed route-wiring gate
         shell: bash
         run: |
           set -euo pipefail
           dotnet run --project lan-readiness-harness/Vhdchy.LanReadiness.Harness.csproj -c Release --no-build -- "$DATA_ROOT/edge.db" | tee "$RUNNER_TEMP/readiness-harness.log"
           grep -Fq 'LAN_READINESS_HARNESS_PASS' "$RUNNER_TEMP/readiness-harness.log"
+          grep -Fq 'primaryCredentialGate=PASS' "$RUNNER_TEMP/readiness-harness.log"
+          grep -Fq 'routeWiringGate=PASS' "$RUNNER_TEMP/readiness-harness.log"
 
-          test "$(sqlite3 "$DATA_ROOT/edge.db" "SELECT meta_value FROM edge_meta WHERE meta_key='authority_snapshot_version';")" = "AUTH-TEST-2"
-          test "$(sqlite3 "$DATA_ROOT/edge.db" "SELECT meta_value FROM edge_meta WHERE meta_key='operational_snapshot_version';")" = "OP-TEST-2"
-          test "$(sqlite3 "$DATA_ROOT/edge.db" "SELECT meta_value FROM edge_meta WHERE meta_key='operational_snapshot_authority_version';")" = "AUTH-TEST-2"
+          test "$(sqlite3 "$DATA_ROOT/edge.db" "SELECT meta_value FROM edge_meta WHERE meta_key='authority_snapshot_version';")" = "AUTH-READINESS-V2"
+          test "$(sqlite3 "$DATA_ROOT/edge.db" "SELECT meta_value FROM edge_meta WHERE meta_key='operational_snapshot_version';")" = "OP-READINESS-V2"
+          test "$(sqlite3 "$DATA_ROOT/edge.db" "SELECT meta_value FROM edge_meta WHERE meta_key='operational_snapshot_authority_version';")" = "AUTH-READINESS-V2"
           test "$(sqlite3 "$DATA_ROOT/edge.db" "SELECT meta_value FROM edge_meta WHERE meta_key='readiness';")" = "EDGE_EMPTY"
           test "$(sqlite3 "$DATA_ROOT/edge.db" "PRAGMA foreign_key_check;")" = ""
           test "$(sqlite3 "$DATA_ROOT/edge.db" "PRAGMA quick_check;")" = "ok"
@@ -114,7 +116,7 @@ jobs:
             sleep 0.5
           done
           test "$ok" = "true"
-          jq -e '.authoritySnapshotVersion == "AUTH-TEST-2" and .operationalSnapshotVersion == "OP-TEST-2" and .readiness == "EDGE_EMPTY"' "$RUNNER_TEMP/sync.json" >/dev/null
+          jq -e '.authoritySnapshotVersion == "AUTH-READINESS-V2" and .operationalSnapshotVersion == "OP-READINESS-V2" and .readiness == "EDGE_EMPTY"' "$RUNNER_TEMP/sync.json" >/dev/null
           code=$(curl --noproxy '*' -sS -o "$RUNNER_TEMP/mutation.json" -w '%{http_code}' -X POST http://127.0.0.1:17912/api/v1/data/test)
           test "$code" = "503"
           jq -e '.error.code == "RUNTIME_DEPENDENCY_UNAVAILABLE"' "$RUNNER_TEMP/mutation.json" >/dev/null
