@@ -1,6 +1,7 @@
 export const PROJECTION_PROTOCOL = 'VHDCHY_PROJECTION_V1';
 export const PROJECTION_TARGET = 'GOOGLE_SHEETS';
 export const PROJECTION_MAX_ATTEMPTS = 8;
+export const PROJECTION_PROCESSING_LEASE_MS = 5 * 60 * 1000;
 
 function parsePayload(value) {
   if (value && typeof value === 'object' && !Array.isArray(value)) return value;
@@ -43,29 +44,40 @@ export function classifyProjectionFailure(currentAttempts, nowMs = Date.now()) {
   return { status: 'PENDING', attempts, nextAttemptAt: nextRetryAt(attempts, nowMs) };
 }
 
+export function projectionLeaseStaleBefore(nowMs = Date.now()) {
+  return new Date(Number(nowMs) - PROJECTION_PROCESSING_LEASE_MS).toISOString();
+}
+
 export async function loadPendingOutbox(db, limit = 25, nowMs = Date.now()) {
   if (!db) return [];
   const safeLimit = Math.max(1, Math.min(100, Number(limit) || 25));
   const nowIso = new Date(nowMs).toISOString();
+  const staleBeforeIso = projectionLeaseStaleBefore(nowMs);
   const result = await db.prepare(`
-    SELECT outbox_id, event_id, projection_target, payload_json, status, attempts, next_attempt_at
+    SELECT outbox_id, event_id, projection_target, payload_json, status, attempts, next_attempt_at, updated_at
     FROM projection_outbox
     WHERE projection_target = ?
-      AND status = 'PENDING'
-      AND (next_attempt_at IS NULL OR next_attempt_at <= ?)
+      AND (
+        (status = 'PENDING' AND (next_attempt_at IS NULL OR next_attempt_at <= ?))
+        OR (status = 'PROCESSING' AND updated_at <= ?)
+      )
     ORDER BY outbox_id ASC
     LIMIT ?
-  `).bind(PROJECTION_TARGET, nowIso, safeLimit).all();
+  `).bind(PROJECTION_TARGET, nowIso, staleBeforeIso, safeLimit).all();
   return Array.isArray(result?.results) ? result.results : [];
 }
 
-export async function markOutboxProcessing(db, rows, nowIso = new Date().toISOString()) {
+export async function markOutboxProcessing(db, rows, nowIso = new Date().toISOString(), staleBeforeIso = projectionLeaseStaleBefore(Date.parse(nowIso))) {
   const statements = (Array.isArray(rows) ? rows : []).map(row =>
     db.prepare(`
       UPDATE projection_outbox
       SET status = 'PROCESSING', updated_at = ?
-      WHERE outbox_id = ? AND event_id = ? AND status = 'PENDING'
-    `).bind(nowIso, Number(row.outbox_id), String(row.event_id))
+      WHERE outbox_id = ? AND event_id = ?
+        AND (
+          status = 'PENDING'
+          OR (status = 'PROCESSING' AND updated_at <= ?)
+        )
+    `).bind(nowIso, Number(row.outbox_id), String(row.event_id), staleBeforeIso)
   );
   if (!statements.length) return [];
   return db.batch(statements);
