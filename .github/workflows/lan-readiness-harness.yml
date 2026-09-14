@@ -71,7 +71,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          dotnet run --project lan-service-harness/Vhdchy.LanService.Harness.csproj -c Release --no-build -- "$DATA_ROOT/edge.db" | tee "$RUNNER_TEMP/base-harness.log"
+          dotnet run --project lan-service-harness/Vhdchy.LanService.Harness.csproj -c Release --no-build -- "$DATA_ROOT/edge.db" 2>&1 | tee "$RUNNER_TEMP/base-harness.log"
           grep -Fq 'LAN_AUTHORITY_SNAPSHOT_HARNESS_PASS' "$RUNNER_TEMP/base-harness.log"
           grep -Fq 'LAN_AUTHORIZATION_HARNESS_PASS' "$RUNNER_TEMP/base-harness.log"
           grep -Fq 'LAN_OPERATIONAL_SNAPSHOT_HARNESS_PASS' "$RUNNER_TEMP/base-harness.log"
@@ -81,7 +81,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          dotnet run --project lan-readiness-harness/Vhdchy.LanReadiness.Harness.csproj -c Release --no-build -- "$DATA_ROOT/edge.db" | tee "$RUNNER_TEMP/readiness-harness.log"
+          dotnet run --project lan-readiness-harness/Vhdchy.LanReadiness.Harness.csproj -c Release --no-build -- "$DATA_ROOT/edge.db" 2>&1 | tee "$RUNNER_TEMP/readiness-harness.log"
           grep -Fq 'LAN_READINESS_HARNESS_PASS' "$RUNNER_TEMP/readiness-harness.log"
           grep -Fq 'primaryCredentialGate=PASS' "$RUNNER_TEMP/readiness-harness.log"
           grep -Fq 'routeWiringGate=PASS' "$RUNNER_TEMP/readiness-harness.log"
@@ -123,3 +123,18 @@ jobs:
           kill "$pid"
           wait "$pid" || true
           trap - EXIT
+
+      - name: Upload readiness diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lan-readiness-diagnostics
+          if-no-files-found: ignore
+          path: |
+            ${{ runner.temp }}/base-harness.log
+            ${{ runner.temp }}/readiness-harness.log
+            ${{ runner.temp }}/lan-init.log
+            ${{ runner.temp }}/lan-restart.log
+            ${{ runner.temp }}/health-init.json
+            ${{ runner.temp }}/sync.json
+            ${{ runner.temp }}/mutation.json
