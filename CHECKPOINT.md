@@ -1,9 +1,9 @@
 # CHECKPOINT — VHDCHY
 
-checkpoint_version: 41
+checkpoint_version: 42
 protocol: AI_AUTHORITY_RESUME_V2
 status: EXECUTING_PRODUCT_V7_BETA
-reconciled_through_commit: 703c0990c924f2b490241f38c513238c1369f652
+reconciled_through_commit: d02434d76706ec79ada89839f882fa49d8348c8a
 action_mode: AUTONOMOUS_PARALLEL
 active_lanes: REPO_GOVERNANCE / SHARED_DOMAIN / CLOUD_SERVICE / LAN_FULL_SERVICE / AUTH / GOOGLE_SYNC / WEB_ONLINE_LAN / ANDROID_PDA / RECONCILIATION / STABLE_PREPARATION
 paused_lanes: PHYSICAL_CORPORATE_LAN_REGRESSION
@@ -16,7 +16,6 @@ authority_v6_ref: DECISIONS_V6.md
 authority_v7_ref: DECISIONS_V7.md
 service_contract_ref: docs/SERVICE_API_CONTRACT_V3.md
 lan_edge_ref: docs/LAN_EDGE_STATE_V2.md
-lan_secure_http_ref: docs/LAN_SECURE_HTTP_V1.md
 delivery_plan_ref: docs/DELIVERY_PLAN_V5.md
 progress_ref: docs/PROGRESS_TRACKING_V1.md
 context_index_ref: CONTEXT_INDEX.md
@@ -26,98 +25,98 @@ context_index_ref: CONTEXT_INDEX.md
 - Evidence-weighted total: **55.4% exact / 55% displayed**.
 - Phase 6 LAN continuity/offline/reconcile: **60%**.
 - Phase 7 Online/LAN Web UI: **25%**.
-- No percentage increase is recorded for the latest reconciliation transport source slice yet. Live network/finality/provider/physical evidence is still incomplete.
+- No percentage increase is recorded yet for reconciliation finality/provider preparation. Source/CI and guarded migration preparation are not equivalent to live signed network E2E acceptance.
 
 ## Resume reconciliation state
 
-Checkpoint v40 was reconciled through `3a6527e74a33ce2dcdafdbbd93da5ab82da50f2e`. Current `main` then advanced through three decision-independent commits:
+FOCUSED reconciliation is complete from prior checkpoint commit `703c0990c924f2b490241f38c513238c1369f652` through `d02434d76706ec79ada89839f882fa49d8348c8a`.
 
-- `717a40b20f31a51c6d21885726737b7edabf4c36` — checkpoint handoff only;
-- `e64bc9c9c2521ed02f7778b896045d3fb46c85d8` — aggregate LAN CI capability assertion repaired to the current reconciliation contract;
-- `703c0990c924f2b490241f38c513238c1369f652` — LAN CI validation note pinning the current fail-closed capability markers.
+No active decision layer changed. The relevant later changes are limited to Cloud/LAN reconciliation finality source/tests, Worker deployment packaging/binding preservation, Cloudflare read-only diagnostics, and guarded BETA reconciliation-schema backfill preparation.
 
-No active decision/authority layer changed in that range. FOCUSED reconciliation is complete through `703c0990c924f2b490241f38c513238c1369f652`.
+A fresh chat must still live-read `AI_ENTRYPOINT.md` and execute the normal bootstrap. If HEAD is later than `reconciled_through_commit`, inspect later changes before mutation.
 
-A fresh chat must still live-read `AI_ENTRYPOINT.md` and execute the normal bootstrap. If HEAD is later than `reconciled_through_commit`, inspect those later changes before continuing.
+## Reconciliation finality source — SOURCE/CI PASS for supported Slice-1 command
 
-## Cloud/LAN reconciliation continuation — signed transport SOURCE/CI PASS
+Current source implements honest canonical finality for the reviewed `EMPLOYEE_CREATE` reconciliation slice:
 
-The source contains an isolated authenticated LAN->Cloud reconciliation path:
+- final acknowledgement is not fabricated from inbox receipt;
+- canonical commit is tied to supported business semantics and durable D1 transaction behavior;
+- current state, immutable `domain_events`, required projection outbox evidence and edge-to-canonical linkage are handled as the finality unit;
+- retries/idempotency return the existing compatible canonical event rather than duplicating it;
+- conflicts remain explicit;
+- unsupported commands remain `RECEIVED` instead of being falsely promoted to final Cloud commit.
 
-- public Worker route `POST /api/v1/reconciliation/events` isolated from unrelated mutation routes;
-- signed machine-request verification using HMAC-SHA256 over the canonical request contract;
-- request binding includes method/path/timestamp/nonce/body hash/environment/key identity;
-- unsigned, stale and body/signature-mismatched requests are rejected;
-- LAN HTTPS sender creates the matching signed request;
-- LAN reconciliation pump runs only when complete Cloud endpoint + machine-auth runtime configuration is available; partial configuration fails closed;
-- Cloud `RECEIVED` means durable inbox receipt only and is not promoted to final `RECONCILED`/canonical-commit state.
+Worker deployment source now packages the reconciliation modules and the uploader supports strict inherited binding preservation for `LAN_RECONCILIATION_KEY_ID` and `LAN_RECONCILIATION_SHARED_SECRET`.
 
-Worker-side accepted evidence:
+Accepted source evidence includes aggregate product-foundation PASS at the finality source lane and later migration-source HEADs. At migration commit `1e83f591dcdcccc2bf0c5fb46328ae1aef62fcbe`:
 
-- route-coverage commit `a2932d95fb8289ad78be7102d597d3b4a95561ce`;
-- clean-baseline run `34832612667`: **SUCCESS**.
+- `Validate clean baseline` run `34839687469`: **SUCCESS**;
+- `Build product foundations` run `34839687487`: **SUCCESS**.
 
-Same-HEAD repaired evidence at `703c0990c924f2b490241f38c513238c1369f652`:
+## Live Cloudflare BETA provider diagnosis — VERIFIED
 
-- aggregate `Build product foundations` run `34835154934`: **SUCCESS**;
-- dedicated `Validate LAN Cloud reconciliation queue` run `34835154937`: **SUCCESS**;
-- `Validate clean baseline` run `34835154892`: **SUCCESS**.
+Latest direct provider diagnostic evidence before mutation is workflow `34838029253`, job `103956280288`, against BETA account/resource identity:
 
-The prior aggregate `lan-service` regression from run `34833117353` is therefore **CLOSED**. Do not repeat diagnosis of that historical failure unless a later HEAD introduces a new failure.
+- Cloudflare account: `1b1695e4f2a3abfe08dc475b352c7f42` — verified;
+- Worker: `vhdchy-beta` — found;
+- D1: `vhdchy-data-beta` / `37eb7d59-05c0-4ba2-8162-cb6a9fe5d492` — found;
+- base D1 schema marker remains `business_core_v3`;
+- Worker currently has `APP_ENV`, `BUILD_SHA`, `DB`, `GAS_EXEC_URL` only;
+- Worker currently **does not have** `LAN_RECONCILIATION_KEY_ID`;
+- Worker currently **does not have** `LAN_RECONCILIATION_SHARED_SECRET`;
+- BETA D1 currently **does not have** `edge_sources`, `edge_event_ingest`, `integration_receipts`, or `edge_sync_checkpoints`.
 
-## Current reconciliation finality gap
+The earlier diagnostic UI step summaries were misleading because those isolated steps used `continue-on-error`; raw job logs are the authority for the missing-binding/missing-table result.
 
-Cloud currently durably ingests LAN events into `edge_event_ingest` with replay/collision/receipt checks, but successful ingestion still returns only `RECEIVED`.
+## Guarded D1 reconciliation backfill — READY / NOT YET APPLIED
 
-Current contract requires final `LAN_RECONCILED_CLOUD_COMMITTED` only after the LAN-originated event has passed canonical Cloud business semantics and one durable Cloud transaction has committed the required current state + immutable `domain_events` evidence + required async work + edge-to-canonical linkage.
+Do **not** apply legacy `0009_edge_reconciliation.sql` directly to this BETA database. It also seeds legacy unprefixed permission IDs, while current permission authority uses the dedicated V1 catalog with `PERM:*` identities. Direct replay could introduce duplicate semantic permission definitions.
 
-Current Worker `/api/v1/data/*` business routes remain unimplemented, so finality must not be fabricated by merely changing inbox status. The next source slice is to implement a reviewed canonical Slice-1 reconciliation adapter/transaction for supported commands, preserve explicit conflicts, and return canonical event/time only after durable commit.
+A compatibility backfill was therefore added:
 
-Deployment preparation must also reconcile the Worker module manifest/bindings: `deploy.beta.json` currently predates the newer reconciliation modules, and the upload path must preserve/provision the reviewed machine-auth secret binding instead of silently dropping it. Run read-only provider inspection before any deployment mutation.
+- migration: `service/worker/migrations/0013_edge_reconciliation_backfill_v2.sql`;
+- source commit: `1e83f591dcdcccc2bf0c5fb46328ae1aef62fcbe`;
+- blob SHA: `0056e9a5e8a1818c13241810fbd35e967f2d13f7`;
+- creates the missing reconciliation tables directly in V2 shape;
+- includes `payload_json`, `actor_user_id`, `resulting_entity_version` and required indexes;
+- updates reconciliation metadata;
+- intentionally performs **no permission-catalog seeding**.
 
-## Account-security retained state
+Guarded provider workflow:
 
-Current public normal-login + normal change-password + ROOT permanent-password exclusion/bootstrap remains **SOURCE/CI PASS**.
+- `.github/workflows/cloudflare-beta-additive-0013.yml`;
+- dispatch `.github/dispatch/cloudflare-beta-additive-0013.json` currently `enabled=false`;
+- workflow validates exact main branch, migration blob, Cloudflare account, D1 identity, `business_core_v3`, required base tables, all-absent/all-final reconciliation state, pre-existing row counts, post-state tables/columns/indexes/meta, foreign keys and quick-check;
+- partial/unexpected state fails closed;
+- if already final, apply is skipped rather than replayed.
 
-Evidence:
+Preparation evidence at HEAD `d02434d76706ec79ada89839f882fa49d8348c8a`:
 
-- source/test commits `2bffb170319f9bf6d6d5f1953655ce960115d35e`, `1f2d328f21af90d09c5e3b260ad6452af05835c6`;
-- validation run `34830186926`, job/check `103931457439`: **SUCCESS**.
+- guarded migration workflow run `34839845122`: **SUCCESS / disabled NO-OP**, provider mutation skipped;
+- clean-baseline run `34839845085`: **SUCCESS**.
 
-ROOT email-OTP delivery/request/verify and normal forgotten-password full E2E remain incomplete until real delivery integration and verified BETA migration/provider state exist. Do not fake delivery success.
+## Next provider action
 
-## Existing LAN accepted evidence retained
+The next reviewed mutation is to enable exactly the fixed `0013` BETA dispatch once, then require provider preflight + apply/skip + postflight PASS before any Worker reconciliation deployment.
 
-Portable ordinary-user Windows LAN-host package at commit `e4731983fa681541c317d853276abc9bf206366e` remains source/CI PASS:
+After D1 backfill:
 
-- workflow `34821013175`, job/check `103902355956`: **SUCCESS**;
-- package version `0.2.2`;
-- ZIP SHA256 `87a5d8d9ce14852204ba757a7b1cf7a716af79675c1bf78f36f9f44934286167`;
-- artifact ID `10338301582`.
+1. rerun read-only Cloudflare verification and require reconciliation D1 tables/columns PASS;
+2. resolve/provision the two Worker machine-auth bindings through approved secret/config stores without exposing secret values;
+3. deploy the reviewed Worker package only after both D1 and binding gates pass;
+4. verify signed LAN->Cloud BETA transport and final canonical acknowledgement over real HTTP;
+5. prove retry/idempotency/conflict/downstream receipt no-duplicate behavior, then cursor/delta/rebase.
 
-Other retained LAN evidence:
+Secret-store presence/provisioning is currently `VERIFY_REQUIRED`. Do not infer GitHub Environment secret contents and do not ask the Owner to paste secret material into chat. If no connected/reviewed provisioning path exists after independent work is exhausted, classify only that lane as `OWNER_PERMISSION_REQUIRED` and request the minimum secret-store/UI action.
 
-- secure HTTP `34811861697` / `103874646267` — **SUCCESS**;
-- Windows DPAPI TLS `34817069447` / `103889883955` — **SUCCESS**;
-- certificate manager `34819836554` / `103898656531` — **SUCCESS**;
-- Cloudflare read-only inspection `34816004518` / `103886701628` — **SUCCESS**.
+## Retained evidence / boundaries
 
-## Current ready queue
-
-1. **Reconciliation finality source:** implement/test canonical Slice-1 Cloud reconciliation transaction and honest final acknowledgement; preserve replay/restart/idempotency/conflict/downstream-dedup semantics.
-2. **Provider-safe activation:** read-only inspect exact BETA Worker bindings + D1 state; repair deployment module/secret-binding handling; apply required migration only after identity/precondition verification; deploy and verify real signed LAN->Cloud BETA path.
-3. **Post-finality reconciliation:** cursor/delta/rebase and downstream Google no-duplicate E2E proof.
-4. **Physical/provider chain:** target ordinary-user Windows host -> least-privilege DNS access -> ACME staging -> protected PFX + HTTPS restart -> production public CA after staging PASS -> company Windows/browser trust -> real NLS-MT90/PDA -> >=60-minute Internet-cut -> restoration reconciliation.
-5. **Account security:** real email delivery integration, ROOT OTP request/verify, normal recovery, V6 lifecycle tests and verified BETA migration state.
-6. **Web/Android/Gateway:** authenticated Web/business surfaces; Android endpoint/session/scanner/retry/HTTPS/reconnect; Google projection/upload receipt/retry/readback.
-
-## Owner decision gate
-
-Portrait replacement remains the only current material product-semantic Owner decision gate: immediate deletion of previous portrait conflicts with offline staging while Drive is unavailable. Actual offline portrait replacement remains fail-closed; decision-independent media infrastructure may continue.
-
-## STABLE boundary
-
-STABLE business activation/promotion remains blocked until mandatory BETA acceptance plus explicit Owner approval.
+- Aggregate LAN regression from historical run `34833117353` is CLOSED by later same-HEAD PASS evidence; do not reopen without a new failure.
+- Portable ordinary-user Windows LAN-host package and secure LAN HTTPS/DPAPI/certificate-manager source evidence remain retained.
+- Physical company-network/PDA acceptance and >=60-minute Internet-cut acceptance remain separate and pending.
+- ROOT email delivery/recovery live E2E remains incomplete; do not fake delivery.
+- Portrait replacement remains the only current material product-semantic Owner decision gate.
+- STABLE business activation/promotion remains blocked until mandatory BETA acceptance plus explicit Owner approval.
 
 do_not_repeat:
-Do not treat memory as authority. Do not replay uncertain provider mutations. Do not treat source/package CI as physical acceptance. Do not treat `RECEIVED` as final Cloud reconciliation. Do not fake OTP delivery. Do not infer live migration/provider state from source files. Do not weaken fail-closed security/readiness. Do not make Google business authority. Do not silently resolve the portrait conflict. Do not invent unavailable Pick Pack UI details. Do not copy DNSHE branding/assets. Do not inflate progress without acceptance evidence. Do not promote STABLE without explicit Owner approval.
+Do not treat memory as authority. Do not replay uncertain provider mutations. Do not apply legacy reconciliation migration `0009` directly to the current BETA database. Do not infer Worker machine-auth bindings or GitHub secret-store contents from source. Do not deploy reconciliation finality until D1 schema and machine-auth bindings are proven. Do not treat source/package CI as physical acceptance. Do not treat `RECEIVED` as final Cloud reconciliation. Do not fake OTP delivery. Do not weaken fail-closed security/readiness. Do not make Google business authority. Do not silently resolve the portrait conflict. Do not invent unavailable Pick Pack UI details. Do not copy DNSHE branding/assets. Do not inflate progress without acceptance evidence. Do not promote STABLE without explicit Owner approval.
