@@ -238,7 +238,9 @@ jobs:
           curl --noproxy '*' -fsS http://127.0.0.1:17901/api/v1/capabilities | jq -e '
             .businessMutationEnabled == false and
             (.supports | index("EDGE_STATE_LOCAL_DURABLE") != null) and
-            (.supports | index("CLOUD_SYNC_ENGINE_PLANNED") != null)
+            (.supports | index("CLOUD_SYNC_QUEUE_STATE_MACHINE_LOCAL_DURABLE") != null) and
+            (.supports | index("CLOUD_SYNC_INTERRUPTED_CLAIM_RECOVERY") != null) and
+            (.supports | index("CLOUD_RECONCILIATION_TRANSPORT_PLANNED") != null)
           ' >/dev/null
           curl --noproxy '*' -fsS http://127.0.0.1:17901/ | grep -Fq 'VẬN HÀNH DC HƯNG YÊN'
 
