@@ -52,8 +52,17 @@ test('BETA Worker deployment manifest includes every local JavaScript dependency
       assert.ok(modules.has(match[1]), `${moduleName} imports ${match[1]} but deploy.beta.json does not package it`);
     }
   }
+});
 
-  for (const required of ['LAN_RECONCILIATION_KEY_ID', 'LAN_RECONCILIATION_SHARED_SECRET']) {
-    assert.ok(deploy.inherit_bindings.includes(required), `missing inherited Worker binding ${required}`);
-  }
+test('BETA reconciliation machine credential is sourced from secret store and finality stays disabled before E2E', async () => {
+  const deploy = await readJson('service/worker/deploy.beta.json');
+  assert.equal(deploy.vars.LAN_RECONCILIATION_KEY_ID, 'vhdchy-beta-lan-reconciliation-01');
+  assert.equal(deploy.vars.LAN_RECONCILIATION_FINALITY_V1, 'disabled');
+  assert.equal(deploy.inherit_bindings, undefined);
+
+  assert.ok(Array.isArray(deploy.secret_env_bindings));
+  const secret = deploy.secret_env_bindings.find(item => item?.name === 'LAN_RECONCILIATION_SHARED_SECRET');
+  assert.ok(secret, 'missing LAN_RECONCILIATION_SHARED_SECRET secret-store binding');
+  assert.equal(secret.env, 'LAN_RECONCILIATION_SHARED_SECRET');
+  assert.ok(Number(secret.min_length) >= 32);
 });
