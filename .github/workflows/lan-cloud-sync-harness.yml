@@ -1,0 +1,75 @@
+name: Validate LAN Cloud reconciliation queue
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'lan-service/**'
+      - 'lan-cloud-sync-harness/**'
+      - '.github/workflows/lan-cloud-sync-harness.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cloud-sync-queue:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Build LAN Service and sync harness
+        run: |
+          set -euo pipefail
+          dotnet build lan-service/Vhdchy.LanService.csproj -c Release
+          dotnet build lan-cloud-sync-harness/Vhdchy.LanCloudSync.Harness.csproj -c Release
+
+      - name: Initialize durable edge store
+        shell: bash
+        run: |
+          set -euo pipefail
+          data_root="$RUNNER_TEMP/vhdchy-lan-sync"
+          mkdir -p "$data_root"
+          VHDCHY_ENV=BETA \
+          VHDCHY_CLUSTER_ID=PICK_PACK_1291 \
+          VHDCHY_LAN_PORT=17911 \
+          VHDCHY_LAN_DATA_ROOT="$data_root" \
+            dotnet lan-service/bin/Release/net8.0/VHDCHY.LanService.dll > "$RUNNER_TEMP/lan-sync-init.log" 2>&1 &
+          pid=$!
+          trap 'kill ${pid:-0} 2>/dev/null || true' EXIT
+
+          ok=false
+          for i in $(seq 1 30); do
+            code=$(curl --noproxy '*' -sS -o "$RUNNER_TEMP/lan-sync-health.json" -w '%{http_code}' http://127.0.0.1:17911/health || true)
+            if [ "$code" = "200" ]; then ok=true; break; fi
+            if ! kill -0 "$pid" 2>/dev/null; then cat "$RUNNER_TEMP/lan-sync-init.log"; exit 1; fi
+            sleep 0.5
+          done
+          test "$ok" = "true"
+          jq -e '.edgeStoreIntegrity == "PASS" and .businessMutationEnabled == false' "$RUNNER_TEMP/lan-sync-health.json" >/dev/null
+          kill "$pid"
+          wait "$pid" || true
+          trap - EXIT
+          test -s "$data_root/edge.db"
+          printf '%s\n' "$data_root/edge.db" > "$RUNNER_TEMP/edge-db-path.txt"
+
+      - name: Run durable Cloud sync queue vectors
+        shell: bash
+        run: |
+          set -euo pipefail
+          db="$(cat "$RUNNER_TEMP/edge-db-path.txt")"
+          dotnet run --project lan-cloud-sync-harness/Vhdchy.LanCloudSync.Harness.csproj -c Release --no-build -- "$db" | tee "$RUNNER_TEMP/cloud-sync-harness.log"
+          grep -Fq 'LAN_CLOUD_SYNC_QUEUE_PASS' "$RUNNER_TEMP/cloud-sync-harness.log"
+
+          test "$(sqlite3 "$db" "SELECT COUNT(*) FROM cloud_sync_outbox;")" = "4"
+          test "$(sqlite3 "$db" "SELECT COUNT(*) FROM cloud_sync_outbox WHERE state='RECONCILED';")" = "3"
+          test "$(sqlite3 "$db" "SELECT COUNT(*) FROM cloud_sync_outbox WHERE state='CONFLICT';")" = "1"
+          test "$(sqlite3 "$db" "SELECT COUNT(*) FROM edge_conflicts WHERE state='OPEN';")" = "1"
+          test "$(sqlite3 "$db" "SELECT COUNT(*) FROM edge_reconciliation_state WHERE state='RECONCILED';")" = "3"
+          test "$(sqlite3 "$db" "SELECT COUNT(*) FROM edge_reconciliation_state WHERE state='CONFLICT';")" = "1"
+          test "$(sqlite3 "$db" "SELECT meta_value FROM edge_meta WHERE meta_key='last_cloud_sync_event_id';")" != ""
+          test "$(sqlite3 "$db" "PRAGMA quick_check;")" = "ok"
+          test "$(sqlite3 "$db" "PRAGMA foreign_key_check;")" = ""
