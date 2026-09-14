@@ -8,13 +8,13 @@ Supersedes: `docs/DELIVERY_PLAN_V4.md` for overall delivery sequencing/progress.
 
 ## Executive position
 
-The project is **53.3% complete (display: 53%)** against the complete target product.
+The project is **55.4% complete (display: 55%)** against the complete target product.
 
 Primary active phase: **Phase 6 — LAN continuity, local state, offline operation and reconciliation**.
 
-Parallel incomplete lanes: **Phase 4 — broader core business Service/API**, **Phase 5 — Gateway/integrations**, and newly locked **Phase 7/8 UI/App implementation direction**.
+Parallel incomplete lanes: **Phase 4 — broader core business Service/API**, **Phase 5 — Gateway/integrations**, and **Phase 7/8 UI/App implementation**.
 
-The project is past initial scope/architecture/foundation. It is in the middle of implementation: a current LAN/business Slice-1 and durable staged-media path exist with automated evidence, but the final Web/App surfaces, current physical LAN regression, 60-minute internet-cut acceptance, full business/provider coverage, BETA UAT/capacity, and STABLE production promotion remain incomplete.
+The project is past initial scope/architecture/foundation. It is in the middle of implementation: a current LAN/business Slice-1, durable staged-media/reconciliation queue and secure LAN HTTP foundation exist with automated evidence, but the final Web/App surfaces, publicly trusted LAN certificate/target-host acceptance, 60-minute internet-cut acceptance, full business/provider coverage, BETA UAT/capacity, and STABLE production promotion remain incomplete.
 
 ---
 
@@ -48,15 +48,15 @@ The project is past initial scope/architecture/foundation. It is in the middle o
 
 ### 1.4 Account/language/UI direction — DONE as decision
 
-- Web/App expose Vietnamese / English / Chinese; default English.
-- Account context/identity rules established.
+- Current Web/App acceptance UI is **Vietnamese only**; Vietnamese/English/Chinese support is deferred to a later feature phase.
+- Account context/identity rules established, including V6 ROOT email-OTP and normal-account recovery semantics.
 - Android/PDA UI direction = Pick Pack 1291 reference adapted to VHDCHY.
 - Online Web + LAN Web UI direction = DNSHE-style visual language from Owner screenshots, without copying DNSHE branding/assets.
 
 ### 1.5 Architecture closure — REMAINING
 
-- Continue eliminating stale standalone V2 wording where it could misroute future implementation.
-- Incorporate any later Owner decisions without allowing older documents to override them.
+- Continue eliminating stale older wording where it could misroute future implementation.
+- Incorporate later Owner decisions without allowing older documents to override them.
 
 **Next gate:** all currently active top-level architecture/authority files independently point to the same V3–V7 model.
 
@@ -83,8 +83,8 @@ The project is past initial scope/architecture/foundation. It is in the middle o
 ### 2.3 CI/build guardrails — SUBSTANTIALLY DONE
 
 - Automated source validation exists for multiple current LAN/service slices.
-- Recent LAN staged-media workflow completed successfully on current source lineage.
-- Android signing/release groundwork exists from prior setup work, but current final App build path still needs to converge with the new current-product implementation.
+- Secure LAN HTTP, reconciliation queue, staged-media and product-foundation paths have accepted automated evidence on reviewed source lineage.
+- Android signing/release groundwork exists, but current final App build path still needs to converge with the current-product implementation.
 
 ### 2.4 STABLE provider/runtime separation — REMAINING
 
@@ -107,25 +107,26 @@ The project is past initial scope/architecture/foundation. It is in the middle o
 - Canonical business schema covers configuration/platform data, identity linkage, attendance/presence, sessions/tasks, resources, labor, dropped goods, documents/media, immutable domain events, projection/outbox, conflicts, snapshots/archive and telemetry.
 - Employee-code lifecycle is separated from employee identity.
 - Idempotent event/device-sequence semantics are represented.
+- Reviewed source migrations now include additive edge reconciliation, V6 email-OTP and dynamic permission-catalog foundations; live provider application must still be verified per environment.
 
 ### 3.2 Authentication/account context — SUBSTANTIALLY DONE as contracts and current service paths
 
-- Cloud account display-name/email identity direction is established.
-- Optional provider linkage rules are established.
-- CLI/service/operator authentication behavior has current implementation evidence.
+- V6 ROOT and normal-account recovery semantics are locked.
+- Password/session/email-OTP primitives have current source implementation evidence.
+- Public Cloud password-login/change-password routing is under current implementation/validation; ROOT email-OTP delivery/verification provider integration remains incomplete until verified end-to-end.
 - Provider-evidence-before-routing hardening exists in recent source lineage.
 
 ### 3.3 Service runtime/API foundation — SUBSTANTIALLY DONE
 
 - Current Service API contracts and permission/error conventions exist.
 - Status/health/operator surfaces and environment awareness have material implementation evidence.
-- Bilingual/multilingual operator-label groundwork exists, while final full V5 language/UI acceptance remains open.
+- Current user-facing Web/App acceptance language is Vietnamese only; multilingual product UI is deferred by V7.
 
 ### 3.4 Remaining foundation work
 
-- Close any schema/source gap introduced by current LAN sync/receipt/reconciliation implementation.
+- Verify/apply intended additive migrations to exact provider environments using controlled workflows.
 - Ensure current auth, provider linkage and permission semantics are identical across Online/LAN entry paths where applicable.
-- Finish stale authority-document reconciliation.
+- Complete ROOT email-OTP request/delivery/verify E2E without exposing credentials.
 
 **Next gate:** all current business adapters and LAN reconciliation use one canonical current schema/auth contract with no legacy contract ambiguity.
 
@@ -213,13 +214,14 @@ The project is past initial scope/architecture/foundation. It is in the middle o
 ## Phase 6 — LAN continuity, local state, offline operation and reconciliation
 
 **Weight:** 16%  
-**Current completion:** 50%  
-**Status:** PRIMARY ACTIVE PHASE — SOURCE/MODEL ACTIVE, CURRENT PHYSICAL REGRESSION PENDING
+**Current completion:** 60%  
+**Status:** PRIMARY ACTIVE PHASE — MATERIAL AUTOMATED FOUNDATION, PHYSICAL/PUBLIC-TRUST ACCEPTANCE PENDING
 
-### 6.1 No-admin Windows LAN host — PARTIAL / legacy feasibility proven, current path being materialized
+### 6.1 No-admin Windows LAN host — MATERIAL SOURCE/CI PASS, target host pending
 
 - Portable ordinary-user Windows operation is a hard requirement.
-- Legacy pilot proved feasibility without Administrator/network-policy changes, but current VHDCHY business path must be re-verified.
+- Current Windows no-admin host packaging/certificate-manager lineage has automated evidence; the current package line includes the reviewed `0.2.2` host bundle.
+- Real company Windows host/public-trust/browser/PDA acceptance is still required and cannot be replaced by CI evidence.
 
 ### 6.2 LAN discovery/endpoint/reconnect — DESIGN + reusable source evidence
 
@@ -240,23 +242,23 @@ The project is past initial scope/architecture/foundation. It is in the middle o
 ### 6.5 Durable staged media — CURRENT WORKING SLICE WITH CI PASS
 
 - Durable media store/schema, serialized identity claims and lifecycle harness exist.
-- The dedicated staged-media GitHub Actions run on `cddf8dc8358dce25febf0efd6c04c4cd73f602fb` completed successfully.
+- Dedicated staged-media automated evidence is retained in project history.
 
-### 6.6 LAN auth/pairing/security epoch — PARTIAL / REMAINING
+### 6.6 LAN auth/pairing/security epoch — MATERIAL PARTIAL
 
-- Pilot identity hints cannot substitute for cryptographic current auth.
-- Complete current pairing/auth/permission enforcement before opening broader business-data transport.
+- Secure public LAN HTTP slice exists with Kestrel HTTPS/user-space PFX, fail-closed HTTP behavior, paired-device signed normal-user login, durable session issuance and signed-session Slice-1 business routing.
+- Complete ROOT email-OTP HTTP flow, broader permission/business route coverage and final provider/security E2E remain.
 
 ### 6.7 LAN Web local shell/assets/domain — PARTIAL / REMAINING
 
-- Canonical LAN domain/host direction exists.
-- V7 requires LAN-critical UI assets to work without internet dependencies.
-- Actual offline-domain/current UI acceptance remains open.
+- Canonical LAN domain direction exists.
+- V7 requires LAN-critical UI assets to work without internet dependencies; current shared Web shell provides material local/offline-safe foundation.
+- Publicly trusted certificate issuance/renewal on the target host, canonical DNS resolution and real browser/PDA trust remain unaccepted.
 
-### 6.8 Reconciliation and conflict handling — PARTIAL / REMAINING
+### 6.8 Reconciliation and conflict handling — MATERIAL PARTIAL
 
-- Preserve idempotency/device sequence/event identity.
-- Complete Cloud ingestion linkage, Google projection receipts, deduplication, sync cursor/checkpoint and conflict evidence/resolution.
+- Durable Cloud-reconciliation queue mechanics, claim/retry/restart/conflict state and immutable edge envelope foundations have automated evidence.
+- Complete machine/service-authenticated Cloud network ingestion, exact provider linkage, Google receipts E2E and conflict-resolution workflow remain.
 
 ### 6.9 Physical internet-cut test — NOT YET ACCEPTED
 
@@ -275,56 +277,56 @@ The project is past initial scope/architecture/foundation. It is in the middle o
 - No-admin update/rollback on target laptop.
 - Synthetic 10/25/50/100 Agent/client capacity plus soak.
 
-**Next gate:** finish broader current LAN business/reconciliation/auth coverage, then execute current physical regression and 60-minute continuity acceptance on the target environment.
+**Next gate:** target company Windows host -> ACME staging -> production public CA -> Windows/browser trust -> real NLS-MT90 -> >=60-minute Internet-cut acceptance, while independent source lanes continue in parallel.
 
 ---
 
 ## Phase 7 — Online Web + LAN Web product UI
 
 **Weight:** 10%  
-**Current completion:** 20%  
-**Status:** DESIGN DIRECTION LOCKED / implementation not final
+**Current completion:** 25%  
+**Status:** V7 SHARED SHELL MATERIALIZED / business UI not final
 
-### 7.1 Shared design system — NEW V7 WORK
+### 7.1 Shared design system — MATERIAL PARTIAL
 
-- Build one Web design system for Online and LAN modes.
+- One Web design system serves Online and LAN modes.
 - Visual direction: dark navy navigation; light blue/white page field; white rounded cards; restrained borders/shadows; royal-blue primary actions; compact status/icon tiles.
-- Use VHDCHY identity/assets, not DNSHE branding/assets.
+- VHDCHY identity/assets are used; DNSHE branding/assets are not copied.
 
 ### 7.2 Login/authentication shell — REMAINING
 
 - Central focused sign-in card.
 - Context/security/support areas where useful.
-- Language/account behavior compliant with V5/V6.
+- Account behavior compliant with V6.
 
-### 7.3 Authenticated dashboard shell — PARTIAL groundwork / V7 redesign remaining
+### 7.3 Authenticated dashboard shell — MATERIAL PARTIAL
 
-- Left navigation/top bar as appropriate.
-- Hero/summary region, KPI cards, search/filter, recent activity/content and context panels.
-- Existing operator/service UI implementation evidence may be reused structurally where valid, but it is not considered V7-complete by default.
+- Current shared Vietnamese shell has responsive navigation/dashboard/status surfaces and explicit Cloud/LAN/sync/Google/conflict presentation.
+- It is not considered complete until authenticated data/business flows are wired and accepted.
 
 ### 7.4 Business modules — REMAINING
 
 - Employee/personnel, attendance/presence, Pick/Pack/session/task/resource, labor, dropped goods, media/documents, diagnostics/other approved modules.
 - Permission-aware actions and clear loading/error/conflict states.
 
-### 7.5 Online/LAN parity and network-state UX — REMAINING
+### 7.5 Online/LAN parity and network-state UX — PARTIAL / REMAINING
 
 - Same navigation language/hierarchy in Online and LAN modes.
 - Clear state where behavior differs: Online / LAN active / degraded-reconnecting / queued-local-only as applicable.
 - No confusing split into two independent products.
 
-### 7.6 Offline-safe LAN assets — REMAINING
+### 7.6 Offline-safe LAN assets — MATERIAL FOUNDATION
 
-- Bundle/serve core fonts/icons/scripts/styles/images locally.
-- No LAN-critical dependency on internet-only CDN/assets.
+- Core LAN-critical assets are required to be local/offline-capable and current source has an offline-safe shell foundation.
+- Full business-screen acceptance under outage remains open.
 
-### 7.7 Responsive + i18n acceptance — REMAINING
+### 7.7 Responsive + language acceptance — CURRENT V7 RULE
 
-- Vietnamese / English / Chinese; default English.
-- Desktop-first Web console, responsive to supported smaller screens.
+- Current Web acceptance UI is **Vietnamese only**.
+- Vietnamese/English/Chinese implementation is deferred to a later feature phase and is not a current acceptance requirement.
+- Desktop-first Web console remains responsive to supported smaller screens.
 
-**Next gate:** implement the shared V7 shell/login/dashboard/design tokens first, then migrate each business module onto that shell with Online/LAN parity tests.
+**Next gate:** wire authenticated login/session and current business modules into the shared V7 shell with Online/LAN parity tests.
 
 ---
 
@@ -371,10 +373,10 @@ The project is past initial scope/architecture/foundation. It is in the middle o
 - Current APK signing/release pipeline.
 - Physical battery/background lifecycle and update acceptance.
 
-### 8.8 i18n/device acceptance — REMAINING
+### 8.8 Language/device acceptance — CURRENT V7 RULE
 
-- Vietnamese / English / Chinese; default English.
-- Real NLS-MT90 layout/scanner/performance validation.
+- Current Android/PDA acceptance UI is **Vietnamese only**; multilingual implementation is deferred.
+- Real NLS-MT90 layout/scanner/performance validation remains required.
 
 **Next gate:** surface the Pick Pack 1291 UI reference, create the current App shell/design tokens, then implement the highest-frequency PDA business flow end-to-end against current Service/LAN contracts.
 
@@ -419,7 +421,7 @@ The project is past initial scope/architecture/foundation. It is in the middle o
 ### 10.1 Security — PARTIAL
 
 - Fail-closed direction, permissions, idempotency and evidence capture have current implementation.
-- Finish LAN pairing/auth/security epoch, secret handling, provider scopes and end-to-end threat review.
+- Finish LAN pairing/auth/security epoch, ROOT OTP provider path, secret handling, provider scopes and end-to-end threat review.
 
 ### 10.2 Observability — PARTIAL
 
@@ -510,16 +512,16 @@ The project is past initial scope/architecture/foundation. It is in the middle o
 
 The plan is not strictly serial: independent work should run in parallel when it does not create contract drift. The recommended current ordering is:
 
-1. **Primary:** finish Phase 6 current LAN business/reconciliation/auth slice enough to support physical regression safely.
-2. **Parallel:** close Phase 4/5 missing business/provider paths and tests that LAN/Web/App depend on.
-3. **Parallel UI lane:** implement Phase 7 shared V7 Web shell/design system; surface Pick Pack 1291 App UI evidence and begin Phase 8 App shell.
-4. When current LAN + Web/App business flows are materially complete, execute Phase 11 physical target-network/PDA, >=60-minute internet-cut, load/soak and UAT gates.
+1. **Primary physical gate:** target company Windows host -> ACME staging -> production public CA -> Windows/browser trust -> real NLS-MT90 -> >=60-minute continuity acceptance when target hardware/network and least-privilege DNS credentials are available.
+2. **Parallel source lane:** close Phase 3/4/5 auth/business/provider paths and tests, including ROOT email-OTP E2E and Cloud/LAN reconciliation transport.
+3. **Parallel UI lane:** wire authenticated/business Phase 7 Web flows; surface Pick Pack 1291 App UI evidence and continue Phase 8 App shell/business flows without inventing missing visuals.
+4. Execute Phase 11 physical target-network/PDA, load/soak and UAT gates when prerequisites are ready.
 5. Only after exact BETA acceptance, execute Phase 12 STABLE promotion/deployment/handover.
 
 ## Progress reporting
 
 Current baseline:
 
-`Overall: 53% | Current: Phase 6 — LAN continuity/offline/reconcile | Parallel: Phase 4/5 + V7 Web/App UI | Next gate: broader current LAN business/auth/reconcile coverage -> physical regression`
+`Overall: 55% (55.4 exact) | Current: Phase 6 — LAN continuity/offline/reconcile | Parallel: Phase 3/4/5 auth/business/provider + Phase 7/8 Web/App | Next physical gate: target host -> public trust -> real PDA -> >=60-minute Internet cut`
 
-Update this line and `docs/PROGRESS_TRACKING_V1.md` whenever material evidence changes.
+Update this line and `docs/PROGRESS_TRACKING_V1.md` whenever material accepted evidence changes.
