@@ -8,6 +8,10 @@ const token = process.env.CLOUDFLARE_API_TOKEN;
 const expectedWorker = 'vhdchy-beta';
 const expectedD1 = 'vhdchy-data-beta';
 const verifyOnlyBinding = String(process.env.VHDCHY_VERIFY_ONLY_BINDING || '').trim();
+const verifyD1Stage = String(process.env.VHDCHY_VERIFY_D1_STAGE || '').trim().toLowerCase();
+if (verifyD1Stage && !['tables', 'columns'].includes(verifyD1Stage)) {
+  throw new Error(`Unsupported VHDCHY_VERIFY_D1_STAGE=${verifyD1Stage}`);
+}
 const requiredReconciliationTables = [
   'domain_events',
   'projection_outbox',
@@ -111,7 +115,7 @@ async function d1Select(databaseId, sql, params = []) {
   return firstQueryRows(payload);
 }
 
-async function inspectD1ReadOnly(databaseId) {
+async function inspectD1ReadOnly(databaseId, stage = '') {
   const tableRows = await d1Select(
     databaseId,
     `SELECT name FROM sqlite_schema WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name`
@@ -123,6 +127,8 @@ async function inspectD1ReadOnly(databaseId) {
   if (missingReconciliationTables.length) {
     throw new Error(`D1_RECONCILIATION_TABLES_MISSING=${missingReconciliationTables.join(',')}`);
   }
+  console.log('D1_RECONCILIATION_TABLES_PASS');
+  if (stage === 'tables') return;
 
   const edgeColumnsRows = await d1Select(databaseId, 'PRAGMA table_info(edge_event_ingest)');
   const edgeColumns = edgeColumnsRows.map(row => String(row.name || '')).filter(Boolean);
@@ -131,7 +137,8 @@ async function inspectD1ReadOnly(databaseId) {
   if (missingEdgeColumns.length) {
     throw new Error(`D1_EDGE_INGEST_COLUMNS_MISSING=${missingEdgeColumns.join(',')}`);
   }
-  console.log('D1 reconciliation schema preflight PASS');
+  console.log('D1_EDGE_INGEST_COLUMNS_PASS');
+  if (stage === 'columns') return;
 
   let schemaVersion = '(missing)';
   if (tables.includes('vhdchy_meta')) {
@@ -222,13 +229,19 @@ if (!worker || !database) {
   throw new Error(`Cloudflare expected-resource mismatch: worker=${worker ? 'found' : 'missing'}, d1=${database ? 'found' : 'missing'}. Fail closed; no resources were created.`);
 }
 
+const databaseId = database.uuid || database.id;
+if (verifyD1Stage) {
+  await inspectD1ReadOnly(databaseId, verifyD1Stage);
+  console.log(`Cloudflare BETA isolated D1 verification PASS: ${verifyD1Stage}`);
+  process.exit(0);
+}
+
 await inspectWorkerReadOnly(verifyOnlyBinding);
 if (verifyOnlyBinding) {
   console.log(`Cloudflare BETA isolated binding verification PASS: ${verifyOnlyBinding}`);
   process.exit(0);
 }
 
-const databaseId = database.uuid || database.id;
 await inspectD1ReadOnly(databaseId);
 
 console.log('Cloudflare BETA identity verification PASS');
