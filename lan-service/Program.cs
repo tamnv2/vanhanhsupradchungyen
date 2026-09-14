@@ -92,6 +92,7 @@ var app = builder.Build();
 
 HttpClient? cloudReconciliationHttpClient = null;
 Task? cloudReconciliationPumpTask = null;
+Task? cloudOperationalRefreshPumpTask = null;
 if (cloudReconciliationConfigured)
 {
     cloudReconciliationHttpClient = new HttpClient
@@ -109,6 +110,32 @@ if (cloudReconciliationConfigured)
     var cloudPump = new CloudReconciliationPump(cloudSyncQueue, cloudEnvelopeBuilder, cloudSender);
     cloudReconciliationPumpTask = Task.Run(() =>
         cloudPump.RunAsync(TimeSpan.FromSeconds(5), app.Lifetime.ApplicationStopping));
+
+    var snapshotEndpointBuilder = new UriBuilder(cloudEndpoint)
+    {
+        Path = CloudOperationalSnapshotHttpClient.SnapshotPath,
+        Query = string.Empty,
+        Fragment = string.Empty
+    };
+    var snapshotClient = new CloudOperationalSnapshotHttpClient(
+        cloudReconciliationHttpClient,
+        snapshotEndpointBuilder.Uri,
+        environment,
+        cloudReconciliationKeyId!,
+        cloudReconciliationKeyMaterial!);
+    var refreshCoordinator = new CloudOperationalRefreshCoordinator(
+        edgeStore.DatabasePath,
+        snapshotClient,
+        environment,
+        clusterId,
+        instanceId,
+        edgeEpoch,
+        DomainContractVersion,
+        EdgeStore.SchemaVersion,
+        new[] { Slice1BusinessAdapter.ModuleId });
+    var refreshPump = new CloudOperationalRefreshPump(refreshCoordinator);
+    cloudOperationalRefreshPumpTask = Task.Run(() =>
+        refreshPump.RunAsync(TimeSpan.FromSeconds(30), app.Lifetime.ApplicationStopping));
 }
 
 app.UseDefaultFiles();
@@ -141,6 +168,7 @@ app.MapGet("/health", async (CancellationToken cancellationToken) =>
         publicReadiness = publicReadiness.Readiness,
         businessMutationEnabled = secureHttpEnabled && publicReadiness.Ready,
         cloudReconciliationTransportConfigured = cloudReconciliationConfigured,
+        cloudOperationalRefreshConfigured = cloudReconciliationConfigured,
         recoveredInterruptedCloudSync,
         localDataRoot = root
     });
@@ -167,6 +195,7 @@ app.MapGet("/api/v1/meta", async (CancellationToken cancellationToken) =>
         domainContractVersion = DomainContractVersion,
         edgeSchemaVersion = EdgeStore.SchemaVersion,
         cloudReconciliationTransportConfigured = cloudReconciliationConfigured,
+        cloudOperationalRefreshConfigured = cloudReconciliationConfigured,
         readiness = state.Readiness
     });
 });
@@ -203,6 +232,8 @@ app.MapGet("/api/v1/capabilities", async (CancellationToken cancellationToken) =
             "WINDOWS_DPAPI_CURRENT_USER_TLS_PFX",
             "CLOUD_RECONCILIATION_HMAC_V1",
             cloudReconciliationConfigured ? "CLOUD_RECONCILIATION_NETWORK_SENDER_ACTIVE" : "CLOUD_RECONCILIATION_NETWORK_SENDER_NOT_CONFIGURED",
+            cloudReconciliationConfigured ? "CLOUD_OPERATIONAL_SNAPSHOT_REFRESH_ACTIVE" : "CLOUD_OPERATIONAL_SNAPSHOT_REFRESH_NOT_CONFIGURED",
+            "POST_RECONCILIATION_REBASE_READINESS_GATE",
             "DIRECT_GOOGLE_SENDER_PLANNED"
         }
     });
@@ -211,6 +242,7 @@ app.MapGet("/api/v1/capabilities", async (CancellationToken cancellationToken) =
 app.MapGet("/api/v1/sync/status", async (CancellationToken cancellationToken) =>
 {
     var state = await edgeStore.ReadStatusAsync(cancellationToken);
+    var rebase = await new PostReconciliationRebaseTracker(edgeStore.DatabasePath).InspectAsync(cancellationToken);
     return Results.Json(new
     {
         ok = true,
@@ -222,7 +254,10 @@ app.MapGet("/api/v1/sync/status", async (CancellationToken cancellationToken) =>
         pendingCloudSync = state.PendingCloudSync,
         pendingGoogleWork = state.PendingGoogleWork,
         conflictCount = state.ConflictCount,
-        cloudReconciliationTransportConfigured = cloudReconciliationConfigured
+        postReconciliationRebaseRequired = rebase.Required,
+        postReconciliationPendingCanonicalEventCount = rebase.PendingCanonicalEventCount,
+        cloudReconciliationTransportConfigured = cloudReconciliationConfigured,
+        cloudOperationalRefreshConfigured = cloudReconciliationConfigured
     });
 });
 
@@ -257,9 +292,9 @@ if (tlsLoadResult is not null)
 {
     Console.WriteLine($"TLS certificate loaded from {tlsLoadResult.StorageMode}; notAfterUtc={tlsLoadResult.NotAfterUtc:O}.");
 }
-Console.WriteLine($"Cloud sync queue recovery active; interruptedClaimsRecovered={recoveredInterruptedCloudSync}; machineAuth={CloudReconciliationHttpSender.AuthVersion}; networkSenderConfigured={cloudReconciliationConfigured}.");
+Console.WriteLine($"Cloud sync queue recovery active; interruptedClaimsRecovered={recoveredInterruptedCloudSync}; machineAuth={CloudReconciliationHttpSender.AuthVersion}; networkSenderConfigured={cloudReconciliationConfigured}; operationalRefreshConfigured={cloudReconciliationConfigured}.");
 Console.WriteLine(secureHttpEnabled
-    ? "Secure LAN login and reviewed Slice-1 business routes are TLS-gated; runtime readiness still fails closed on missing synchronized authority/operational/security prerequisites."
+    ? "Secure LAN login and reviewed Slice-1 business routes are TLS-gated; runtime readiness fails closed on missing synchronized authority/operational/security prerequisites and pending post-reconciliation rebase."
     : "LAN runtime is HTTP read-only. All business mutation remains FAIL_CLOSED until a reviewed TLS certificate is configured.");
 
 try
@@ -273,6 +308,16 @@ finally
         try
         {
             await cloudReconciliationPumpTask;
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+    if (cloudOperationalRefreshPumpTask is not null)
+    {
+        try
+        {
+            await cloudOperationalRefreshPumpTask;
         }
         catch (OperationCanceledException)
         {
