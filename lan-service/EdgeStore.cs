@@ -66,7 +66,10 @@ internal sealed class EdgeStore
                 "SELECT (SELECT COUNT(*) FROM google_projection_outbox WHERE state IN ('PENDING','SENDING','RETRY_WAIT')) + " +
                 "(SELECT COUNT(*) FROM drive_upload_outbox WHERE state IN ('PENDING','UPLOADING','RETRY_WAIT'))", cancellationToken),
             ConflictCount: await CountAsync(connection,
-                "SELECT COUNT(*) FROM edge_conflicts WHERE state IN ('OPEN','REVIEW_REQUIRED')", cancellationToken));
+                "SELECT " +
+                "(SELECT COUNT(*) FROM edge_conflicts WHERE state IN ('OPEN','REVIEW_REQUIRED')) + " +
+                "(SELECT COUNT(*) FROM google_projection_outbox WHERE state='REVIEW_REQUIRED') + " +
+                "(SELECT COUNT(*) FROM drive_upload_outbox WHERE state='REVIEW_REQUIRED')", cancellationToken));
     }
 
     public async Task<EdgeStoreIntegrity> CheckIntegrityAsync(CancellationToken cancellationToken = default)
