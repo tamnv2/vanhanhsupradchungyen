@@ -6,9 +6,9 @@ namespace Vhdchy.LanService;
 public sealed class PostReconciliationRebaseTracker
 {
     public const string ContractVersion = "VHDCHY_POST_RECONCILIATION_REBASE_V1";
-    public const string RequiredMetaKey = "post_reconciliation_rebase_required_v1";
+    public const string CursorMetaKey = "post_reconciliation_rebase_cursor_v1";
 
-    private const int MaxPendingCanonicalEvents = 10_000;
+    private const int MaxCoverageIds = 10_000;
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private readonly string _connectionString;
 
@@ -24,76 +24,17 @@ public sealed class PostReconciliationRebaseTracker
         }.ToString();
     }
 
-    public async Task MarkRequiredAsync(
-        string edgeEventId,
-        string canonicalEventId,
-        DateTimeOffset canonicalCommittedAt,
-        CancellationToken cancellationToken = default)
-    {
-        edgeEventId = RequireText(edgeEventId, nameof(edgeEventId), 240);
-        canonicalEventId = RequireText(canonicalEventId, nameof(canonicalEventId), 240);
-        var now = DateTimeOffset.UtcNow;
-
-        await using var connection = await OpenAsync(cancellationToken);
-        using var transaction = connection.BeginTransaction();
-
-        var existing = await ReadRequiredStateAsync(connection, transaction, cancellationToken);
-        var pending = existing?.Events.ToList() ?? new List<PostReconciliationPendingCanonicalEvent>();
-        var sameEdge = pending.SingleOrDefault(item => string.Equals(item.EdgeEventId, edgeEventId, StringComparison.Ordinal));
-        if (sameEdge is not null)
-        {
-            if (!string.Equals(sameEdge.CanonicalEventId, canonicalEventId, StringComparison.Ordinal) ||
-                sameEdge.CanonicalCommittedAt.ToUniversalTime() != canonicalCommittedAt.ToUniversalTime())
-            {
-                throw new PostReconciliationRebaseException(
-                    "POST_RECONCILIATION_REBASE_IDENTITY_CONFLICT",
-                    "The same edge event was observed with different canonical reconciliation evidence.");
-            }
-        }
-        else
-        {
-            pending.Add(new PostReconciliationPendingCanonicalEvent(
-                edgeEventId,
-                canonicalEventId,
-                canonicalCommittedAt.ToUniversalTime()));
-        }
-
-        if (pending.Count > MaxPendingCanonicalEvents)
-        {
-            throw new PostReconciliationRebaseException(
-                "POST_RECONCILIATION_REBASE_BACKLOG_LIMIT",
-                "Post-reconciliation rebase backlog exceeded the reviewed evidence bound.");
-        }
-
-        var state = new PostReconciliationRequiredState(
-            ContractVersion,
-            now,
-            pending
-                .OrderBy(item => item.CanonicalCommittedAt)
-                .ThenBy(item => item.CanonicalEventId, StringComparer.Ordinal)
-                .ToArray());
-
-        await UpsertMetaAsync(
-            connection,
-            transaction,
-            RequiredMetaKey,
-            JsonSerializer.Serialize(state, JsonOptions),
-            now,
-            cancellationToken);
-        transaction.Commit();
-    }
-
     public async Task<PostReconciliationRebaseInspection> InspectAsync(CancellationToken cancellationToken = default)
     {
         await using var connection = await OpenAsync(cancellationToken);
-        var state = await ReadRequiredStateAsync(connection, transaction: null, cancellationToken);
-        return state is null
-            ? new PostReconciliationRebaseInspection(false, 0, null, Array.Empty<string>())
-            : new PostReconciliationRebaseInspection(
-                true,
-                state.Events.Count,
-                state.RequiredAt,
-                state.Events.Select(item => item.CanonicalEventId).ToArray());
+        var reconciled = await ReadReconciledEventsAsync(connection, transaction: null, cancellationToken);
+        var cursor = await ReadCursorAsync(connection, transaction: null, cancellationToken);
+        var pending = PendingAfterCursor(reconciled, cursor);
+        return new PostReconciliationRebaseInspection(
+            Required: pending.Count != 0,
+            PendingCanonicalEventCount: pending.Count,
+            RequiredAt: pending.Count == 0 ? null : pending.Max(item => item.ReconciledAt),
+            CanonicalEventIds: pending.Select(item => item.CanonicalEventId).ToArray());
     }
 
     public async Task<PostReconciliationRebaseConfirmResult> ConfirmAsync(
@@ -106,7 +47,7 @@ public sealed class PostReconciliationRebaseTracker
         var covered = (evidence.CoveredCanonicalEventIds ?? Array.Empty<string>())
             .Select(value => RequireText(value, nameof(evidence.CoveredCanonicalEventIds), 240))
             .ToArray();
-        if (covered.Length == 0 || covered.Length > MaxPendingCanonicalEvents || covered.Distinct(StringComparer.Ordinal).Count() != covered.Length)
+        if (covered.Length == 0 || covered.Length > MaxCoverageIds || covered.Distinct(StringComparer.Ordinal).Count() != covered.Length)
         {
             throw new PostReconciliationRebaseException(
                 "POST_RECONCILIATION_REBASE_COVERAGE_INVALID",
@@ -115,8 +56,10 @@ public sealed class PostReconciliationRebaseTracker
 
         await using var connection = await OpenAsync(cancellationToken);
         using var transaction = connection.BeginTransaction();
-        var required = await ReadRequiredStateAsync(connection, transaction, cancellationToken);
-        if (required is null)
+        var reconciled = await ReadReconciledEventsAsync(connection, transaction, cancellationToken);
+        var currentCursor = await ReadCursorAsync(connection, transaction, cancellationToken);
+        var pending = PendingAfterCursor(reconciled, currentCursor);
+        if (pending.Count == 0)
         {
             transaction.Commit();
             return new PostReconciliationRebaseConfirmResult(false, true, 0, snapshotVersion);
@@ -134,15 +77,16 @@ public sealed class PostReconciliationRebaseTracker
                 "The supplied source checkpoint does not match the active operational snapshot evidence.");
         }
 
-        if (snapshot.ImportedAt < required.RequiredAt)
+        var latestRequiredAt = pending.Max(item => item.ReconciledAt);
+        if (snapshot.ImportedAt < latestRequiredAt)
         {
             throw new PostReconciliationRebaseException(
                 "POST_RECONCILIATION_REBASE_SNAPSHOT_STALE",
-                "The active operational snapshot predates the latest canonical reconciliation acknowledgement and cannot clear rebase-required state.");
+                "The active operational snapshot predates reconciliation evidence that still requires local rebase.");
         }
 
         var coverage = covered.ToHashSet(StringComparer.Ordinal);
-        var missing = required.Events
+        var missing = pending
             .Select(item => item.CanonicalEventId)
             .Where(id => !coverage.Contains(id))
             .ToArray();
@@ -153,15 +97,38 @@ public sealed class PostReconciliationRebaseTracker
                 "The operational refresh does not prove coverage of every canonical event awaiting local rebase.");
         }
 
+        var boundaryIds = reconciled
+            .Where(item => item.ReconciledAt == latestRequiredAt)
+            .Select(item => item.EdgeEventId)
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(value => value, StringComparer.Ordinal)
+            .ToArray();
+        if (boundaryIds.Length == 0 || boundaryIds.Length > MaxCoverageIds)
+        {
+            throw new PostReconciliationRebaseException(
+                "POST_RECONCILIATION_REBASE_CURSOR_INVALID",
+                "Unable to persist a bounded post-reconciliation rebase cursor.");
+        }
+
+        var newCursor = new PostReconciliationRebaseCursor(
+            ContractVersion,
+            latestRequiredAt,
+            boundaryIds);
         var now = DateTimeOffset.UtcNow;
-        await DeleteMetaAsync(connection, transaction, RequiredMetaKey, cancellationToken);
+        await UpsertMetaAsync(
+            connection,
+            transaction,
+            CursorMetaKey,
+            JsonSerializer.Serialize(newCursor, JsonOptions),
+            now,
+            cancellationToken);
         await UpsertMetaAsync(connection, transaction, "post_reconciliation_rebase_last_snapshot_version", snapshotVersion, now, cancellationToken);
         await UpsertMetaAsync(connection, transaction, "post_reconciliation_rebase_last_source_checkpoint", sourceCheckpoint, now, cancellationToken);
         await UpsertMetaAsync(connection, transaction, "post_reconciliation_rebase_last_completed_at", now.ToString("O"), now, cancellationToken);
-        await UpsertMetaAsync(connection, transaction, "post_reconciliation_rebase_last_covered_count", required.Events.Count.ToString(System.Globalization.CultureInfo.InvariantCulture), now, cancellationToken);
+        await UpsertMetaAsync(connection, transaction, "post_reconciliation_rebase_last_covered_count", pending.Count.ToString(System.Globalization.CultureInfo.InvariantCulture), now, cancellationToken);
         transaction.Commit();
 
-        return new PostReconciliationRebaseConfirmResult(true, false, required.Events.Count, snapshotVersion);
+        return new PostReconciliationRebaseConfirmResult(true, false, pending.Count, snapshotVersion);
     }
 
     private async Task<SqliteConnection> OpenAsync(CancellationToken cancellationToken)
@@ -174,7 +141,55 @@ public sealed class PostReconciliationRebaseTracker
         return connection;
     }
 
-    private static async Task<PostReconciliationRequiredState?> ReadRequiredStateAsync(
+    private static async Task<IReadOnlyList<PostReconciliationReconciledEvent>> ReadReconciledEventsAsync(
+        SqliteConnection connection,
+        SqliteTransaction? transaction,
+        CancellationToken cancellationToken)
+    {
+        var result = new List<PostReconciliationReconciledEvent>();
+        await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            SELECT event_id, canonical_event_id, canonical_committed_at, updated_at
+            FROM edge_reconciliation_state
+            WHERE state='RECONCILED'
+              AND canonical_event_id IS NOT NULL
+              AND canonical_committed_at IS NOT NULL
+            ORDER BY updated_at, event_id
+            """;
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            if (!DateTimeOffset.TryParse(reader.GetString(2), out var canonicalCommittedAt) ||
+                !DateTimeOffset.TryParse(reader.GetString(3), out var reconciledAt))
+            {
+                throw new PostReconciliationRebaseException(
+                    "POST_RECONCILIATION_REBASE_STATE_INVALID",
+                    "Persisted reconciliation timestamp evidence is invalid.");
+            }
+            result.Add(new PostReconciliationReconciledEvent(
+                reader.GetString(0),
+                reader.GetString(1),
+                canonicalCommittedAt,
+                reconciledAt));
+        }
+        return result;
+    }
+
+    private static IReadOnlyList<PostReconciliationReconciledEvent> PendingAfterCursor(
+        IReadOnlyList<PostReconciliationReconciledEvent> reconciled,
+        PostReconciliationRebaseCursor? cursor)
+    {
+        if (cursor is null) return reconciled.ToArray();
+        var boundaryIds = cursor.CoveredEdgeEventIdsAtBoundary.ToHashSet(StringComparer.Ordinal);
+        return reconciled
+            .Where(item =>
+                item.ReconciledAt > cursor.CoveredThroughReconciliationAt ||
+                (item.ReconciledAt == cursor.CoveredThroughReconciliationAt && !boundaryIds.Contains(item.EdgeEventId)))
+            .ToArray();
+    }
+
+    private static async Task<PostReconciliationRebaseCursor?> ReadCursorAsync(
         SqliteConnection connection,
         SqliteTransaction? transaction,
         CancellationToken cancellationToken)
@@ -182,30 +197,29 @@ public sealed class PostReconciliationRebaseTracker
         await using var command = connection.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = "SELECT meta_value FROM edge_meta WHERE meta_key=$key LIMIT 1";
-        command.Parameters.AddWithValue("$key", RequiredMetaKey);
+        command.Parameters.AddWithValue("$key", CursorMetaKey);
         var value = await command.ExecuteScalarAsync(cancellationToken);
         if (value is null or DBNull) return null;
 
         try
         {
-            var state = JsonSerializer.Deserialize<PostReconciliationRequiredState>(Convert.ToString(value)!, JsonOptions);
-            if (state is null ||
-                !string.Equals(state.Version, ContractVersion, StringComparison.Ordinal) ||
-                state.Events is null ||
-                state.Events.Count == 0 ||
-                state.Events.Count > MaxPendingCanonicalEvents ||
-                state.Events.Select(item => item.EdgeEventId).Distinct(StringComparer.Ordinal).Count() != state.Events.Count ||
-                state.Events.Select(item => item.CanonicalEventId).Distinct(StringComparer.Ordinal).Count() != state.Events.Count)
+            var cursor = JsonSerializer.Deserialize<PostReconciliationRebaseCursor>(Convert.ToString(value)!, JsonOptions);
+            if (cursor is null ||
+                !string.Equals(cursor.Version, ContractVersion, StringComparison.Ordinal) ||
+                cursor.CoveredEdgeEventIdsAtBoundary is null ||
+                cursor.CoveredEdgeEventIdsAtBoundary.Count == 0 ||
+                cursor.CoveredEdgeEventIdsAtBoundary.Count > MaxCoverageIds ||
+                cursor.CoveredEdgeEventIdsAtBoundary.Distinct(StringComparer.Ordinal).Count() != cursor.CoveredEdgeEventIdsAtBoundary.Count)
             {
                 throw new InvalidOperationException();
             }
-            return state;
+            return cursor;
         }
         catch (Exception error) when (error is JsonException or InvalidOperationException)
         {
             throw new PostReconciliationRebaseException(
-                "POST_RECONCILIATION_REBASE_STATE_INVALID",
-                "Persisted post-reconciliation rebase evidence is invalid.",
+                "POST_RECONCILIATION_REBASE_CURSOR_INVALID",
+                "Persisted post-reconciliation rebase cursor is invalid.",
                 error);
         }
     }
@@ -264,19 +278,6 @@ public sealed class PostReconciliationRebaseTracker
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
-    private static async Task DeleteMetaAsync(
-        SqliteConnection connection,
-        SqliteTransaction transaction,
-        string key,
-        CancellationToken cancellationToken)
-    {
-        await using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = "DELETE FROM edge_meta WHERE meta_key=$key";
-        command.Parameters.AddWithValue("$key", key);
-        await command.ExecuteNonQueryAsync(cancellationToken);
-    }
-
     private static string RequireText(string? value, string name, int max)
     {
         var normalized = (value ?? string.Empty).Trim();
@@ -288,15 +289,16 @@ public sealed class PostReconciliationRebaseTracker
     private sealed record ActiveSnapshotEvidence(string SourceCheckpoint, DateTimeOffset ImportedAt);
 }
 
-public sealed record PostReconciliationPendingCanonicalEvent(
+public sealed record PostReconciliationReconciledEvent(
     string EdgeEventId,
     string CanonicalEventId,
-    DateTimeOffset CanonicalCommittedAt);
+    DateTimeOffset CanonicalCommittedAt,
+    DateTimeOffset ReconciledAt);
 
-public sealed record PostReconciliationRequiredState(
+public sealed record PostReconciliationRebaseCursor(
     string Version,
-    DateTimeOffset RequiredAt,
-    IReadOnlyList<PostReconciliationPendingCanonicalEvent> Events);
+    DateTimeOffset CoveredThroughReconciliationAt,
+    IReadOnlyList<string> CoveredEdgeEventIdsAtBoundary);
 
 public sealed record PostReconciliationRebaseInspection(
     bool Required,
