@@ -1,8 +1,8 @@
 # OWNER BUSINESS RULES V1 — VHDCHY / PICK_PACK_1291
 
 Status: ACTIVE CANONICAL HANDBOOK
-Updated: 2026-09-13
-Authority layers: `DECISIONS.md` -> `DECISIONS_V3.md` -> `DECISIONS_V4.md` -> `DECISIONS_V5.md`.
+Updated: 2026-09-14
+Authority layers: `DECISIONS.md` -> `DECISIONS_V3.md` -> `DECISIONS_V4.md` -> `DECISIONS_V5.md` -> `DECISIONS_V6.md` -> `DECISIONS_V7.md`.
 
 Purpose: give future AI/Dev one compact business-rules source without requiring the old Word files or chat history. This handbook does not replace the decision files; it consolidates their effective meaning.
 
@@ -47,21 +47,24 @@ Account levels: ROOT, SUPERADMIN, ADMIN, USER.
 
 ## 4. ROOT authentication/recovery
 
-Locked:
+Locked through V6:
 - ROOT username is fixed at `admin` per environment.
 - HH/mm password logic is removed.
-- TOTP is the approved time-based ROOT mechanism.
-- ROOT email OTP is exactly four decimal digits, one-time, code visible in the email subject; successful use invalidates it and triggers generation/delivery of a replacement code.
-- SMS backup/recovery must exist from BETA.
-- Recovery destination allowlists and minimum ROOT protection are application-policy locked.
-- Delivery provider/API keys may be rotated/replaced.
-- Real recovery destinations stay outside the public repository.
+- ROOT has no permanent-password login requirement; its primary login is the approved email one-time-password flow.
+- The fixed/approved ROOT recovery-email channel cannot be disabled.
+- ROOT email OTP is exactly four decimal digits and remains subject to the previously approved email presentation/delivery constraints.
+- A ROOT email OTP is single-use, valid for 5 minutes from issuance, and a new OTP cannot be requested until 5 minutes after the previous send whether the previous credential was used or not.
+- A later successfully issued OTP supersedes an earlier still-unused credential.
+- Successful ROOT email-OTP login does **not** create `MUST_CHANGE_PASSWORD`.
+- TOTP is optional for ROOT. If enabled, the ROOT auth state machine must also satisfy TOTP; if disabled, a valid email OTP alone is sufficient.
+- Disabling TOTP never disables the fixed ROOT email-OTP channel.
+- Web and APK must expose the ROOT-compatible `Lấy lại mật khẩu` / request-one-time-password flow.
+- Actual recovery destinations and provider/API credentials remain outside the public repository.
 - OTP/TOTP secrets and readable codes never enter source, Sheets, Drive business data, logs or diagnostics.
-- Root recovery attempts require rate limiting, temporary anti-guessing lock behavior and security audit.
+- Request/use/failure/security events are auditable without logging the credential itself; replay after successful use is rejected and resend before cooldown ends is rejected.
+- Cloud and LAN preserve the same auth semantics; neither may fabricate successful email delivery when delivery capability is unavailable.
 
-Open Owner decision before final ROOT auth implementation:
-- whether TOTP can ever be disabled;
-- exact email-OTP lifetime/rotation behavior when a pre-generated code is not used.
+The prior ROOT-factor Owner-decision gate from V5 is resolved and must not be re-opened from stale documents.
 
 ## 5. Normal password/session rules
 
@@ -70,6 +73,8 @@ Open Owner decision before final ROOT auth implementation:
 - Long passphrases are allowed.
 - No forced periodic password change absent incident.
 - Admin/Super reset creates a temporary password and forces change on next login.
+- `Lấy lại mật khẩu` for a normal account with registered recovery email sends a single-use email OTP valid for 5 minutes with 5-minute resend cooldown.
+- Successful normal-account login using recovery OTP creates restricted `MUST_CHANGE_PASSWORD`; the account must establish a different new permanent password before ordinary product functions are available.
 - Passwords are stored only as reviewed verifiers/hashes; never plaintext.
 - When connected authority can coordinate, session policy converges on the current active login context; hard partitions may temporarily produce independent local sessions that reconcile later.
 - Security/account changes synchronized after reconnect apply prospectively; previously accepted offline business events retain evidence.
