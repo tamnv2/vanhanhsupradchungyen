@@ -1,9 +1,9 @@
 # CHECKPOINT — VHDCHY
 
-checkpoint_version: 35
+checkpoint_version: 36
 protocol: AI_AUTHORITY_RESUME_V2
 status: EXECUTING_PRODUCT_V7_BETA
-reconciled_through_commit: 4ecbea301d561c0b26b3eadcc413c00c44f650be
+reconciled_through_commit: 55dc697a038c0f6b8ee6d9b606fef69ce301e116
 action_mode: AUTONOMOUS_PARALLEL
 active_lanes: REPO_GOVERNANCE / SHARED_DOMAIN / CLOUD_SERVICE / LAN_FULL_SERVICE / AUTH / GOOGLE_SYNC / WEB_ONLINE_LAN / ANDROID_PDA / RECONCILIATION / STABLE_PREPARATION
 paused_lanes: PHYSICAL_CORPORATE_LAN_REGRESSION
@@ -17,6 +17,7 @@ authority_v7_ref: DECISIONS_V7.md
 service_contract_ref: docs/SERVICE_API_CONTRACT_V3.md
 lan_edge_ref: docs/LAN_EDGE_STATE_V2.md
 lan_secure_http_ref: docs/LAN_SECURE_HTTP_V1.md
+lan_certificate_manager_ref: docs/LAN_CERTIFICATE_MANAGER_V1.md
 delivery_plan_ref: docs/DELIVERY_PLAN_V5.md
 progress_ref: docs/PROGRESS_TRACKING_V1.md
 context_index_ref: CONTEXT_INDEX.md
@@ -26,71 +27,103 @@ context_index_ref: CONTEXT_INDEX.md
 - Evidence-weighted total: **55.4% exact / 55% displayed**.
 - Phase 6 LAN continuity/offline/reconcile: **60%**.
 - Primary active phase: **Phase 6 — LAN continuity, local state, offline operation and reconciliation**.
-- Parallel lanes: Phase 4 core business Service/API; Phase 5 Gateway/integrations; Phase 7 Online+LAN Web V7 UI; Phase 8 Android/PDA App; Cloud reconciliation machine-auth/network path.
-- Delta in this execution block: **54.6% -> 55.4% exact** because a material secure LAN HTTP sub-slice reached real-runtime automated E2E PASS. No physical/provider acceptance credit was added.
+- No progress increase is taken for the newer certificate-lifecycle source/CI work because live public-CA issuance, target-host DNS credential/write capability, company-network trust and real PDA acceptance remain unproven.
+- Parallel lanes: Phase 4 core business Service/API; Phase 5 Gateway/integrations; Phase 7 Online+LAN Web V7 UI; Phase 8 Android/PDA App; Cloud reconciliation machine-auth/network path; account-security routes.
 
 ## Authority / UI / execution state
 
-- Current Web and Android/PDA user-facing implementation is **Vietnamese only**; multilingual UI is deferred.
+- Current Web and Android/PDA user-facing implementation is **Vietnamese only**; multilingual UI remains deferred.
 - Android/PDA visual direction uses actual Pick Pack 1291 UI/UX evidence only; legacy business/data/credentials/runtime remain NON_AUTHORITY.
 - Online Web + LAN Web share the V7 VHDCHY design direction inspired by Owner-supplied DNSHE screenshots without copying DNSHE branding/assets.
 - Ready-queue parallel execution remains mandatory. A blocked node must not stall independent safe work.
 - PASS requires reproducible evidence. CI/source PASS never substitutes for physical company-network/PDA PASS.
+- Ordinary-user/no-admin remains a hard LAN-host constraint.
 
-## Reconciled evidence through `4ecbea301d561c0b26b3eadcc413c00c44f650be`
+## Reconciled evidence through `55dc697a038c0f6b8ee6d9b606fef69ce301e116`
 
-### Secure LAN HTTPS login/session -> public Slice-1 HTTP route — SOURCE/CI PASS
+### Secure LAN HTTPS public route — SOURCE/CI PASS
 
-Security decision:
+The reviewed credential transport remains direct Kestrel HTTPS. Paired-client P-256 signatures provide device/request authentication and integrity, not password confidentiality.
 
-- reusable passwords must not cross plaintext LAN HTTP;
-- paired-client P-256 signatures provide authentication/integrity, not password confidentiality;
-- reviewed transport is direct Kestrel HTTPS with a user-space PFX;
-- production trust target is a publicly trusted certificate for `lan-beta.supra.cc.cd` / `lan.supra.cc.cd`;
-- no company Windows certificate-store, firewall, router/AP or internal-DNS policy change is implicitly authorized;
-- CI self-signed + thumbprint pinning is test-only and not production trust.
+Runtime safeguards remain:
 
-Runtime implementation:
+- no TLS source => `HTTP_READ_ONLY`, no reviewed credential/business mutation route;
+- valid TLS source => secure routes still require synchronized authority/operational state, paired client security, credential authority, session/authz/domain readiness;
+- normal-user login issues durable LAN session evidence;
+- reviewed business commands require HTTPS + Bearer session + exact signed body;
+- ROOT has no permanent password and remains email-OTP authority;
+- `mustChangePassword` remains fail-closed until change/recovery routes exist;
+- portrait replacement remains fail-closed at the unresolved Owner semantic gate.
 
-- without TLS PFX: service is `HTTP_READ_ONLY`, secure login/business routes are not registered and mutation catch-all remains 503;
-- with valid TLS PFX: Kestrel serves HTTPS and registers the reviewed secure routes;
-- secure route readiness still requires synchronized authority + operational snapshots, paired-client security and executable primary credential authority;
-- `POST /api/v1/auth/login` verifies paired signed request before normal-user credentials and issues a durable session bound to device/security epoch/authority generation;
-- `POST /api/v1/data/commands` requires HTTPS + Bearer session + exact signed raw body and delegates to `LanBusinessRouteCoordinator`;
-- ROOT remains email-OTP authority; no permanent ROOT password was introduced;
-- `mustChangePassword` remains fail-closed for ordinary business mutation until reviewed change/recovery routes exist;
-- `EMPLOYEE_PORTRAIT_REPLACE` remains fail-closed at the unresolved portrait lifecycle gate.
-
-Automated evidence:
-
-- secure HTTP workflow `34811861697`, job/check `103874646267`, commit `63ceeb6a8db865ced1870209c7cb74d4f65baea1`: **SUCCESS**;
-- same-HEAD clean baseline workflow `34811861613`: **SUCCESS**.
-
-E2E vectors proven on the actual LAN Service process:
-
-- HTTP read-only bootstrap without TLS;
-- HTTPS listener startup with PFX;
-- plaintext HTTP does not successfully reach the credential route on the TLS listener;
-- signed paired-device normal-user login;
-- wrong password rejection;
-- signed-body tamper rejection;
-- login replay rejection;
-- durable session issuance;
-- signed authorized `EMPLOYEE_CREATE` through the public business adapter;
-- business replay rejection;
-- valid session reuse after LAN Service restart;
-- password absent from captured service diagnostics;
-- SQLite foreign-key and quick-integrity checks.
+Secure HTTP workflow `34811861697`, check `103874646267`, commit `63ceeb6a8db865ced1870209c7cb74d4f65baea1`: **SUCCESS**. Same-HEAD clean baseline `34811861613`: **SUCCESS**.
 
 Detailed boundary: `docs/LAN_SECURE_HTTP_V1.md`.
 
-### Earlier LAN security/readiness foundations — remain PASS
+### Windows DPAPI CurrentUser TLS — SOURCE/CI PASS
 
-- primary credential/session workflow `34805395079` at `583b3d0329166804b207332dadf6d449b07c0abf`: **SUCCESS**;
-- integrated readiness workflow `34808274815`: **SUCCESS**;
+The LAN Service can consume a DPAPI CurrentUser protected PFX without installing a certificate in the Windows certificate store or requiring administrator rights.
+
+Windows Schannel evidence established that `EphemeralKeySet` is unsuitable for the server private key on the target runtime path. Windows therefore uses temporary current-user key storage (`UserKeySet`, no `PersistKeySet`); non-Windows compatibility paths retain ephemeral loading.
+
+Evidence at commit `376cb0976f481acf68e8e21654d3d6593e98a81b`:
+
+- DPAPI TLS workflow `34817069447`, check `103889883955`: **SUCCESS**;
+- secure HTTP regression `34817069438`: **SUCCESS**;
+- baseline `34817069440`: **SUCCESS**.
+
+Proven markers include DPAPI CurrentUser protection, real Kestrel/Schannel HTTPS startup, canonical SAN acceptance, wrong-host rejection, corrupt-blob rejection and no raw-PFX disk leak.
+
+### ACME DNS-01 certificate manager — SOURCE/CI PASS
+
+A separate Windows user-space certificate manager now owns certificate lifecycle concerns. DNS-provider credentials are intentionally separated from LAN Service.
+
+Implemented safeguards:
+
+- BETA/STABLE canonical host derivation;
+- exact Cloudflare account/zone verification before mutation;
+- ACME TXT writes restricted to `_acme-challenge.<canonical-host>`;
+- exact challenge readback and record-ID cleanup in `finally`;
+- ECDSA P-256 certificate request;
+- SAN/validity verification before activation;
+- atomic DPAPI CurrentUser protected-PFX replacement;
+- separate DPAPI-protected ACME account key;
+- 30-day renewal threshold;
+- Let’s Encrypt staging by default;
+- production requires both `--production` and `VHDCHY_ACME_ALLOW_PRODUCTION=YES`;
+- no intentional logging of DNS token/private key/account key/PFX bytes.
+
+Certificate-manager workflow at commit `e11c5730a3e9cd7e212d07ea0fbdfc07aff77655`:
+
+- run `34819836554`, check/job `103898656531`: **SUCCESS**;
+- markers: `LAN_CERTIFICATE_MANAGER_SELF_TEST_PASS`, `dpapiPfxAtomicWrite=PASS`, `dpapiAccountSecret=PASS`, `renewalMetadata=PASS`, `rawPfxDiskLeak=PASS`;
+- same-HEAD baseline run `34819836553`, check `103898626431`: **SUCCESS**.
+
+The dedicated CI workflow receives no GitHub `secrets.*` values. It does not perform live DNS mutation or final certificate issuance.
+
+Detailed boundary: `docs/LAN_CERTIFICATE_MANAGER_V1.md`.
+
+### Cloudflare trust prerequisites — READ-ONLY PROVIDER PASS
+
+Read-only inspection at commit `3588bbcc29b665be453e3988e8f5898ed35a9fa8`, run `34816004518`, check/job `103886701628`: **SUCCESS**.
+
+Verified at that time:
+
+- configured account token active;
+- exact expected project account matched;
+- zone `supra.cc.cd` matched and was `active`;
+- `lan-beta.supra.cc.cd` record count = 0;
+- `_acme-challenge.lan-beta.supra.cc.cd` record count = 0.
+
+This does **not** prove DNS Edit capability for a dedicated credential on the intended Windows LAN host. No provider mutation PASS is inferred.
+
+### Earlier LAN security/readiness/local foundations — remain PASS
+
+- primary credential/session workflow `34805395079`: **SUCCESS**;
+- integrated readiness `34808274815`: **SUCCESS**;
 - paired readiness baseline `34808274819`: **SUCCESS**;
-- signed internal route-wiring workflow `34808936937` at `a469d29325ee83f8e19070234c1186ca23474a1c`: **SUCCESS**;
-- route-wiring baseline `34808937077`: **SUCCESS**.
+- signed route wiring `34808936937`: **SUCCESS**;
+- route-wiring baseline `34808937077`: **SUCCESS**;
+- durable Cloud-sync queue `34801533266`: **SUCCESS**.
 
 Production fail-closed safeguards remain intact.
 
@@ -98,37 +131,39 @@ Production fail-closed safeguards remain intact.
 
 Cloud LAN-reconciliation ingestion core remains source/CI PASS, including actor/source/event evidence preservation, collision handling, completed integration receipt ingestion/deduplication and packaged Worker module.
 
-Evidence:
-
-- commit `19c3463a633389b0cd85ddcede6a4525ccaa522a` — ingestion core;
-- commit `591c4083973141155530357f5bddd4ee58efbdc7` — packaged module;
-- workflows `34803221835` and `34803221873`: **SUCCESS**.
+Evidence remains workflows `34803221835` and `34803221873` at `591c4083973141155530357f5bddd4ee58efbdc7`: **SUCCESS**.
 
 A reviewed machine/service authentication mechanism is still required before the LAN -> Cloud network route is exposed. Payload actor evidence is not authentication.
 
-### LAN durable local foundation — PASS
-
-Operational snapshots/materialized Slice-1, immutable local event/outbox, idempotent replay, actor evidence, employee/MNV/attendance, atomic active-code uniqueness, staged media and durable Cloud-sync queue remain PASS foundations.
-
-Dedicated durable queue workflow `34801533266` at `013d5b310ae0f068510c56cdbfe7cf4ea7ffec66`: **SUCCESS**.
-
 ### Web / Android foundations
 
-- Shared V7 Online/LAN Web shell remains PASS in product-foundation workflow `34801611019` at `41565f3b2ffdca473f756e33bd71769e16d8af13`.
+- Shared V7 Online/LAN Web shell remains PASS in product-foundation workflow `34801611019`.
 - Android foundation continues to build; exact final Pick Pack screen/layout evidence remains insufficiently surfaced, so exact visual details must not be invented.
 
 ## Current dependency graph / ready queue
 
-### Primary — production-trusted LAN HTTPS + real-device acceptance
+### Primary — target-Windows public CA + real-device acceptance
 
-1. provision/automate a publicly trusted BETA certificate for `lan-beta.supra.cc.cd`; DNS-01 is preferred where provider capability permits because inbound Internet reachability to the laptop is unnecessary;
-2. keep private key/PFX outside source control and define safe renewal/rotation;
-3. prove canonical hostname resolution/reachability + browser certificate trust on intended ordinary-user company Windows/network;
-4. prove real NLS-MT90/PDA HTTPS login/business/reconnection behavior;
-5. implement/prove public ROOT email-OTP flow;
-6. implement/prove normal-user must-change/password-change/recovery flow;
-7. keep portrait replacement closed until explicit Owner semantic authority;
-8. then include the approved secure public subset in physical Internet-cut acceptance.
+1. use/provision a dedicated least-privilege DNS credential on the intended ordinary-user Windows LAN host;
+2. live-verify exact account/zone and TXT create/read/delete capability only in `_acme-challenge.lan-beta.supra.cc.cd`;
+3. run ACME **staging** issuance on the target Windows user/machine context;
+4. verify DPAPI protected PFX, canonical SAN and LAN Service HTTPS startup/restart;
+5. only after staging PASS, explicitly enable production issuance;
+6. prove canonical hostname resolution/reachability + browser public-certificate trust on the intended company Windows/network;
+7. prove real NLS-MT90/PDA HTTPS login/business/reconnection and Wi-Fi/LAN reacquisition;
+8. include the approved secure public subset in later physical continuity acceptance.
+
+A GitHub-hosted runner must not create the final DPAPI PFX for the laptop because DPAPI CurrentUser is bound to the target Windows user/machine context.
+
+Do not create arbitrary `lan-beta` public DNS routing merely to satisfy the hostname label; canonical offline/company-LAN resolution remains a separate V4 acceptance requirement.
+
+### Parallel — account security
+
+1. implement/prove public ROOT email-OTP request/verify flow without permanent ROOT password;
+2. prove OTP expiry/cooldown/replay/attempt-limit behavior;
+3. implement/prove authenticated `mustChangePassword` change path;
+4. implement/prove normal-user forgotten-password recovery ending in mandatory password change;
+5. keep credential/OTP material out of diagnostics.
 
 ### Parallel — reconciliation network E2E
 
@@ -142,7 +177,7 @@ Dedicated durable queue workflow `34801533266` at `013d5b310ae0f068510c56cdbfe7c
 ### Other independent lanes
 
 - Web authenticated/business surfaces against real Service/LAN routes;
-- Android endpoint/scanner/session/durable-queue/HTTPS work not blocked by missing visual evidence;
+- Android endpoint/scanner/session/durable-queue/certificate-validating HTTPS work not blocked by missing visual evidence;
 - broader Cloud/Gateway/Google receipt/retry/readback work;
 - broader business adapter coverage.
 
@@ -152,10 +187,10 @@ The portrait rule conflict remains unresolved: immediate deletion of the previou
 
 ## Physical / STABLE boundary
 
-- Publicly trusted BETA certificate/DNS/company-device HTTPS evidence is not yet PASS.
+- Live publicly trusted BETA certificate/DNS/company-device HTTPS evidence is not yet PASS.
 - Physical company ordinary-user Windows + target network + real NLS-MT90 regression remains pending.
 - Canonical offline continuity acceptance remains **Window 2 >=60 minutes** after Internet cut while valid LAN remains.
 - STABLE business activation/promotion remains blocked until mandatory BETA acceptance and explicit Owner approval.
 
 do_not_repeat:
-Do not treat memory as authority. Do not replay provider mutations from remembered state. Do not claim provider delivery/projection live without current evidence. Do not bypass action-safety. Do not send reusable passwords over plaintext LAN HTTP. Do not confuse signed requests with encryption. Do not treat CI self-signed certificates as production trust. Do not require or silently modify company certificate stores/firewall/router/AP/internal DNS. Do not weaken security/readiness assertions merely to make CI pass. Do not mutate raw edge events. Do not make Google business authority. Do not silently last-write-wins conflicts. Do not treat CI as physical company-LAN proof. Do not invent Pick Pack UI details without actual reference evidence. Do not copy DNSHE branding/assets. Do not reintroduce stale duration-only offline TTL. Do not silently resolve the portrait immediate-delete/offline-staging conflict. Do not build/expose multilingual UI in the current stage. Do not inflate progress from tool/commit activity without acceptance evidence. Do not promote STABLE without explicit Owner approval.
+Do not treat memory as authority. Do not replay provider mutations from remembered state. Do not claim provider delivery/projection live without current evidence. Do not bypass action-safety. Do not send reusable passwords over plaintext LAN HTTP. Do not confuse signed requests with encryption. Do not treat CI self-signed certificates as production trust. Do not treat certificate-manager self-test as live CA issuance. Do not generate the target laptop DPAPI PFX on a GitHub runner. Do not assume DNS Edit from read-only token verification. Do not require or silently modify company certificate stores/firewall/router/AP/internal DNS. Do not create arbitrary public LAN routing merely to appear complete. Do not weaken security/readiness assertions merely to make CI pass. Do not mutate raw edge events. Do not make Google business authority. Do not silently last-write-wins conflicts. Do not treat CI as physical company-LAN proof. Do not invent Pick Pack UI details without actual reference evidence. Do not copy DNSHE branding/assets. Do not reintroduce stale duration-only offline TTL. Do not silently resolve the portrait immediate-delete/offline-staging conflict. Do not build/expose multilingual UI in the current stage. Do not inflate progress from tool/commit activity without acceptance evidence. Do not promote STABLE without explicit Owner approval.
