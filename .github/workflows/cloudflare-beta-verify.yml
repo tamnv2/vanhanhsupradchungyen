@@ -44,14 +44,16 @@ jobs:
         run: node .github/scripts/cloudflare-verify.mjs
 
       - name: Verify LAN reconciliation key-id binding
+        continue-on-error: true
         env:
           VHDCHY_VERIFY_ONLY_BINDING: LAN_RECONCILIATION_KEY_ID
         run: node .github/scripts/cloudflare-verify.mjs
 
       - name: Verify LAN reconciliation shared-secret binding
+        continue-on-error: true
         env:
           VHDCHY_VERIFY_ONLY_BINDING: LAN_RECONCILIATION_SHARED_SECRET
         run: node .github/scripts/cloudflare-verify.mjs
 
-      - name: Verify Cloudflare BETA identity and reconciliation D1 schema read-only
+      - name: Enforce full Cloudflare BETA identity, bindings and reconciliation D1 schema
         run: node .github/scripts/cloudflare-verify.mjs
