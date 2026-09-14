@@ -5,11 +5,13 @@ on:
     branches: [main]
     paths:
       - 'web/**'
+      - 'android-app/**'
       - 'lan-service/**'
+      - 'service/worker/**'
       - 'contracts/**'
       - 'config/permissions.v1.json'
-      - 'service/worker/migrations/0011_permission_catalog_v1.sql'
       - '.github/scripts/domain-parity-test.mjs'
+      - '.github/scripts/auth-contract-test.mjs'
       - '.github/workflows/build-product-foundations.yml'
   workflow_dispatch:
 
@@ -55,6 +57,81 @@ jobs:
           path: |
             out/VHDCHY-WEB-foundation.tar.gz
             out/VHDCHY-WEB-foundation.tar.gz.sha256
+          if-no-files-found: error
+
+  cloud-service:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate Cloud Service source and shared contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          node .github/scripts/domain-parity-test.mjs
+          node .github/scripts/auth-contract-test.mjs
+          for source in service/worker/src/*.js; do
+            echo "Checking ${source}"
+            node --input-type=module --check < "${source}"
+          done
+          node --test service/worker/tests/*.test.mjs
+
+          rm -f "$RUNNER_TEMP/vhdchy-cloud.db"
+          for migration in service/worker/migrations/*.sql; do
+            sqlite3 "$RUNNER_TEMP/vhdchy-cloud.db" < "$migration"
+          done
+          test "$(sqlite3 "$RUNNER_TEMP/vhdchy-cloud.db" "SELECT value FROM vhdchy_meta WHERE key='schema_version';")" = "business_core_v3"
+          test "$(sqlite3 "$RUNNER_TEMP/vhdchy-cloud.db" "PRAGMA foreign_key_check;")" = ""
+
+          mkdir -p out/cloud-service
+          cp -R service/worker/. out/cloud-service/
+          mkdir -p out/cloud-service/contracts
+          cp contracts/domain.v1.json contracts/commands.slice1.v1.json contracts/acceptance.v1.json contracts/mutation-result.v1.schema.json out/cloud-service/contracts/
+          tar -C out/cloud-service -czf out/VHDCHY-Cloud-Service-foundation.tar.gz .
+          sha256sum out/VHDCHY-Cloud-Service-foundation.tar.gz > out/VHDCHY-Cloud-Service-foundation.tar.gz.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cloud-service-foundation
+          path: |
+            out/VHDCHY-Cloud-Service-foundation.tar.gz
+            out/VHDCHY-Cloud-Service-foundation.tar.gz.sha256
+          if-no-files-found: error
+
+  android-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Build product Android BETA debug APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s android-app/settings.gradle
+          test -s android-app/app/build.gradle
+          test -s android-app/app/src/main/AndroidManifest.xml
+          test -s android-app/app/src/main/java/vn/vhdchy/app/MainActivity.java
+          jq -e '.contractVersion == "VHDCHY_DOMAIN_V1"' contracts/domain.v1.json >/dev/null
+          jq -e '.schemaVersion == "VHDCHY_COMMAND_SPEC_V1" and .slice == "IDENTITY_EMPLOYEE_ATTENDANCE"' contracts/commands.slice1.v1.json >/dev/null
+          gradle -p android-app :app:assembleDebug --stacktrace
+          apk="android-app/app/build/outputs/apk/debug/app-debug.apk"
+          test -s "$apk"
+          mkdir -p out
+          cp "$apk" out/VHDCHY-Android-BETA-debug.apk
+          sha256sum out/VHDCHY-Android-BETA-debug.apk > out/VHDCHY-Android-BETA-debug.apk.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-apk-foundation
+          path: |
+            out/VHDCHY-Android-BETA-debug.apk
+            out/VHDCHY-Android-BETA-debug.apk.sha256
           if-no-files-found: error
 
   lan-service:
