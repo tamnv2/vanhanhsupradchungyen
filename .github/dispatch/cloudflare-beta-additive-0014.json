@@ -1,6 +1,6 @@
 {
-  "enabled": false,
+  "enabled": true,
   "target": "beta",
   "operation": "migrate_employee_code_entity_version_0014",
-  "reason": "Read-only preflight first; additive provider migration remains disabled by default"
+  "reason": "Apply reviewed additive employee-code entity version after exact BETA preflight ABSENT with zero employee-code rows"
 }
