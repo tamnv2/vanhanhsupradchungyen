@@ -22,9 +22,9 @@ public final class MainActivity extends Activity {
         root.setPadding(padding, padding, padding, padding);
 
         TextView title = text("VẬN HÀNH DC HƯNG YÊN", 24);
-        TextView subtitle = text("PDA business client · BETA", 18);
-        TextView contract = text("Domain: " + DOMAIN_CONTRACT + "\nSlice: " + SLICE, 14);
-        TextView state = text("Product foundation: auth/domain screens will use the same Cloud/LAN Service contract.", 16);
+        TextView subtitle = text("Ứng dụng nghiệp vụ PDA · BETA", 18);
+        TextView contract = text("Contract: " + DOMAIN_CONTRACT + "\nPhân hệ: " + SLICE, 14);
+        TextView state = text("Nền tảng ứng dụng hiện dùng chung contract nghiệp vụ cho Cloud Service và LAN Service. Giao diện chính thức sẽ tiếp tục bám theo tham chiếu Pick Pack 1291 sau khi nguồn UI được xác minh.", 16);
 
         root.addView(title, matchWrap());
         root.addView(subtitle, matchWrap());
