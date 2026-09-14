@@ -1,0 +1,183 @@
+name: Build portable LAN Windows host package
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'lan-service/**'
+      - 'lan-certificate-manager/**'
+      - 'lan-host/**'
+      - '.github/workflows/lan-host-package.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  LAN_HOST_VERSION: 0.2.${{ github.run_number }}
+
+concurrency:
+  group: lan-host-package
+  cancel-in-progress: true
+
+jobs:
+  portable-windows-host:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Publish self-contained win-x64 runtimes
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force out/package/service | Out-Null
+          New-Item -ItemType Directory -Force out/package/certificate | Out-Null
+          New-Item -ItemType Directory -Force out/package/scripts | Out-Null
+
+          dotnet publish lan-service/Vhdchy.LanService.csproj `
+            -c Release `
+            -r win-x64 `
+            --self-contained true `
+            -p:Version=$env:LAN_HOST_VERSION `
+            -o out/package/service
+
+          dotnet publish lan-certificate-manager/Vhdchy.LanCertificateManager.csproj `
+            -c Release `
+            -r win-x64 `
+            --self-contained true `
+            -p:Version=$env:LAN_HOST_VERSION `
+            -o out/package/certificate
+
+          Copy-Item lan-host/Start-LanService.ps1 out/package/scripts/Start-LanService.ps1
+          Copy-Item lan-host/Manage-LanCertificate.ps1 out/package/scripts/Manage-LanCertificate.ps1
+          Copy-Item lan-host/README.md out/package/README.md
+          Set-Content -LiteralPath out/package/VERSION.txt -Value $env:LAN_HOST_VERSION -NoNewline -Encoding utf8
+
+      - name: Validate published certificate manager self-test
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $logPath = Join-Path $env:RUNNER_TEMP 'lan-host-cert-manager.log'
+          & './out/package/certificate/VHDCHY.LanCertificateManager.exe' --self-test 2>&1 | Tee-Object -FilePath $logPath
+          if ($LASTEXITCODE -ne 0) { throw 'Published certificate manager self-test failed.' }
+          $log = Get-Content -LiteralPath $logPath -Raw
+          foreach ($marker in @(
+            'LAN_CERTIFICATE_MANAGER_SELF_TEST_PASS',
+            'dpapiPfxAtomicWrite=PASS',
+            'dpapiAccountSecret=PASS',
+            'renewalMetadata=PASS',
+            'rawPfxDiskLeak=PASS'
+          )) {
+            if (-not $log.Contains($marker)) { throw "Missing certificate-manager marker: $marker" }
+          }
+
+      - name: Validate current-user host token protection
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = Join-Path $env:RUNNER_TEMP 'vhdchy-host-cert-self-test'
+          & './out/package/scripts/Manage-LanCertificate.ps1' `
+            -Action SelfTest `
+            -TargetEnvironment BETA `
+            -CertificateDataRoot $root 2>&1 | Tee-Object -FilePath (Join-Path $env:RUNNER_TEMP 'lan-host-script.log')
+          if ($LASTEXITCODE -ne 0) { throw 'Host certificate launcher self-test failed.' }
+          $log = Get-Content -LiteralPath (Join-Path $env:RUNNER_TEMP 'lan-host-script.log') -Raw
+          foreach ($marker in @(
+            'LAN_CERT_HOST_SELF_TEST_PASS',
+            'dnsTokenDpapiCurrentUser=PASS',
+            'dnsTokenPlaintextDiskLeak=PASS'
+          )) {
+            if (-not $log.Contains($marker)) { throw "Missing host-script marker: $marker" }
+          }
+
+      - name: Validate published LAN Service HTTP_READ_ONLY fallback
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $dataRoot = Join-Path $env:RUNNER_TEMP 'vhdchy-portable-lan-service'
+          $stdout = Join-Path $env:RUNNER_TEMP 'portable-lan-service.stdout.log'
+          $stderr = Join-Path $env:RUNNER_TEMP 'portable-lan-service.stderr.log'
+          New-Item -ItemType Directory -Force $dataRoot | Out-Null
+
+          $env:VHDCHY_ENV = 'BETA'
+          $env:VHDCHY_CLUSTER_ID = 'PICK_PACK_1291'
+          $env:VHDCHY_LAN_PORT = '17941'
+          $env:VHDCHY_LAN_DATA_ROOT = $dataRoot
+          Remove-Item Env:VHDCHY_LAN_TLS_PROTECTED_PFX_PATH -ErrorAction SilentlyContinue
+          Remove-Item Env:VHDCHY_LAN_TLS_PFX_PATH -ErrorAction SilentlyContinue
+          Remove-Item Env:VHDCHY_LAN_TLS_PFX_PASSWORD -ErrorAction SilentlyContinue
+
+          $process = Start-Process `
+            -FilePath './out/package/service/VHDCHY.LanService.exe' `
+            -PassThru `
+            -RedirectStandardOutput $stdout `
+            -RedirectStandardError $stderr
+          try {
+            $health = $null
+            for ($attempt = 0; $attempt -lt 40; $attempt++) {
+              if ($process.HasExited) {
+                $err = if (Test-Path $stderr) { Get-Content -LiteralPath $stderr -Raw } else { '' }
+                throw "Published LAN Service exited before health check. $err"
+              }
+              try {
+                $health = Invoke-RestMethod -Uri 'http://127.0.0.1:17941/health' -TimeoutSec 2
+                break
+              }
+              catch {
+                Start-Sleep -Milliseconds 250
+              }
+            }
+            if ($null -eq $health) { throw 'Published LAN Service did not become healthy.' }
+            if ($health.ok -ne $true) { throw 'Published LAN Service health did not report ok=true.' }
+            if ($health.transport -ne 'HTTP_READ_ONLY') { throw "Unexpected transport: $($health.transport)" }
+            if ($health.secureMutationTransportEnabled -ne $false) { throw 'Secure mutation transport must remain disabled without a protected PFX.' }
+            if ($health.businessMutationEnabled -ne $false) { throw 'Business mutation must remain disabled without a protected PFX.' }
+            if ($health.canonicalLanHost -ne 'lan-beta.supra.cc.cd') { throw 'Canonical BETA LAN host mismatch.' }
+            Write-Host 'LAN_HOST_PACKAGE_HTTP_READ_ONLY_PASS'
+          }
+          finally {
+            if (-not $process.HasExited) { Stop-Process -Id $process.Id -Force }
+          }
+
+      - name: Assert package contains no secret/private-key material
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $forbidden = Get-ChildItem -LiteralPath out/package -Recurse -File | Where-Object {
+            $_.Extension.ToLowerInvariant() -in @('.pfx','.p12','.jks','.key','.pem')
+          }
+          if ($forbidden) {
+            $forbidden | ForEach-Object { Write-Host $_.FullName }
+            throw 'Portable package must not contain certificate/private-key/signing material.'
+          }
+          $workflow = Get-Content -LiteralPath '.github/workflows/lan-host-package.yml' -Raw
+          if ($workflow -match '\$\{\{\s*secrets\.') {
+            throw 'Portable package CI must not receive repository/environment secrets.'
+          }
+          Write-Host 'LAN_HOST_PACKAGE_SECRET_BOUNDARY_PASS'
+
+      - name: Create package and SHA256
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $zip = 'out/VHDCHY-LAN-HOST-BETA-win-x64.zip'
+          if (Test-Path $zip) { Remove-Item $zip -Force }
+          Compress-Archive -Path 'out/package/*' -DestinationPath $zip -CompressionLevel Optimal
+          $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          Set-Content -LiteralPath "$zip.sha256" -Value "$hash  VHDCHY-LAN-HOST-BETA-win-x64.zip" -NoNewline -Encoding ascii
+          Write-Host "LAN_HOST_PACKAGE_SHA256=$hash"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vhdchy-lan-host-beta-win-x64
+          if-no-files-found: error
+          path: |
+            out/VHDCHY-LAN-HOST-BETA-win-x64.zip
+            out/VHDCHY-LAN-HOST-BETA-win-x64.zip.sha256
+            ${{ runner.temp }}/lan-host-cert-manager.log
+            ${{ runner.temp }}/lan-host-script.log
+            ${{ runner.temp }}/portable-lan-service.stdout.log
+            ${{ runner.temp }}/portable-lan-service.stderr.log
