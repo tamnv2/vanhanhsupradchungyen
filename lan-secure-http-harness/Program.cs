@@ -124,7 +124,11 @@ static string BusinessBody(string requestId, string idempotencyKey, string emplo
         deviceSeq = sequence
     });
 
-static async Task WaitHealthyAsync(HttpClient client, RunningService service)
+static async Task WaitForHealthAsync(
+    HttpClient client,
+    RunningService service,
+    string expectedTransport,
+    bool? expectedBusinessMutation = null)
 {
     Exception? last = null;
     for (var attempt = 0; attempt < 60; attempt++)
@@ -138,9 +142,14 @@ static async Task WaitHealthyAsync(HttpClient client, RunningService service)
             {
                 var body = await response.Content.ReadAsStringAsync();
                 using var document = JsonDocument.Parse(body);
-                Assert(document.RootElement.GetProperty("transport").GetString() == "HTTPS", "HEALTH_NOT_HTTPS");
-                Assert(document.RootElement.GetProperty("secureMutationTransportEnabled").GetBoolean(), "SECURE_TRANSPORT_NOT_ENABLED");
-                Assert(document.RootElement.GetProperty("businessMutationEnabled").GetBoolean(), "BUSINESS_MUTATION_NOT_READY");
+                var root = document.RootElement;
+                Assert(root.GetProperty("transport").GetString() == expectedTransport, "HEALTH_TRANSPORT_MISMATCH");
+                if (expectedBusinessMutation.HasValue)
+                {
+                    Assert(
+                        root.GetProperty("businessMutationEnabled").GetBoolean() == expectedBusinessMutation.Value,
+                        "BUSINESS_MUTATION_READINESS_MISMATCH");
+                }
                 return;
             }
         }
@@ -153,7 +162,12 @@ static async Task WaitHealthyAsync(HttpClient client, RunningService service)
     throw new InvalidOperationException("LAN_SERVICE_HEALTH_TIMEOUT", last);
 }
 
-static RunningService StartService(string dll, string root, int listenPort, string pfx, string pfxPassword)
+static RunningService StartService(
+    string dll,
+    string root,
+    int listenPort,
+    string? pfx = null,
+    string? pfxPassword = null)
 {
     var start = new ProcessStartInfo("dotnet")
     {
@@ -167,16 +181,34 @@ static RunningService StartService(string dll, string root, int listenPort, stri
     start.Environment["VHDCHY_CLUSTER_ID"] = clusterId;
     start.Environment["VHDCHY_LAN_PORT"] = listenPort.ToString(System.Globalization.CultureInfo.InvariantCulture);
     start.Environment["VHDCHY_LAN_DATA_ROOT"] = root;
-    start.Environment["VHDCHY_LAN_TLS_PFX_PATH"] = pfx;
-    start.Environment["VHDCHY_LAN_TLS_PFX_PASSWORD"] = pfxPassword;
+    if (!string.IsNullOrWhiteSpace(pfx))
+    {
+        start.Environment["VHDCHY_LAN_TLS_PFX_PATH"] = pfx;
+        start.Environment["VHDCHY_LAN_TLS_PFX_PASSWORD"] = pfxPassword ?? string.Empty;
+    }
     var process = Process.Start(start) ?? throw new InvalidOperationException("LAN_SERVICE_START_FAILED");
     return new RunningService(process, process.StandardOutput.ReadToEndAsync(), process.StandardError.ReadToEndAsync());
 }
 
 var dbPath = Path.Combine(dataRoot, "edge.db");
-var edge = new EdgeStore(dbPath);
-await edge.InitializeAsync(environment, clusterId, "SECURE-HTTP-HARNESS", Guid.NewGuid().ToString("N"), compatibility);
-await EmployeeCodeUniqueClaimStore.EnsureAsync(dbPath);
+var allDiagnostics = new StringBuilder();
+
+// Bootstrap the real edge schema through the production LAN runtime startup path.
+var bootstrap = StartService(serviceDll, dataRoot, port);
+try
+{
+    using var bootstrapClient = new HttpClient
+    {
+        BaseAddress = new Uri($"http://127.0.0.1:{port}"),
+        Timeout = TimeSpan.FromSeconds(5)
+    };
+    await WaitForHealthAsync(bootstrapClient, bootstrap, "HTTP_READ_ONLY", expectedBusinessMutation: false);
+}
+finally
+{
+    allDiagnostics.Append(await bootstrap.StopAsync());
+}
+Assert(File.Exists(dbPath), "EDGE_DB_NOT_BOOTSTRAPPED");
 
 var passwordRecord = PasswordRecord(password);
 var authorityPayload = JsonSerializer.Serialize(new
@@ -276,11 +308,10 @@ using var client = new HttpClient(handler)
     Timeout = TimeSpan.FromSeconds(5)
 };
 
-var allDiagnostics = new StringBuilder();
 var service = StartService(serviceDll, dataRoot, port, pfxPath, pfxPassword);
 try
 {
-    await WaitHealthyAsync(client, service);
+    await WaitForHealthAsync(client, service, "HTTPS", expectedBusinessMutation: true);
 
     using (var plain = new HttpClient { Timeout = TimeSpan.FromSeconds(2) })
     {
@@ -329,7 +360,7 @@ try
     allDiagnostics.Append(await service.StopAsync());
 
     service = StartService(serviceDll, dataRoot, port, pfxPath, pfxPassword);
-    await WaitHealthyAsync(client, service);
+    await WaitForHealthAsync(client, service, "HTTPS", expectedBusinessMutation: true);
     var command2 = BusinessBody("REQ-SECURE-2", "IDEM-SECURE-2", "EMP-SECURE-2", 2);
     var commandEnvelope2 = Sign(deviceKey, deviceId, epoch, LanSecureHttpRoutes.BusinessRouteTarget, command2);
     var afterRestart = await SendAsync(client, RequestFor(LanSecureHttpRoutes.BusinessRouteTarget, commandEnvelope2, deviceId, epoch, token));
