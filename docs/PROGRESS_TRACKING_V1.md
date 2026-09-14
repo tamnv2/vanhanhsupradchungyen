@@ -52,7 +52,7 @@ The detailed substeps and current evidence for these phases live in `docs/DELIVE
 
 ## 4. Current baseline — 2026-09-14
 
-This baseline reconciles repository source through the secure LAN HTTPS login/session + reviewed public Slice-1 business HTTP route E2E, earlier LAN durable-state/media/reconciliation queue work, the Vietnamese-only V7 Web shell, and current product-foundation CI evidence.
+This baseline reconciles repository source through the secure LAN HTTPS login/session + reviewed public Slice-1 business HTTP route E2E, durable staged-media/reconciliation queue work, the machine-authenticated Cloud operational snapshot/coverage route, LAN signed refresh/rebase/readiness recovery automation, the Vietnamese-only V7 Web shell, and current product-foundation CI evidence.
 
 | Phase | Weight | Current completion | Weighted contribution |
 |---|---:|---:|---:|
@@ -61,28 +61,38 @@ This baseline reconciles repository source through the secure LAN HTTPS login/se
 | 3. Cloud data / auth / Service foundation | 12% | 80% | 9.60% |
 | 4. Core business Service/API | 14% | 65% | 9.10% |
 | 5. Gateway / adapters / integrations | 10% | 55% | 5.50% |
-| 6. LAN continuity / offline / reconcile | 16% | **60%** | **9.60%** |
+| 6. LAN continuity / offline / reconcile | 16% | **65%** | **10.40%** |
 | 7. Online Web + LAN Web UI | 10% | **25%** | **2.50%** |
 | 8. Android/PDA App | 10% | 15% | 1.50% |
 | 9. Account/admin/reporting/support | 4% | 35% | 1.40% |
 | 10. Security / observability / recovery | 3% | 50% | 1.50% |
 | 11. BETA physical/capacity/UAT | 3% | 10% | 0.30% |
 | 12. STABLE production/handover | 2% | 0% | 0.00% |
-|  |  | **TOTAL_PRODUCT_COMPLETION = 55.4%** | **55.40%** |
+|  |  | **TOTAL_PRODUCT_COMPLETION = 56.2%** | **56.20%** |
 
-Human-facing status rounds this baseline to **55% complete**.
+Human-facing status rounds this baseline to **56% complete**.
 
-### Evidence supporting the increase from 54.6% to 55.4%
+### Evidence supporting the increase from 55.4% to 56.2%
+
+**Phase 6: 60% -> 65%.**
+
+The post-reconciliation path is now materially implemented and automated rather than stopping at queue/tracker primitives. Cloud exposes a machine-authenticated Slice-1 operational snapshot route with real D1 state and explicit canonical-event coverage. LAN has the matching signed HTTP client, authoritative refresh coordinator/pump, atomic operational snapshot import, post-reconciliation rebase confirmation, and fail-closed readiness while canonical events remain unre-based. Historical canonical coverage is restart-safe by persistent `edgeInstanceId` while the request still carries the current `edgeEpoch` for machine identity.
+
+Dedicated integration workflow `34851773729` at source commit `42590dcf73ecbe8d1d8ee8dfbd6275aabf9d64fd` completed `SUCCESS`. It proves signed HMAC request construction, exact requested canonical coverage, epoch rotation after restart, rejection of incomplete coverage without changing the active snapshot, atomic import of the complete authoritative snapshot, rebase cursor clearing, and readiness recovery. Clean-baseline workflow `34851772963` on the same source commit also completed `SUCCESS`, including authority checks, Worker unit tests, clean D1 schema and schema/runtime contract validation.
+
+This increase credits an `IMPLEMENTED_AUTOMATED` reconciliation sub-slice only. It does **not** credit live BETA machine credential provisioning/provider transport acceptance, exact live provider linkage, public-trust/canonical-DNS/real PDA acceptance, the >=60-minute Internet-cut physical window, capacity/soak/UAT, or STABLE activation.
+
+### Earlier evidence supporting the increase from 54.6% to 55.4%
 
 **Phase 6: 55% -> 60%.**
 
-The LAN runtime now has an implemented secure public HTTP slice rather than only an internal coordinator: direct Kestrel HTTPS using a user-space PFX, a fail-closed HTTP read-only fallback when TLS is absent, paired-device signed normal-user login, durable session issuance, and the reviewed signed-session `POST /api/v1/data/commands` path into `LanBusinessRouteCoordinator`. Dedicated workflow `34811861697`, job/check `103874646267`, at commit `63ceeb6a8db865ced1870209c7cb74d4f65baea1` completed `SUCCESS`. It proves TLS-only credential handling at runtime, wrong-password and signed-body tamper rejection, login/business replay rejection, authorized `EMPLOYEE_CREATE`, restart session continuity, no captured password leakage, and SQLite integrity. Baseline workflow `34811861613` on the same HEAD also completed `SUCCESS`.
+The LAN runtime has an implemented secure public HTTP slice rather than only an internal coordinator: direct Kestrel HTTPS using a user-space PFX, a fail-closed HTTP read-only fallback when TLS is absent, paired-device signed normal-user login, durable session issuance, and the reviewed signed-session `POST /api/v1/data/commands` path into `LanBusinessRouteCoordinator`. Dedicated workflow `34811861697`, job/check `103874646267`, at commit `63ceeb6a8db865ced1870209c7cb74d4f65baea1` completed `SUCCESS`. It proves TLS-only credential handling at runtime, wrong-password and signed-body tamper rejection, login/business replay rejection, authorized `EMPLOYEE_CREATE`, restart session continuity, no captured password leakage, and SQLite integrity. Baseline workflow `34811861613` on the same HEAD also completed `SUCCESS`.
 
-This is credited as `IMPLEMENTED_AUTOMATED` progress for a material LAN sub-slice, not physical acceptance. It does not credit publicly trusted BETA certificate issuance/renewal, canonical DNS and real company-network/browser/PDA trust, ROOT email-OTP HTTP flow, public password-change/recovery, Cloud reconciliation machine/service authentication, portrait semantic resolution, >=60-minute Internet-cut physical continuity, capacity/UAT, or STABLE activation. See `docs/LAN_SECURE_HTTP_V1.md`.
+This is credited as `IMPLEMENTED_AUTOMATED` progress for a material LAN sub-slice, not physical acceptance. It does not credit publicly trusted BETA certificate issuance/renewal, canonical DNS and real company-network/browser/PDA trust, ROOT email-OTP HTTP flow, public password-change/recovery, live Cloud reconciliation machine credential/provider acceptance, portrait semantic resolution, >=60-minute Internet-cut physical continuity, capacity/UAT, or STABLE activation. See `docs/LAN_SECURE_HTTP_V1.md`.
 
 ### Earlier evidence retained in the baseline
 
-The historical measured baseline before the durable reconciliation + Web-shell increase was **53.3%**; the subsequent accepted evidence moved it to 54.6%, and the secure LAN HTTP evidence above moves the current exact baseline to 55.4%. This historical marker is retained for audit/validator continuity and is not the current percentage.
+The historical measured baseline before the durable reconciliation + Web-shell increase was **53.3%**; subsequent accepted evidence moved it to 54.6%, then secure LAN HTTP moved it to 55.4%, and the automated operational refresh/rebase slice moves the current exact baseline to 56.2%. These historical markers are retained for audit/validator continuity and are not the current percentage.
 
 **Phase 6 durable reconciliation foundation.**
 
@@ -96,9 +106,9 @@ The Android phase remains at 15%: visible shell text is Vietnamese and the curre
 
 ## 5. Why the project is not scored higher
 
-The repository has substantial architecture, business/data contracts, Cloud/Service foundation and a materially implemented LAN Slice-1 with automated evidence. LAN now also includes durable staged media, durable Cloud-sync queue mechanics and an automated secure HTTPS login/session -> public Slice-1 business route.
+The repository has substantial architecture, business/data contracts, Cloud/Service foundation and a materially implemented LAN Slice-1 with automated evidence. LAN now also includes durable staged media, durable Cloud-sync queue mechanics, an automated secure HTTPS login/session -> public Slice-1 business route, and an automated signed operational refresh/rebase/readiness-recovery path.
 
-However, the final product still lacks enough evidence to credit the remaining work as complete: the production-trusted LAN certificate/DNS/real-device path is unproven; current Android/PDA product UI is not yet faithfully reconstructed from the authorized Pick Pack 1291 visual source; Web authentication and business modules are incomplete; Cloud reconciliation machine-authenticated network ingestion/transport is incomplete; target-company-network/NLS-MT90 physical regression is pending; the 60-minute Internet-cut acceptance is pending; broader business/provider paths remain; capacity/soak/UAT remain; and STABLE production promotion/handover has not been completed.
+However, the final product still lacks enough evidence to credit the remaining work as complete: the production-trusted LAN certificate/DNS/real-device path is unproven; current Android/PDA product UI is not yet faithfully reconstructed from the authorized Pick Pack 1291 visual source; Web authentication and business modules are incomplete; live BETA machine credential/provider LAN->Cloud transport and exact provider linkage are unaccepted; target-company-network/NLS-MT90 physical regression is pending; the 60-minute Internet-cut acceptance is pending; broader business/provider paths remain; capacity/soak/UAT remain; and STABLE production promotion/handover has not been completed.
 
 ## 6. Update rules
 
