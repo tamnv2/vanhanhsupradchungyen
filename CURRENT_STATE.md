@@ -9,11 +9,11 @@ Active decisions: `DECISIONS.md` + `DECISIONS_V3.md` + `DECISIONS_V4.md` + `DECI
 
 ## Progress
 
-`Overall: 55% | Exact weighted baseline: 54.6% | Primary current phase: Phase 6 — LAN continuity/offline/reconcile`
+`Overall: 55% | Exact weighted baseline: 55.4% | Primary current phase: Phase 6 — LAN continuity/offline/reconcile`
 
-The numerical baseline remains unchanged. LAN readiness and session-to-business route wiring now have dedicated CI PASS evidence, but public LAN HTTP mutation is still intentionally closed and no additional product/physical acceptance gate has closed yet.
+Phase 6 advances from 55% to 60% because the secure LAN credential transport plus public login/session -> reviewed Slice-1 HTTP business route now have real runtime E2E CI evidence. This is implementation/automation credit only; publicly trusted certificate/DNS/real company-device acceptance remains open.
 
-Parallel active lanes: broader core business Service/API, Gateway/integrations, Online+LAN Web V7 UI, Android/PDA App and reconciliation transport.
+Parallel active lanes: broader core business Service/API, Gateway/integrations, Online+LAN Web V7 UI, Android/PDA App and Cloud reconciliation transport.
 
 ## Current product authority
 
@@ -25,7 +25,47 @@ Parallel active lanes: broader core business Service/API, Gateway/integrations, 
 - Sheets/Drive remain downstream projection/storage, never canonical business authority.
 - D1 remains central consolidated structured authority after synchronization; LAN edge state + immutable event journal is local operational authority for events accepted by LAN.
 
-## Reconciled source/evidence through HEAD `a469d29325ee83f8e19070234c1186ca23474a1c`
+## Reconciled source/evidence through HEAD `63ceeb6a8db865ced1870209c7cb74d4f65baea1`
+
+### Secure LAN HTTPS login/session -> public Slice-1 HTTP route — source/CI PASS
+
+The reviewed transport is direct Kestrel HTTPS using a user-space PFX. Reusable passwords are never intentionally sent through the plaintext LAN mutation path merely because the paired client signs requests. Request signing remains defense-in-depth for device/request authenticity and integrity; TLS supplies credential confidentiality.
+
+Runtime behavior:
+
+- without `VHDCHY_LAN_TLS_PFX_PATH`, LAN remains `HTTP_READ_ONLY`, login/business routes are not registered and mutation catch-all remains 503;
+- with a valid PFX, Kestrel serves HTTPS and exposes only the reviewed secure login/business routes plus existing read surfaces;
+- the PFX is loaded with ephemeral user-space key handling; the design does not require company Windows certificate-store changes;
+- secure-route readiness remains dependent on synchronized authority/operational snapshots, paired-client security and primary credential authority;
+- `POST /api/v1/auth/login` verifies the paired signed request before normal-user credential verification and issues a durable device/security-epoch/authority-bound LAN session;
+- `POST /api/v1/data/commands` requires HTTPS + Bearer session + exact signed raw body and delegates to the already-proven `LanBusinessRouteCoordinator`;
+- ROOT semantics are unchanged: current password route returns `ROOT_EMAIL_OTP_REQUIRED`; no permanent ROOT password was introduced;
+- `mustChangePassword` remains session evidence and ordinary business mutation stays blocked until a reviewed password-change path is implemented;
+- portrait replacement remains fail-closed at the unresolved media semantic gate.
+
+Dedicated secure HTTP workflow `34811861697`, job/check `103874646267`, at commit `63ceeb6a8db865ced1870209c7cb74d4f65baea1`: **SUCCESS**.
+
+Covered runtime vectors:
+
+- actual LAN Service process bootstrap in HTTP read-only mode;
+- actual LAN Service process restart in HTTPS mode;
+- plaintext HTTP does not successfully reach the credential route on the TLS listener;
+- paired signed login;
+- wrong password rejection;
+- signed body tamper rejection;
+- login replay rejection;
+- durable session issuance;
+- signed authorized `EMPLOYEE_CREATE` through the public business adapter;
+- business replay rejection;
+- valid session reuse after LAN Service restart;
+- password absent from captured service diagnostics;
+- SQLite foreign-key/quick integrity checks.
+
+Baseline workflow `34811861613` on the same HEAD: **SUCCESS**.
+
+Detailed boundary: `docs/LAN_SECURE_HTTP_V1.md`.
+
+This is **not yet physical/provider acceptance**. CI uses a self-signed certificate with explicit thumbprint pinning only to prove TLS/runtime behavior. Production BETA still requires a publicly trusted certificate for `lan-beta.supra.cc.cd`, canonical DNS/reachability, ordinary-user company Windows browser trust and real PDA/NLS-MT90 HTTPS/reconnect evidence without unauthorized company-admin changes.
 
 ### Cloud reconciliation ingestion — source/CI PASS foundation
 
@@ -48,62 +88,22 @@ Dedicated queue workflow `34801533266` at `013d5b310ae0f068510c56cdbfe7cf4ea7ffe
 
 ### LAN signed-client / session / primary credential — dedicated CI PASS
 
-Source includes:
-
-- signed P-256 client pairing/request verification with replay and security-epoch fencing;
-- durable LAN user-session binding;
-- authority snapshot V2 primary password verifier;
-- V1/V2 authorization compatibility for current synchronized permission evaluation;
-- primary credential -> authenticated evidence -> LAN session chain.
+Source includes signed P-256 client pairing/request verification with replay/security-epoch fencing, durable LAN user-session binding, authority snapshot V2 primary password verifier, V1/V2 authorization compatibility and the primary credential -> authenticated evidence -> LAN session chain.
 
 Dedicated primary-auth workflow `34805395079` at commit `583b3d0329166804b207332dadf6d449b07c0abf`: **SUCCESS**.
 
-### Integrated LAN readiness — PASS through reviewed route-wiring gate
+### Integrated LAN readiness + internal business coordinator — PASS
 
-The previous readiness failures were traced to test coupling, not production safeguards:
-
-1. readiness reused a DB containing intentionally unreconciled local work, so `OperationalSnapshotStore` correctly rejected replacement;
-2. after DB isolation, the harness still depended on authority/operational fixtures created by the base harness.
-
-The readiness harness was isolated and made self-seeding. Production fail-closed safeguards were not weakened.
+Readiness and route-wiring foundations remain proven without weakening fail-closed safeguards.
 
 Evidence:
 
-- workflow `34808274815` (`Validate LAN fail-closed readiness gate`): **SUCCESS**;
-- same-chain baseline workflow `34808274819`: **SUCCESS**.
+- readiness workflow `34808274815`: **SUCCESS**;
+- paired baseline `34808274819`: **SUCCESS**;
+- signed route-wiring workflow `34808936937` at `a469d29325ee83f8e19070234c1186ca23474a1c`: **SUCCESS**;
+- route-wiring baseline `34808937077`: **SUCCESS**.
 
-This proves synchronized snapshots -> signed-client security -> primary credential authority -> reviewed route-wiring blocker/restart fail-closed behavior.
-
-### Signed LAN session -> Slice-1 business coordinator — PASS
-
-`LanBusinessRouteCoordinator` now binds an already-authenticated LAN session to the Slice-1 business adapter with all of the following gates:
-
-- signed paired-device P-256 request;
-- signed method/route target;
-- SHA-256 binding to the exact raw request body;
-- nonce/replay and security-epoch checks;
-- session token bound to device + security epoch;
-- current authority snapshot/session freshness;
-- `MUST_CHANGE_PASSWORD` blocks ordinary business mutation;
-- authorization/domain/command gate before business execution;
-- authenticated actor comes only from server-side session evidence, never client actor fields;
-- portrait command remains fail-closed at its unresolved media lifecycle gate.
-
-The coordinator parses the exact signed raw body itself, preventing a mismatch between signed bytes and separately supplied parsed business fields.
-
-Dedicated workflow `34808936937` at commit `a469d29325ee83f8e19070234c1186ca23474a1c`: **SUCCESS**.
-
-Covered vectors include positive business execution plus replay rejection, signed-body mismatch, wrong route target, wrong device/session binding, permission DENY precedence, unsupported command, `MUST_CHANGE_PASSWORD`, stale authority requiring re-authentication and portrait fail-closed behavior.
-
-Baseline workflow `34808937077` at the same commit: **SUCCESS**.
-
-### Public LAN HTTP mutation — intentionally CLOSED
-
-The same route-wiring workflow explicitly proves the public HTTP mutation endpoint remains closed/503. Coordinator PASS is therefore **not** equivalent to public mutation readiness.
-
-The next material blocker is secure login transport / HTTP adapter wiring. P-256 request signing authenticates device/request integrity but does not encrypt a user's password. No public LAN login route may send a reusable password over plaintext HTTP merely to advance readiness.
-
-Current no-admin host constraints also prohibit silently depending on changes to company certificate stores, firewall, router/AP, internal DNS or other corporate policy.
+The coordinator binds signed paired-device request -> device-bound session -> current authority -> authorization/domain/command gate -> Slice-1 adapter. Authenticated actor evidence is server-derived and the coordinator consumes the exact signed raw body.
 
 ### Cloud reconciliation network boundary — still pending
 
@@ -128,13 +128,14 @@ Decision-independent media work may continue. Portrait replacement while Drive i
 
 ## Immediate execution direction
 
-Primary LAN dependency chain:
+Primary LAN chain now moves from source/CI transport implementation to real trust/acceptance:
 
-1. design/prove a secure LAN login transport compatible with normal-user/no-admin host constraints and without plaintext reusable passwords;
-2. wire the reviewed HTTP login/session adapter only after that transport is safe;
-3. wire public LAN business HTTP handling to the already-proven signed-session coordinator;
-4. re-run readiness/E2E negative vectors and keep portrait closed;
-5. only then consider opening the approved public LAN business subset.
+1. provision/automate a publicly trusted BETA certificate for `lan-beta.supra.cc.cd` without relying on company-admin certificate-store changes;
+2. prove canonical DNS/reachability and HTTPS trust on the intended ordinary-user company Windows environment;
+3. prove real PDA/NLS-MT90 HTTPS/reconnect behavior;
+4. implement/prove the remaining public account-security surfaces required for actual use, especially ROOT email OTP and normal-user must-change/password recovery/change flows;
+5. keep portrait replacement closed until the Owner semantic decision exists;
+6. then include the approved secure public subset in the physical continuity window.
 
 Parallel reconciliation chain:
 
