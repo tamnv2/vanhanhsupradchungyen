@@ -60,6 +60,8 @@ var stagedMediaRoot = Path.Combine(root, "staged-media");
 await LanStagedMediaStore.EnsureAsync(edgeStore.DatabasePath, stagedMediaRoot);
 var cloudSyncQueue = new CloudSyncQueueStore(edgeStore.DatabasePath);
 var recoveredInterruptedCloudSync = await cloudSyncQueue.RecoverInterruptedClaimsAsync();
+var integrationOutputStore = new LanIntegrationOutputStore(edgeStore.DatabasePath);
+var recoveredInterruptedIntegrationOutput = await integrationOutputStore.RecoverInterruptedClaimsAsync();
 var startupIntegrity = await edgeStore.CheckIntegrityAsync();
 if (!startupIntegrity.Ok)
 {
@@ -170,6 +172,7 @@ app.MapGet("/health", async (CancellationToken cancellationToken) =>
         cloudReconciliationTransportConfigured = cloudReconciliationConfigured,
         cloudOperationalRefreshConfigured = cloudReconciliationConfigured,
         recoveredInterruptedCloudSync,
+        recoveredInterruptedIntegrationOutput,
         localDataRoot = root
     });
 });
@@ -222,7 +225,10 @@ app.MapGet("/api/v1/capabilities", async (CancellationToken cancellationToken) =
             "CLOUD_SYNC_OUTBOX_STORAGE_LOCAL_DURABLE",
             "CLOUD_SYNC_QUEUE_STATE_MACHINE_LOCAL_DURABLE",
             "CLOUD_SYNC_INTERRUPTED_CLAIM_RECOVERY",
+            "INTEGRATION_OUTPUT_QUEUE_STATE_MACHINE_LOCAL_DURABLE",
+            "INTEGRATION_OUTPUT_INTERRUPTED_CLAIM_RECOVERY",
             "GOOGLE_OUTBOX_RECEIPT_STORAGE_LOCAL_DURABLE",
+            "INTEGRATION_RECEIPT_READBACK_EVIDENCE_LOCAL_DURABLE",
             "CONFLICT_STORAGE_LOCAL_DURABLE",
             "AUTHORITY_SNAPSHOT_STORAGE_LOCAL_DURABLE",
             "STAGED_MEDIA_LOCAL_DURABLE",
@@ -242,6 +248,7 @@ app.MapGet("/api/v1/capabilities", async (CancellationToken cancellationToken) =
 app.MapGet("/api/v1/sync/status", async (CancellationToken cancellationToken) =>
 {
     var state = await edgeStore.ReadStatusAsync(cancellationToken);
+    var integration = await integrationOutputStore.InspectAsync(cancellationToken);
     var rebase = await new PostReconciliationRebaseTracker(edgeStore.DatabasePath).InspectAsync(cancellationToken);
     return Results.Json(new
     {
@@ -253,6 +260,9 @@ app.MapGet("/api/v1/sync/status", async (CancellationToken cancellationToken) =>
         lastCloudSyncAt = state.LastCloudSyncAt,
         pendingCloudSync = state.PendingCloudSync,
         pendingGoogleWork = state.PendingGoogleWork,
+        integrationOutputReviewRequired = integration.ReviewRequired,
+        completedIntegrationReceipts = integration.CompletedReceipts,
+        reviewIntegrationReceipts = integration.ReviewReceipts,
         conflictCount = state.ConflictCount,
         postReconciliationRebaseRequired = rebase.Required,
         postReconciliationPendingCanonicalEventCount = rebase.PendingCanonicalEventCount,
@@ -292,7 +302,7 @@ if (tlsLoadResult is not null)
 {
     Console.WriteLine($"TLS certificate loaded from {tlsLoadResult.StorageMode}; notAfterUtc={tlsLoadResult.NotAfterUtc:O}.");
 }
-Console.WriteLine($"Cloud sync queue recovery active; interruptedClaimsRecovered={recoveredInterruptedCloudSync}; machineAuth={CloudReconciliationHttpSender.AuthVersion}; networkSenderConfigured={cloudReconciliationConfigured}; operationalRefreshConfigured={cloudReconciliationConfigured}.");
+Console.WriteLine($"Cloud sync queue recovery active; interruptedClaimsRecovered={recoveredInterruptedCloudSync}; integrationClaimsRecovered={recoveredInterruptedIntegrationOutput}; machineAuth={CloudReconciliationHttpSender.AuthVersion}; networkSenderConfigured={cloudReconciliationConfigured}; operationalRefreshConfigured={cloudReconciliationConfigured}.");
 Console.WriteLine(secureHttpEnabled
     ? "Secure LAN login and reviewed Slice-1 business routes are TLS-gated; runtime readiness fails closed on missing synchronized authority/operational/security prerequisites and pending post-reconciliation rebase."
     : "LAN runtime is HTTP read-only. All business mutation remains FAIL_CLOSED until a reviewed TLS certificate is configured.");
