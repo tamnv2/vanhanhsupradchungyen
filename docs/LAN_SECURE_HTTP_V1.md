@@ -2,155 +2,146 @@
 
 Status: IMPLEMENTED_AUTOMATED — source/CI PASS; physical/provider acceptance pending
 Effective date: 2026-09-14
-Scope: LAN credential transport, primary login/session HTTP adapter, reviewed Slice-1 public business route
+Scope: LAN credential transport, primary login/session HTTP adapter, reviewed Slice-1 public business route, Windows user-space TLS key custody
 Authority dependencies: `DECISIONS.md`, `DECISIONS_V3.md`, `DECISIONS_V4.md`, `DECISIONS_V5.md`, `DECISIONS_V6.md`, `DECISIONS_V7.md`, `docs/SERVICE_API_CONTRACT_V3.md`, `docs/TARGET_PRODUCT_ARCHITECTURE_V3.md`, `docs/LAN_EDGE_STATE_V2.md`, `docs/LAN_HOST_DOMAIN_V1.md`, `docs/NON_FUNCTIONAL_BASELINE_V1.md`
 
 ## 1. Security decision
 
-Reusable user credentials must not cross plaintext HTTP. P-256 client request signing authenticates the paired device and binds method, target and exact request body, but it does not provide confidentiality for a password.
+Reusable user credentials must not cross plaintext HTTP. P-256 request signing authenticates/binds the paired device, method, target and exact body, but it does not encrypt a password. The reviewed transport is direct HTTPS in the LAN Service Kestrel listener.
 
-The reviewed transport is therefore direct HTTPS in the LAN Service Kestrel listener. The production trust target is a publicly trusted certificate for the canonical LAN hostname:
+Canonical production-trust names:
 
 - BETA: `lan-beta.supra.cc.cd`
 - STABLE: `lan.supra.cc.cd`
 
-The certificate/private key is loaded from a user-space PFX with ephemeral key loading. The design does not require installing a certificate into the company Windows certificate store and does not authorize changes to company firewall, router/AP, internal DNS or other corporate policy.
+Production requires a publicly trusted certificate. CI self-signed certificates with explicit thumbprint pinning are test-only and are never an accepted browser/PDA trust mechanism.
 
-A self-signed certificate with explicit thumbprint pinning is used only inside CI to prove the runtime TLS and HTTP behavior. It is not an accepted production/browser trust mechanism and must not be converted into a user click-through exception.
+No design step here authorizes changes to company certificate stores, firewall, router/AP, internal DNS or other corporate policy.
 
-## 2. Runtime modes
+## 2. TLS key custody on Windows
 
-### No TLS PFX configured
+The preferred Windows ordinary-user runtime input is:
 
-The LAN Service remains `HTTP_READ_ONLY`.
+- `VHDCHY_LAN_TLS_PROTECTED_PFX_PATH`
 
-- read-only health/meta/capability/sync-status endpoints remain available;
+The file contains a complete PFX encrypted at rest with Windows DPAPI `CurrentUser`. The entropy binds the protected blob to VHDCHY, the target environment and canonical LAN hostname. The decrypted PFX exists only in process memory and plaintext buffers are zeroed after import.
+
+Before Kestrel starts, the loader verifies:
+
+- a private key exists;
+- current certificate validity window is valid;
+- exact SAN matches the canonical hostname;
+- wildcard matching and CN fallback are not accepted;
+- TLS Server Authentication EKU is accepted when EKU restrictions exist.
+
+On Windows the decrypted certificate is imported with `UserKeySet` and without `PersistKeySet`. This gives Schannel temporary current-user key material without installing the certificate into a Windows certificate store and without administrator rights. The earlier `EphemeralKeySet` approach was rejected by real Windows CI because Schannel could not complete the server TLS handshake with that private-key form.
+
+Compatibility/test inputs remain available:
+
+- `VHDCHY_LAN_TLS_PFX_PATH`
+- `VHDCHY_LAN_TLS_PFX_PASSWORD`
+
+Only one source may be configured. Raw production PFX/private-key material must not be committed to GitHub.
+
+## 3. Runtime modes
+
+### No certificate configured
+
+The LAN Service remains `HTTP_READ_ONLY`:
+
+- read-only health/meta/capability/sync-status remain available;
 - login and reviewed business mutation routes are not registered;
 - generic mutation paths remain fail-closed with HTTP 503;
 - `businessMutationEnabled=false`.
 
-This is the safe default and preserves the earlier fail-closed behavior.
+### Valid certificate configured
 
-### TLS PFX configured and valid
+Kestrel serves HTTPS on the configured ordinary-user high port. TLS alone does not enable business mutation: synchronized authority + operational snapshots, paired-client security, executable primary credential authority, secure route wiring and authorization/domain/command gates must also pass.
 
-Kestrel listens using HTTPS on the configured ordinary-user high port. The service validates that the PFX exists, contains a private key and is within its certificate validity period.
+Health/meta expose certificate storage mode and expiration so renewal can be monitored without exposing private material.
 
-The reviewed secure routes are registered, but business mutation becomes available only when the complete readiness chain is also satisfied: synchronized authority + operational snapshots, paired signed-client security, executable primary credential authority, secure route wiring and the existing command/domain authorization gates.
-
-TLS configuration alone never bypasses readiness.
-
-## 3. Reviewed HTTP routes
+## 4. Reviewed HTTP routes
 
 ### `POST /api/v1/auth/login`
 
-Requirements:
+Requires HTTPS, an active paired client/device, current security epoch, valid P-256 proof over method/target/body/timestamp/nonce, replay/timestamp checks, synchronized primary-login authority and valid normal-user primary credentials.
 
-1. HTTPS;
-2. active paired client/device;
-3. current security epoch;
-4. valid P-256 signature over method + exact route target + exact body hash + timestamp + nonce;
-5. replay/timestamp checks;
-6. synchronized primary-login authority;
-7. valid normal-user primary credentials.
+The body accepts only `username` and `password`. Passwords are verification input only and are not intentionally logged. Successful normal-user login issues a durable LAN session bound to device, security epoch and authority generation.
 
-The request body accepts only `username` and `password`. The password is used only for verification and is not returned or intentionally logged.
-
-A successful normal-user login issues a durable LAN session bound to device, security epoch and authority snapshot generation.
-
-ROOT semantics are unchanged: a permanent ROOT password is not introduced. The current primary credential verifier returns `ROOT_EMAIL_OTP_REQUIRED`; the public ROOT email-OTP flow is outside this V1 route and remains pending.
-
-If authority marks `mustChangePassword=true`, that state is retained in the session and ordinary business mutation remains blocked. A reviewed public password-change route is still pending.
+ROOT remains email-OTP authority; no permanent ROOT password is introduced. `mustChangePassword=true` remains session evidence and blocks ordinary business mutation until the reviewed public password-change/recovery path exists.
 
 ### `POST /api/v1/data/commands`
 
-Requirements:
+Requires HTTPS, valid Bearer LAN session, valid paired-device signature over the exact raw body, session/device/security-epoch binding, current authority/session freshness, clear `MUST_CHANGE_PASSWORD`, current permission/domain/command authorization and reviewed Slice-1 command support.
 
-1. HTTPS;
-2. valid Bearer LAN session;
-3. valid paired-device signed request over the exact raw business body;
-4. session/device/security-epoch binding;
-5. current authority snapshot/session freshness;
-6. `MUST_CHANGE_PASSWORD` clear;
-7. current permission/domain/command authorization;
-8. reviewed Slice-1 command support.
+Authenticated actor identity is server-derived. `EMPLOYEE_PORTRAIT_REPLACE` remains fail-closed at the unresolved portrait lifecycle gate.
 
-The HTTP adapter passes the exact signed raw request body into `LanBusinessRouteCoordinator`; authenticated actor identity comes from server-side session evidence, never client-supplied actor fields.
-
-`EMPLOYEE_PORTRAIT_REPLACE` remains fail-closed at the unresolved portrait lifecycle semantic gate.
-
-## 4. Request proof headers
-
-The secure routes use the existing paired-client proof:
+## 5. Request proof headers
 
 - `X-VHDCHY-Device-Id`
 - `X-VHDCHY-Security-Epoch`
 - `X-VHDCHY-Timestamp-Ms`
 - `X-VHDCHY-Nonce`
 - `X-VHDCHY-Signature`
+- business route additionally: `Authorization: Bearer <token>`
 
-Business requests additionally carry the LAN session using `Authorization: Bearer <token>`.
-
-Signed request bodies are bounded to 128 KiB and parsed as strict UTF-8. Query strings are rejected on the exact reviewed signed routes so the signed route target cannot differ from the executed route.
-
-## 5. Runtime configuration
-
-Current runtime inputs:
-
-- `VHDCHY_LAN_TLS_PFX_PATH`
-- `VHDCHY_LAN_TLS_PFX_PASSWORD`
-- existing `VHDCHY_ENV`
-- existing `VHDCHY_CLUSTER_ID`
-- existing `VHDCHY_LAN_PORT`
-- existing `VHDCHY_LAN_DATA_ROOT`
-
-The PFX must remain outside source control. No production private key or certificate password may be committed to GitHub.
+Signed bodies are bounded to 128 KiB and strict UTF-8. Query strings are rejected on the exact reviewed signed routes.
 
 ## 6. Automated evidence
 
-Source chain includes:
+### Secure HTTP E2E
 
-- explicit secure-route readiness input;
-- TLS-gated login/session adapter;
-- TLS-gated public Slice-1 business adapter;
-- HTTP read-only fallback when TLS is absent;
-- E2E harness that launches the real LAN Service process.
+Workflow `34811861697`, job/check `103874646267`, commit `63ceeb6a8db865ced1870209c7cb74d4f65baea1`: **SUCCESS**.
 
-Dedicated workflow `34811861697`, job/check `103874646267`, commit `63ceeb6a8db865ced1870209c7cb74d4f65baea1`: **SUCCESS**.
+Proven on the real LAN Service process: HTTP read-only bootstrap, TLS listener, plaintext HTTP not reaching credentials, signed normal-user login, wrong-password rejection, signed-body tamper rejection, login/business replay rejection, durable session, authorized `EMPLOYEE_CREATE`, session reuse after restart, no password in captured diagnostics, SQLite FK/quick-integrity checks.
 
-The E2E proof covers:
+### Windows DPAPI/Schannel TLS E2E
 
-- plaintext HTTP does not successfully reach the credential route on the HTTPS listener;
-- paired signed normal-user login;
-- wrong-password rejection;
-- exact signed-body tamper rejection;
-- login replay rejection;
-- durable LAN session issuance;
-- signed authorized `EMPLOYEE_CREATE` execution through the public HTTP adapter;
-- business replay rejection;
-- LAN Service restart followed by successful reuse of the durable valid session;
-- password absent from captured service diagnostics;
-- SQLite foreign-key and quick integrity checks.
+Commit `376cb0976f481acf68e8e21654d3d6593e98a81b`:
 
-The same HEAD also passed baseline workflow `34811861613`.
+- workflow `34817069447`, job/check `103889883955` (`dpapi-tls`): **SUCCESS**;
+- secure-http regression workflow `34817069438`, job/check `103889884043`: **SUCCESS**;
+- clean baseline workflow `34817069440`, job/check `103889883747`: **SUCCESS**.
 
-## 7. What this does not prove
+Windows harness markers:
 
-This V1 source/CI PASS does not prove:
+- `dpapiCurrentUser=PASS`;
+- `userSpacePfx=PASS`;
+- `canonicalSan=PASS`;
+- `wrongHostRejected=PASS`;
+- `corruptBlobRejected=PASS`;
+- `rawPfxDiskLeak=PASS`.
 
-- issuance/renewal of a publicly trusted production certificate;
-- canonical DNS resolution and certificate hostname acceptance on the actual company LAN;
-- ordinary-user Windows browser trust in the company environment;
-- real NLS-MT90/PDA HTTPS acceptance and reconnection behavior;
+This proves DPAPI-protected PFX at rest plus a working Schannel/Kestrel TLS handshake under the current Windows user without a certificate-store install. It does not prove the intended company laptop/network or a publicly trusted CA certificate.
+
+## 7. Provider trust status
+
+Read-only Cloudflare prerequisite inspection at workflow `34816004518`, job `103886701628`: **SUCCESS**.
+
+Verified live on 2026-09-14:
+
+- exact configured Cloudflare account token is active;
+- zone `supra.cc.cd` is active under the expected account;
+- `lan-beta.supra.cc.cd` has no existing DNS record;
+- `_acme-challenge.lan-beta.supra.cc.cd` has no existing DNS record.
+
+This is **read-only evidence only**. DNS Edit permission has not been proven and must not be inferred.
+
+## 8. What this does not prove
+
+Still open:
+
+- actual public-CA issuance/renewal for `lan-beta.supra.cc.cd`;
+- DNS write capability with a reviewed least-privilege credential;
+- canonical DNS resolution and certificate hostname acceptance on the company LAN;
+- ordinary-user company Windows browser trust;
+- real NLS-MT90/PDA HTTPS/reconnection behavior;
 - ROOT email-OTP HTTP flow;
 - public password-change/recovery route;
 - Cloud reconciliation machine/service authentication;
 - physical >=60-minute Internet-cut continuity acceptance;
 - STABLE production acceptance.
 
-These boundaries remain separate gates and must not be inferred from CI TLS success.
+## 9. Next gate
 
-## 8. Next acceptance gate
-
-The next LAN transport acceptance is to provision a publicly trusted BETA certificate for `lan-beta.supra.cc.cd` without requiring company-admin changes, configure canonical DNS/reachability as permitted by the approved architecture, and prove HTTPS from the intended ordinary-user company Windows environment and real PDA/NLS-MT90 path.
-
-Until that physical/provider evidence exists, status remains `IMPLEMENTED_AUTOMATED`, not `ACCEPTED`.
+Build/prove a separate user-space certificate manager that performs DNS-01 issuance/renewal with a least-privilege DNS credential, never exposes that credential to LAN Service, writes only a DPAPI-protected PFX for the current Windows user, and cleans challenge records fail-closed. Only after this source path is reviewed may live DNS mutation/issuance be attempted under verified provider permissions.
