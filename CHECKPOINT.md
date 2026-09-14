@@ -1,9 +1,9 @@
 # CHECKPOINT — VHDCHY
 
-checkpoint_version: 40
+checkpoint_version: 41
 protocol: AI_AUTHORITY_RESUME_V2
 status: EXECUTING_PRODUCT_V7_BETA
-reconciled_through_commit: 3a6527e74a33ce2dcdafdbbd93da5ab82da50f2e
+reconciled_through_commit: 703c0990c924f2b490241f38c513238c1369f652
 action_mode: AUTONOMOUS_PARALLEL
 active_lanes: REPO_GOVERNANCE / SHARED_DOMAIN / CLOUD_SERVICE / LAN_FULL_SERVICE / AUTH / GOOGLE_SYNC / WEB_ONLINE_LAN / ANDROID_PDA / RECONCILIATION / STABLE_PREPARATION
 paused_lanes: PHYSICAL_CORPORATE_LAN_REGRESSION
@@ -30,16 +30,19 @@ context_index_ref: CONTEXT_INDEX.md
 
 ## Resume reconciliation state
 
-Checkpoint v39 was reconciled only through `3784ace856ff85c68e4f446311475ff27649366c`. Before this handoff, current `main` had advanced through the reconciliation machine-auth/sender work. The changed current-state/source lane was reconciled and persisted into:
+Checkpoint v40 was reconciled through `3a6527e74a33ce2dcdafdbbd93da5ab82da50f2e`. Current `main` then advanced through three decision-independent commits:
 
-- `CURRENT_STATE.md` commit `e30ea58a53253818e2436673fc2d96022d679d7c`;
-- `NEXT_ACTIONS.md` commit `3a6527e74a33ce2dcdafdbbd93da5ab82da50f2e`.
+- `717a40b20f31a51c6d21885726737b7edabf4c36` — checkpoint handoff only;
+- `e64bc9c9c2521ed02f7778b896045d3fb46c85d8` — aggregate LAN CI capability assertion repaired to the current reconciliation contract;
+- `703c0990c924f2b490241f38c513238c1369f652` — LAN CI validation note pinning the current fail-closed capability markers.
+
+No active decision/authority layer changed in that range. FOCUSED reconciliation is complete through `703c0990c924f2b490241f38c513238c1369f652`.
 
 A fresh chat must still live-read `AI_ENTRYPOINT.md` and execute the normal bootstrap. If HEAD is later than `reconciled_through_commit`, inspect those later changes before continuing.
 
-## Cloud/LAN reconciliation continuation — SOURCE/CI PASS for signed transport slice
+## Cloud/LAN reconciliation continuation — signed transport SOURCE/CI PASS
 
-The latest source now contains an isolated authenticated LAN->Cloud reconciliation path:
+The source contains an isolated authenticated LAN->Cloud reconciliation path:
 
 - public Worker route `POST /api/v1/reconciliation/events` isolated from unrelated mutation routes;
 - signed machine-request verification using HMAC-SHA256 over the canonical request contract;
@@ -54,26 +57,23 @@ Worker-side accepted evidence:
 - route-coverage commit `a2932d95fb8289ad78be7102d597d3b4a95561ce`;
 - clean-baseline run `34832612667`: **SUCCESS**.
 
-Latest LAN-side accepted dedicated evidence at HEAD `4b202351c62d7439569fb72b9aa39794c34769c7`:
+Same-HEAD repaired evidence at `703c0990c924f2b490241f38c513238c1369f652`:
 
-- `Validate LAN Cloud reconciliation queue` run `34833117039`: **SUCCESS**;
-- `Validate clean baseline` run `34833117051`: **SUCCESS**;
-- `Build portable LAN Windows host package` run `34833117192`: **SUCCESS**.
+- aggregate `Build product foundations` run `34835154934`: **SUCCESS**;
+- dedicated `Validate LAN Cloud reconciliation queue` run `34835154937`: **SUCCESS**;
+- `Validate clean baseline` run `34835154892`: **SUCCESS**.
 
-Therefore the signed reconciliation transport source slice is **SOURCE/CI PASS**.
+The prior aggregate `lan-service` regression from run `34833117353` is therefore **CLOSED**. Do not repeat diagnosis of that historical failure unless a later HEAD introduces a new failure.
 
-## Open aggregate CI regression — MUST RESUME FIRST IN SOURCE LANE
+## Current reconciliation finality gap
 
-At the same HEAD `4b202351c62d7439569fb72b9aa39794c34769c7`:
+Cloud currently durably ingests LAN events into `edge_event_ingest` with replay/collision/receipt checks, but successful ingestion still returns only `RECEIVED`.
 
-- aggregate workflow `Build product foundations` run `34833117353`: **FAILURE**;
-- failed job `lan-service` / check `103940791504`;
-- failed step: `Build and smoke-test LAN Service`;
-- sibling jobs `android-apk`, `web-contract`, `cloud-service`: **SUCCESS**.
+Current contract requires final `LAN_RECONCILED_CLOUD_COMMITTED` only after the LAN-originated event has passed canonical Cloud business semantics and one durable Cloud transaction has committed the required current state + immutable `domain_events` evidence + required async work + edge-to-canonical linkage.
 
-This does not invalidate the dedicated reconciliation harness PASS, but it means aggregate LAN product-foundation release evidence is not clean. Diagnose and repair this regression first, then require both the aggregate LAN job and dedicated reconciliation harness to PASS at the repaired HEAD.
+Current Worker `/api/v1/data/*` business routes remain unimplemented, so finality must not be fabricated by merely changing inbox status. The next source slice is to implement a reviewed canonical Slice-1 reconciliation adapter/transaction for supported commands, preserve explicit conflicts, and return canonical event/time only after durable commit.
 
-Do not increase project % merely for restoring aggregate CI parity unless the progress model supports a phase-level delta.
+Deployment preparation must also reconcile the Worker module manifest/bindings: `deploy.beta.json` currently predates the newer reconciliation modules, and the upload path must preserve/provision the reviewed machine-auth secret binding instead of silently dropping it. Run read-only provider inspection before any deployment mutation.
 
 ## Account-security retained state
 
@@ -104,11 +104,12 @@ Other retained LAN evidence:
 
 ## Current ready queue
 
-1. **Immediate source fix:** diagnose/repair aggregate `lan-service` smoke-test failure from run `34833117353`; revalidate aggregate + dedicated reconciliation harness together.
-2. **Reconciliation E2E:** real BETA signed LAN->Cloud HTTP path; final reconciliation acknowledgement/finality semantics; retry/restart/idempotency; downstream receipt no-duplicate proof; then cursor/delta/rebase.
-3. **Physical/provider chain:** target ordinary-user Windows host -> least-privilege DNS access -> ACME staging -> protected PFX + HTTPS restart -> production public CA after staging PASS -> company Windows/browser trust -> real NLS-MT90/PDA -> >=60-minute Internet-cut -> restoration reconciliation.
-4. **Account security:** real email delivery integration, ROOT OTP request/verify, normal recovery, V6 lifecycle tests and verified BETA migration state.
-5. **Web/Android/Gateway:** authenticated Web/business surfaces; Android endpoint/session/scanner/retry/HTTPS/reconnect; Google projection/upload receipt/retry/readback.
+1. **Reconciliation finality source:** implement/test canonical Slice-1 Cloud reconciliation transaction and honest final acknowledgement; preserve replay/restart/idempotency/conflict/downstream-dedup semantics.
+2. **Provider-safe activation:** read-only inspect exact BETA Worker bindings + D1 state; repair deployment module/secret-binding handling; apply required migration only after identity/precondition verification; deploy and verify real signed LAN->Cloud BETA path.
+3. **Post-finality reconciliation:** cursor/delta/rebase and downstream Google no-duplicate E2E proof.
+4. **Physical/provider chain:** target ordinary-user Windows host -> least-privilege DNS access -> ACME staging -> protected PFX + HTTPS restart -> production public CA after staging PASS -> company Windows/browser trust -> real NLS-MT90/PDA -> >=60-minute Internet-cut -> restoration reconciliation.
+5. **Account security:** real email delivery integration, ROOT OTP request/verify, normal recovery, V6 lifecycle tests and verified BETA migration state.
+6. **Web/Android/Gateway:** authenticated Web/business surfaces; Android endpoint/session/scanner/retry/HTTPS/reconnect; Google projection/upload receipt/retry/readback.
 
 ## Owner decision gate
 
