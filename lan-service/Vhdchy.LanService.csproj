@@ -15,6 +15,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Vhdchy.LanOperationalRefresh.Harness" />
+  </ItemGroup>
+
+  <ItemGroup>
     <EmbeddedResource Include="../contracts/commands.slice1.v1.json"
                       Link="Contracts/commands.slice1.v1.json"
                       LogicalName="VHDCHY.Contracts.commands.slice1.v1.json" />
