@@ -1,144 +1,169 @@
 # SERVICE AUTHORITY
 
-Status: ACTIVE / OWNER RECONCILED 2026-09-13
+Status: ACTIVE / OWNER RECONCILED 2026-09-14
 Baseline: `REPO-RESET-20260912-01`
+
+This file records known service/provider identities and authority boundaries. Provider facts below are the latest project-recorded verified state; **live-check the exact provider state before any provider mutation/deploy**.
 
 ## GitHub
 
 - Repo: `tamnv2/vanhanhsupradchungyen`
 - Visibility: PUBLIC
 - Current managing identity: `tamnv2` / `nguyenvantam050595@gmail.com`
-- Default branch: `main`
+- Default/authority branch: `main`
 - Pre-zero snapshot: `backup/pre-zero-20260912`
+
+GitHub `main` is persistent project authority for decisions/source/checkpoints. Provider runtime evidence may prove a status entry stale and must then be reconciled back to `main`.
 
 ## Google
 
-Current owner for Drive / Sheets / GAS: `tam95.supra@gmail.com`.
+Current authorized owner/operator for project Drive / Sheets / GAS: `tam95.supra@gmail.com`.
 
-Current BETA projection workbook:
+The separate domain Google account previously used/attempted for automation is not current project Drive/Sheets/GAS authority while unavailable. Its future recovery does not automatically transfer authority or data; any later transfer must be explicit and reviewed.
+
+Current BETA projection workbook recorded by the project:
+
 - Title: `VHDCHY BETA - PICK PACK 1291 - 2026 Q3`
 - ID: `1My2-jG6s8WCOAMox6DfGKKi9M0TBvSrfC2uE9xFNmmk`
 - Schema: `PP1291_SHEETS_BETA_V1`
 - Status: `PROVISIONED_NOT_LIVE`
 
-Current Google runtime scopes:
+Current recorded Google runtime scopes:
+
 - `https://www.googleapis.com/auth/spreadsheets`
 - `https://www.googleapis.com/auth/userinfo.email`
 
-Current CI OAuth scopes:
+Current recorded CI OAuth scopes:
+
 - `https://www.googleapis.com/auth/script.projects`
 - `https://www.googleapis.com/auth/script.deployments`
 
-Google Cloud / OAuth BETA:
+Google Cloud / OAuth BETA recorded state:
+
 - Standard Cloud project: `VHDCHY-BETA`
 - OAuth app: External / In production
 - OAuth owner/operator: `tam95.supra@gmail.com`
 - CI client: `VHDCHY BETA CI`
-- Status: `PASS`
+- Last recorded status: `PASS`
 
-Google Apps Script BETA authority:
+Google Apps Script BETA recorded authority:
+
 - Script title: `VHDCHY BETA - Google Gateway`
 - Script ID: `11jvFS3xBRrl3hmZveMbQP7no_hNw50TmOA0zFrAUJtedal0FrMn2sfnQ`
 - Canonical managed deployment ID: `AKfycbzxRzxjeFyPpYQ39T3MJRL_sSKrhJhHXLY5LgGy16CnxuPEIFoJo8vr9XijrsxZttRtjQ`
 - Canonical Web App URL: `https://script.google.com/macros/s/AKfycbzxRzxjeFyPpYQ39T3MJRL_sSKrhJhHXLY5LgGy16CnxuPEIFoJo8vr9XijrsxZttRtjQ/exec`
-- Current verified immutable version: `3`
+- Current recorded immutable version: `3`
 - Source authority: `service/google-gateway/`
-- Runtime bootstrap: `PASS`
-- Versioned deployment / `/exec` identity + bootstrap verification: `PASS`
-- Projection contract protocol: `VHDCHY_PROJECTION_V1`
-- Projection contract deployment run: GitHub Actions `34753872034` — PASS
-- Projection write state: `FAIL_CLOSED / NOT_LIVE`; projection auth verifier and explicit enable state are required before writes are accepted.
+- Projection protocol: `VHDCHY_PROJECTION_V1`
+- Projection write state: `FAIL_CLOSED / NOT_LIVE`
 
-The managed deployment preserves the same canonical deployment ID and `/exec` URL across immutable versions. Version 3 adds the reviewed projection batch contract while retaining fail-closed behavior. Future releases update the same managed deployment rather than creating uncontrolled deployment identities.
+Sheets/Drive are projection/file-storage outputs, **never canonical business authority**. V3 requires stable identities/receipts so Cloud and LAN controlled output paths do not duplicate rows/files.
 
 ## Cloudflare
 
 Managing email: `nguyenvantam050595@gmail.com`.
 Intended zone/domain: `supra.cc.cd`.
 
-Verified BETA account/resource authority:
+Latest project-recorded BETA account/resource authority:
+
 - Account ID: `1b1695e4f2a3abfe08dc475b352c7f42`
-- API token form: account-owned API token stored only in GitHub Environment `beta`
-- BETA Worker: `vhdchy-beta` — FOUND / V3 DEPLOYED
-- BETA Worker public origin: `https://beta.supra.cc.cd`
-- BETA Worker `workers.dev`: DISABLED
-- BETA Worker bindings: `DB` (D1), `APP_ENV` (plain text), `BUILD_SHA` (plain text), `GAS_EXEC_URL` (plain text)
-- BETA D1: `vhdchy-data-beta` — FOUND
+- API token: stored only in GitHub Environment `beta`, never source/chat
+- BETA Worker: `vhdchy-beta`
+- BETA origin: `https://beta.supra.cc.cd`
+- BETA Worker `workers.dev`: disabled in last recorded verification
+- BETA D1: `vhdchy-data-beta`
 - BETA D1 database ID: `37eb7d59-05c0-4ba2-8162-cb6a9fe5d492`
-- Initial identity verification run: GitHub Actions `34699120539` — PASS
-- Automated pre-migration D1 inspection run: GitHub Actions `34749417468` — PASS
-- Guarded BETA D1 migration run: GitHub Actions `34752340290` — PASS
-- Independent post-migration D1 inspection run: GitHub Actions `34752381290` — PASS
-- Guarded Worker BETA deploy run: GitHub Actions `34752917714` — PASS
-- Independent post-deploy provider inspection run: GitHub Actions `34752966242` — PASS
+- D1 schema marker: `business_core_v3`
 
-Current authoritative D1 state:
-- Provider schema version: `business_core_v3`
-- Target table contract: 54 application tables plus D1 internal `_cf_KV`
-- Required seeds verified: `clusters=1`, `modules=1`, `cluster_modules=1`, `module_domain_registry=6`, `resource_type_catalog=4`, `labor_type_catalog=4`, `root_security_policy=1`, `vhdchy_meta=8`
-- Business rows remain zero after migration
-- Legacy V1 tables `resources`, `session_resource_bindings`, `document_metadata`, `d1_migrations` are absent
-- `PRAGMA foreign_key_check`: PASS
-- `PRAGMA quick_check`: PASS
-- Classification: `BUSINESS_CORE_V3 / MIGRATION_PASS / ZERO_BUSINESS_ROWS`
+Recorded verification history includes guarded D1 migration/provider inspection and guarded Worker deployment/post-deploy inspection. Before new provider mutations, verify exact current identity/bindings/schema/routing rather than relying only on this historical record.
 
-Current authoritative Worker BETA state:
-- Source authority currently deployed: `service/worker/src/index.js`
-- Deployed build SHA: `6b23f7134e02c7b53571c0a151f97f27a86bcb2e`
-- Runtime state: `BUSINESS_CORE_V3`
-- `/health`: PASS with BETA environment and D1 `business_core_v3`
-- `/health/deep`: PASS; Google Gateway not degraded at deployment verification
-- `/api/v1/meta`: PASS
-- `/api/v1/capabilities`: PASS; D1 authority and anonymous mutation disabled
-- Custom domain preserved: `beta.supra.cc.cd`
-- `workers.dev` remained disabled before and after deployment
+D1 remains the central consolidated canonical business store after synchronization under current architecture. LAN local authority accepted during local operation reconciles into this model; Sheets/Drive do not replace it.
 
-Auth/session/permission and outbox source modules are under active development on `main`; they are not treated as deployed Worker runtime until the guarded multi-module deployment path and runtime acceptance tests pass.
+Expected STABLE names remain reserved/preparatory until final promotion:
 
-The D1 migration was executed only after exact preflight and fixed reviewed migration inputs. The Worker deployment was executed only after exact resource/routing/binding/schema preflight and then independently reverified. Raw Cloudflare credentials remain outside source and chat.
-
-Expected STABLE names remain reserved only:
 - STABLE Worker: `vhdchy-stable`
 - STABLE D1: `vhdchy-data-stable`
 
-Cloudflare operations are fail-closed: missing/mismatched expected resources or unexpected provider state must stop the affected mutation/deployment; independent safe work continues under `AI_AUTHORITY_RESUME_V2`.
+STABLE business activation remains blocked until mandatory BETA acceptance plus explicit Owner promotion approval. Promotion must use the exact accepted BETA release/artifacts and must not copy BETA runtime/business data by default.
 
-## LAN Service authority model
+## LAN Service authority model — V3/V4/V6 current
 
-Current product authority is defined by `docs/TARGET_PRODUCT_ARCHITECTURE_V2.md` and D-042..D-048.
+Current LAN product authority is defined by the latest applicable decisions and these current guides:
 
-- LAN Service is a first-class substitute runtime, not merely a transport test.
-- Normal global canonical structured authority remains D1 after Cloud commit/reconciliation.
-- In `LAN_RELAY`, Cloud Service/D1 remains the immediate authoritative commit path.
-- In `LAN_AUTONOMOUS`, the LAN Service may durably accept reviewed offline-capable business events into local edge state/event/outbox while Cloud is unreachable; these events are pending global reconciliation rather than disposable receipts.
-- Successful reconciliation commits/reconciles them into D1 exactly once where non-conflicting.
-- Conflicts remain explicit evidence and must not be silently overwritten/dropped.
-- LAN Service may not use Google Sheets as a fallback database.
+- `DECISIONS_V3.md` through `DECISIONS_V7.md`;
+- `docs/TARGET_PRODUCT_ARCHITECTURE_V3.md`;
+- `docs/SERVICE_API_CONTRACT_V3.md`;
+- `docs/LAN_EDGE_STATE_V2.md` plus later current source/evidence;
+- `docs/LAN_HOST_DOMAIN_V1.md`;
+- `docs/DELIVERY_PLAN_V5.md`.
 
-No production LAN Service implementation is yet authoritative/runtime-PASS. The prior transport-only `android-pilot/` + `lan-agent/` build is a disposable prototype/reference only.
+The former V2 `LAN_RELAY` / `LAN_AUTONOMOUS` framing is historical and must not override V3.
 
-## Website / Android client authority
+Current authority:
 
-- Website and APK use one reviewed Service/domain contract.
-- Website is the wider/full browser surface.
-- APK is the PDA-optimized operational surface.
-- Neither client may bypass Service/domain rules with direct D1/Sheets writes.
-- Both must understand Cloud-direct, LAN-relay, LAN-autonomous and pending-sync/conflict statuses.
+- LAN Service is a **full first-class local Service substitute**, not merely a transport relay.
+- Cloud/LAN share one business command/event meaning and may use different runtime/persistence adapters only.
+- While routed through LAN, LAN may accept approved business operations durably into local current state + immutable event/outbox under the current authority snapshot.
+- If Cloud is reachable, LAN synchronization may run continuously/opportunistically even while users remain routed through LAN.
+- If Google is reachable, LAN may perform controlled approved Sheets projection/Drive upload with stable identities/receipts.
+- If Internet/Google is unavailable, approved Google work/media may be queued/staged locally.
+- Cloud synchronization consumes local events/outbox, never Sheets/Drive as source authority.
+- Conflicts remain explicit evidence; silent last-write-wins/drop is forbidden.
+- LAN must not use Sheets as a fallback database.
+- Host requirement remains ordinary-user/no-admin; do not bypass corporate router/firewall/network policy.
+
+Current source has materially progressed beyond the old transport prototype: local operational state materialization, replay/actor evidence, employee/MNV/attendance Slice-1 behavior, atomic active-code uniqueness and durable staged-media primitives have automated evidence. Public LAN business mutations remain fail-closed until current readiness/auth/domain coverage is accepted.
+
+Physical company-network/PDA validation is still separate and pending for the current product path.
+
+## Offline authority/security — current V6 direction
+
+The former unresolved duration-only offline TTL gate is obsolete. Current offline behavior uses the latest synchronized local authority snapshot under the Owner-approved availability/security tradeoff; remote authority changes made during disconnection cannot be known locally until reconnect/refresh.
+
+This does **not** remove security requirements:
+
+- current authenticated client <-> LAN channel remains required;
+- LAN pairing/auth/security epoch and permission enforcement must be completed before broader public business mutation exposure;
+- the authority-snapshot version accepting an operation must remain auditable;
+- privileged/security operations keep their current explicit permission/recovery boundaries;
+- only allowed retry-safe client work may exist as client-only queue.
+
+Canonical continuity acceptance is minute-level: Window 2 must sustain approved local workflow for **>=60 minutes** after warmup and Internet cut while valid LAN connectivity remains. Post-restoration synchronization is a separate acceptance section; host restart/power loss is also separate.
+
+## Website authority — V7
+
+- Online Web and LAN Web are **one product with one shared design-system/artifact direction**, not unrelated interfaces.
+- Both consume the same current Service/domain semantics.
+- V7 visual direction comes from the Owner-supplied DNSHE screenshots: dark navy navigation, light blue/white field, white rounded cards, royal-blue CTA and clean enterprise-console hierarchy.
+- DNSHE branding/proprietary assets must not be copied.
+- LAN-critical fonts/icons/scripts/styles/images must be locally available so the shell remains usable without Internet.
+- Network/sync/queue state must be visible where it affects behavior.
+- V5 language rule remains Vietnamese / English / Chinese, default English.
+
+## Android/PDA authority — V7
+
+- Android/PDA App is the compact operational client of the same current business/domain contract.
+- V7 authorizes Pick Pack 1291 as **UI/UX reference only**, adapted to VHDCHY.
+- Pick Pack business logic/data/credentials/runtime architecture do not become VHDCHY authority.
+- Exact visual details must be based on actual accessible reference source/artifacts, not invented.
+- Scanner/QR actions must invoke current domain commands rather than bypass Service rules.
+- Reviewed legacy transport mechanics such as discovery/cache/hysteresis, durable queue/device sequence, ACK deletion and reconnect/resync may be deliberately re-adopted after adaptation to current contracts.
 
 ## Android signing
 
-Existing signing material is reference until locally re-verified. Do not use retired Pick Pack legacy signer. No keystore content or password may be committed.
+Signing material remains sensitive. Do not commit keystore contents or passwords. Do not use retired Pick Pack legacy signing material merely because Pick Pack is now a UI reference.
 
-## Unresolved offline security policy
+Current final App signing/release acceptance must use the reviewed VHDCHY signing path and exact accepted artifact.
 
-Do not invent or treat as locked:
-- exact offline credential/capability mechanism;
-- exact offline expiry/TTL;
-- privileged/security operations allowed in autonomous LAN mode;
-- authorization for explicit emergency autonomous-mode entry/exit.
+## Current unresolved product-semantic gate
 
-These remain fail-closed design gates until reviewed.
+Portrait replacement remains fail-closed where current Owner rules conflict:
+
+- previous portrait deletion is required immediately by one current rule;
+- LAN/offline media semantics allow staging when Drive is unavailable.
+
+Durable media infrastructure may proceed, but do not decide offline remote-portrait replacement behavior without explicit Owner authority.
 
 ## Secrets
 
-Secret values live only in provider secret stores / GitHub Environments or reviewed local secure storage when LAN security design is implemented. Repository files may contain only secret names, non-secret resource IDs, verification state and non-sensitive policy.
+Secret values live only in provider secret stores / GitHub Environments or reviewed local secure storage when LAN security is implemented. Repository files may contain only secret names, non-secret resource IDs, verification state and non-sensitive policy.
