@@ -1,9 +1,9 @@
 # CHECKPOINT — VHDCHY
 
-checkpoint_version: 39
+checkpoint_version: 40
 protocol: AI_AUTHORITY_RESUME_V2
 status: EXECUTING_PRODUCT_V7_BETA
-reconciled_through_commit: 3784ace856ff85c68e4f446311475ff27649366c
+reconciled_through_commit: 3a6527e74a33ce2dcdafdbbd93da5ab82da50f2e
 action_mode: AUTONOMOUS_PARALLEL
 active_lanes: REPO_GOVERNANCE / SHARED_DOMAIN / CLOUD_SERVICE / LAN_FULL_SERVICE / AUTH / GOOGLE_SYNC / WEB_ONLINE_LAN / ANDROID_PDA / RECONCILIATION / STABLE_PREPARATION
 paused_lanes: PHYSICAL_CORPORATE_LAN_REGRESSION
@@ -17,7 +17,6 @@ authority_v7_ref: DECISIONS_V7.md
 service_contract_ref: docs/SERVICE_API_CONTRACT_V3.md
 lan_edge_ref: docs/LAN_EDGE_STATE_V2.md
 lan_secure_http_ref: docs/LAN_SECURE_HTTP_V1.md
-lan_certificate_manager_ref: docs/LAN_CERTIFICATE_MANAGER_V1.md
 delivery_plan_ref: docs/DELIVERY_PLAN_V5.md
 progress_ref: docs/PROGRESS_TRACKING_V1.md
 context_index_ref: CONTEXT_INDEX.md
@@ -27,55 +26,69 @@ context_index_ref: CONTEXT_INDEX.md
 - Evidence-weighted total: **55.4% exact / 55% displayed**.
 - Phase 6 LAN continuity/offline/reconcile: **60%**.
 - Phase 7 Online/LAN Web UI: **25%**.
-- No progress increase is taken from governance cleanup or the current validated auth route slice because no additional phase-level completion delta is yet justified.
+- No percentage increase is recorded for the latest reconciliation transport source slice yet. Live network/finality/provider/physical evidence is still incomplete.
 
-## Full-audit reconciliation — 2026-09-14
+## Resume reconciliation state
 
-The audited current implementation remains aligned with Owner authority: full local LAN Service; common Cloud/LAN domain contract; D1 central consolidation after synchronization; LAN edge authority for locally accepted events; Google downstream only; no-admin host; Vietnamese-only current UI; STABLE fail-closed.
+Checkpoint v39 was reconciled only through `3784ace856ff85c68e4f446311475ff27649366c`. Before this handoff, current `main` had advanced through the reconciliation machine-auth/sender work. The changed current-state/source lane was reconciled and persisted into:
 
-Governance drift found during the audit was reconciled before this checkpoint:
+- `CURRENT_STATE.md` commit `e30ea58a53253818e2436673fc2d96022d679d7c`;
+- `NEXT_ACTIONS.md` commit `3a6527e74a33ce2dcdafdbbd93da5ab82da50f2e`.
 
-- `PROJECT_SCOPE.md` — V7 Vietnamese-only UI + current 55.4% / Phase 6 60%;
-- `CONTEXT_INDEX.md` — current progress authority;
-- `docs/OWNER_BUSINESS_RULES_V1.md` — V6 ROOT email OTP / optional TOTP / normal recovery semantics;
-- `docs/DATA_MODEL_GUIDE_V2.md` — V6 auth plus 0009/0010/0011 source-foundation vs live-provider distinction;
-- `docs/DELIVERY_PLAN_V5.md` — 55.4%, Phase 6 60%, Phase 7 25%, Vietnamese-only current acceptance;
-- `docs/LAN_SECURE_HTTP_V1.md` — certificate manager already source/CI PASS; next gate is target-host live trust;
-- `docs/LAN_SOURCE_REVIEW_20260913.md` — current V3 Service contract and correct context-specific LAN/D1 authority model;
-- `CURRENT_STATE.md` and `NEXT_ACTIONS.md` — current ready queue and validated account-security route slice.
+A fresh chat must still live-read `AI_ENTRYPOINT.md` and execute the normal bootstrap. If HEAD is later than `reconciled_through_commit`, inspect those later changes before continuing.
 
-The audit also confirmed that `Validate clean baseline` is an important invariant/freshness/source validator but is not by itself a semantic cross-document equivalence checker. Full audit/reconciliation remains required when authority/current guides drift.
+## Cloud/LAN reconciliation continuation — SOURCE/CI PASS for signed transport slice
 
-## Account-security continuation — SOURCE/CI PASS for current route slice
+The latest source now contains an isolated authenticated LAN->Cloud reconciliation path:
 
-Existing source already had normal password/session primitives and the V6 email-OTP state machine. This continuation added:
+- public Worker route `POST /api/v1/reconciliation/events` isolated from unrelated mutation routes;
+- signed machine-request verification using HMAC-SHA256 over the canonical request contract;
+- request binding includes method/path/timestamp/nonce/body hash/environment/key identity;
+- unsigned, stale and body/signature-mismatched requests are rejected;
+- LAN HTTPS sender creates the matching signed request;
+- LAN reconciliation pump runs only when complete Cloud endpoint + machine-auth runtime configuration is available; partial configuration fails closed;
+- Cloud `RECEIVED` means durable inbox receipt only and is not promoted to final `RECONCILED`/canonical-commit state.
 
-- public normal `POST /api/v1/auth/login`;
-- ROOT username-only bootstrap returning `ROOT_EMAIL_OTP_REQUIRED` without creating a permanent-password session;
-- public authenticated normal-user `POST /api/v1/auth/change-password`, including `MUST_CHANGE_PASSWORD` sessions;
-- bounded JSON request handling;
-- route tests for normal login/token persistence semantics, ROOT permanent-password exclusion and permanent-password establishment.
+Worker-side accepted evidence:
 
-Latest ROOT-bootstrap source/test commits:
+- route-coverage commit `a2932d95fb8289ad78be7102d597d3b4a95561ce`;
+- clean-baseline run `34832612667`: **SUCCESS**.
 
-- `2bffb170319f9bf6d6d5f1953655ce960115d35e`;
-- `1f2d328f21af90d09c5e3b260ad6452af05835c6`.
+Latest LAN-side accepted dedicated evidence at HEAD `4b202351c62d7439569fb72b9aa39794c34769c7`:
 
-Accepted validation evidence at checkpoint v38:
+- `Validate LAN Cloud reconciliation queue` run `34833117039`: **SUCCESS**;
+- `Validate clean baseline` run `34833117051`: **SUCCESS**;
+- `Build portable LAN Windows host package` run `34833117192`: **SUCCESS**.
 
-- HEAD `3bb22252a53ce25d69901c3261efd2ee3c54f57d`;
-- workflow run `34830186926`;
-- job/check `103931457439`;
-- result: **SUCCESS**;
-- Worker syntax, auth crypto contract, Worker unit tests, clean D1 schema and schema/runtime contract all PASS.
+Therefore the signed reconciliation transport source slice is **SOURCE/CI PASS**.
 
-Therefore this route slice is **SOURCE/CI PASS**.
+## Open aggregate CI regression — MUST RESUME FIRST IN SOURCE LANE
 
-Public ROOT email-OTP E2E remains incomplete by design: the current OTP primitive requires a real delivery callback and protected destination provisioning; no fake email delivery is permitted. Migration `0010_auth_v6_email_otp.sql` exists in source, but live BETA application must be verified rather than inferred.
+At the same HEAD `4b202351c62d7439569fb72b9aa39794c34769c7`:
 
-## Existing LAN accepted evidence
+- aggregate workflow `Build product foundations` run `34833117353`: **FAILURE**;
+- failed job `lan-service` / check `103940791504`;
+- failed step: `Build and smoke-test LAN Service`;
+- sibling jobs `android-apk`, `web-contract`, `cloud-service`: **SUCCESS**.
 
-Portable Windows LAN-host package at commit `e4731983fa681541c317d853276abc9bf206366e` remains source/CI PASS:
+This does not invalidate the dedicated reconciliation harness PASS, but it means aggregate LAN product-foundation release evidence is not clean. Diagnose and repair this regression first, then require both the aggregate LAN job and dedicated reconciliation harness to PASS at the repaired HEAD.
+
+Do not increase project % merely for restoring aggregate CI parity unless the progress model supports a phase-level delta.
+
+## Account-security retained state
+
+Current public normal-login + normal change-password + ROOT permanent-password exclusion/bootstrap remains **SOURCE/CI PASS**.
+
+Evidence:
+
+- source/test commits `2bffb170319f9bf6d6d5f1953655ce960115d35e`, `1f2d328f21af90d09c5e3b260ad6452af05835c6`;
+- validation run `34830186926`, job/check `103931457439`: **SUCCESS**.
+
+ROOT email-OTP delivery/request/verify and normal forgotten-password full E2E remain incomplete until real delivery integration and verified BETA migration/provider state exist. Do not fake delivery success.
+
+## Existing LAN accepted evidence retained
+
+Portable ordinary-user Windows LAN-host package at commit `e4731983fa681541c317d853276abc9bf206366e` remains source/CI PASS:
 
 - workflow `34821013175`, job/check `103902355956`: **SUCCESS**;
 - package version `0.2.2`;
@@ -91,13 +104,19 @@ Other retained LAN evidence:
 
 ## Current ready queue
 
-Primary physical/provider chain: target ordinary-user Windows host -> verified least-privilege DNS credential -> ACME staging -> production public CA -> company Windows/browser trust -> real NLS-MT90/PDA HTTPS/reconnection -> >=60-minute Internet-cut acceptance -> post-restoration reconciliation.
+1. **Immediate source fix:** diagnose/repair aggregate `lan-service` smoke-test failure from run `34833117353`; revalidate aggregate + dedicated reconciliation harness together.
+2. **Reconciliation E2E:** real BETA signed LAN->Cloud HTTP path; final reconciliation acknowledgement/finality semantics; retry/restart/idempotency; downstream receipt no-duplicate proof; then cursor/delta/rebase.
+3. **Physical/provider chain:** target ordinary-user Windows host -> least-privilege DNS access -> ACME staging -> protected PFX + HTTPS restart -> production public CA after staging PASS -> company Windows/browser trust -> real NLS-MT90/PDA -> >=60-minute Internet-cut -> restoration reconciliation.
+4. **Account security:** real email delivery integration, ROOT OTP request/verify, normal recovery, V6 lifecycle tests and verified BETA migration state.
+5. **Web/Android/Gateway:** authenticated Web/business surfaces; Android endpoint/session/scanner/retry/HTTPS/reconnect; Google projection/upload receipt/retry/readback.
 
-Parallel source lanes: ROOT email-OTP provider/public request+verify and normal recovery; LAN->Cloud reconciliation machine-auth/network E2E; authenticated Web/business surfaces; Android endpoint/session/scanner/retry/HTTPS; Gateway/Google receipt/retry/readback; broader business adapters.
+## Owner decision gate
 
-Portrait replacement remains the only current material product-semantic Owner decision gate and stays fail-closed.
+Portrait replacement remains the only current material product-semantic Owner decision gate: immediate deletion of previous portrait conflicts with offline staging while Drive is unavailable. Actual offline portrait replacement remains fail-closed; decision-independent media infrastructure may continue.
 
-STABLE activation remains blocked until mandatory BETA acceptance plus explicit Owner approval.
+## STABLE boundary
+
+STABLE business activation/promotion remains blocked until mandatory BETA acceptance plus explicit Owner approval.
 
 do_not_repeat:
-Do not treat memory as authority. Do not replay uncertain provider mutations. Do not treat package/source CI as physical acceptance. Do not generate target-host protected certificate material on a GitHub runner. Do not invent or fake email-OTP delivery. Do not infer live migration state from a migration file. Do not weaken fail-closed security/readiness. Do not make Google business authority. Do not silently resolve conflicts. Do not invent unavailable Pick Pack UI details. Do not copy DNSHE branding/assets. Do not inflate progress without acceptance evidence. Do not promote STABLE without explicit Owner approval.
+Do not treat memory as authority. Do not replay uncertain provider mutations. Do not treat source/package CI as physical acceptance. Do not treat `RECEIVED` as final Cloud reconciliation. Do not fake OTP delivery. Do not infer live migration/provider state from source files. Do not weaken fail-closed security/readiness. Do not make Google business authority. Do not silently resolve the portrait conflict. Do not invent unavailable Pick Pack UI details. Do not copy DNSHE branding/assets. Do not inflate progress without acceptance evidence. Do not promote STABLE without explicit Owner approval.
