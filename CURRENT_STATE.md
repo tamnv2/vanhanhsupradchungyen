@@ -2,6 +2,7 @@
 
 Updated: 2026-09-14
 Protocol: `AI_AUTHORITY_RESUME_V2`
+Current delivery plan: `docs/DELIVERY_PLAN_V5.md`
 Progress model: `docs/PROGRESS_TRACKING_V1.md`
 Active authority: `DECISIONS.md` + `DECISIONS_V3.md` + `DECISIONS_V4.md` + `DECISIONS_V5.md` + `DECISIONS_V6.md` + `DECISIONS_V7.md`
 
