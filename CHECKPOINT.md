@@ -1,9 +1,9 @@
 # CHECKPOINT — VHDCHY
 
-checkpoint_version: 30
+checkpoint_version: 31
 protocol: AI_AUTHORITY_RESUME_V2
 status: EXECUTING_PRODUCT_V7_BETA
-reconciled_through_commit: 9754550ad13a50a71ea5825f75173d3fb176a430
+reconciled_through_commit: 471d529b5b374d165507a7e1940e8058df08f9a4
 action_mode: AUTONOMOUS_PARALLEL
 active_lanes: REPO_GOVERNANCE / SHARED_DOMAIN / CLOUD_SERVICE / LAN_FULL_SERVICE / AUTH / GOOGLE_SYNC / WEB_ONLINE_LAN / ANDROID_PDA / RECONCILIATION / STABLE_PREPARATION
 paused_lanes: PHYSICAL_CORPORATE_LAN_REGRESSION
@@ -22,20 +22,36 @@ context_index_ref: CONTEXT_INDEX.md
 
 ## Current project progress
 
-- Evidence-weighted total: **53.3% exact / 53% displayed**.
+- Evidence-weighted total: **54.6% exact / 55% displayed**.
 - Primary active phase: **Phase 6 — LAN continuity, local state, offline operation and reconciliation**.
 - Parallel incomplete lanes: Phase 4 core business Service/API; Phase 5 Gateway/integrations; Phase 7 Online+LAN Web V7 UI; Phase 8 Android/PDA App.
-- Progress is not elapsed-time/commit-count based. Scope expansion may legitimately reduce the percentage.
+- Current phase completion baseline:
+  - Phase 1 Scope/rules/architecture: 95%
+  - Phase 2 Repo/environments/providers/CI: 85%
+  - Phase 3 Cloud data/auth/Service foundation: 80%
+  - Phase 4 Core business Service/API: 65%
+  - Phase 5 Gateway/adapters/integrations: 55%
+  - Phase 6 LAN continuity/offline/reconcile: **55%**
+  - Phase 7 Online Web + LAN Web UI: **25%**
+  - Phase 8 Android/PDA App: 15%
+  - Phase 9 Account/admin/reporting/support: 35%
+  - Phase 10 Security/observability/recovery: 50%
+  - Phase 11 BETA physical/capacity/UAT: 10%
+  - Phase 12 STABLE production/handover: 0%
+- Progress is evidence-weighted, never elapsed-time/commit/tool-call based. Scope expansion may legitimately reduce the percentage.
 
-## Owner V7 UI authority — ACTIVE
+## Owner V7 UI / language / execution authority — ACTIVE
 
+- Current user-facing Web and Android/PDA implementation is **Vietnamese only**.
+- Multilingual switching, translation catalogs, locale persistence and Vietnamese/English/Chinese acceptance are deferred until a later explicit Owner decision.
 - Android/PDA App UI/UX direction: actual Owner Pick Pack 1291 App reference, adapted to current VHDCHY workflows/terminology/permissions/data/runtime.
 - `BACKUP PICK PACK 1291` remains NON_AUTHORITY except for this explicit UI/UX reference use. Do not inherit old business logic/data/credentials/runtime architecture.
 - Exact Pick Pack visual details must come from accessible actual source/artifacts; do not invent unavailable screen details.
 - Online Web + LAN Web visual direction: Owner-supplied DNSHE screenshots from 2026-09-14 — dark navy navigation, light blue/white field, white rounded cards, royal-blue primary actions, compact status/icon tiles, clean enterprise-console hierarchy.
 - Do not copy DNSHE branding/proprietary assets.
 - Online/LAN Web remain one product/shared design system. LAN-critical UI assets must be available locally without Internet.
-- V5 language rule remains Vietnamese / English / Chinese, default English.
+- Ready-queue parallel execution is mandatory: execute all independent safe ready nodes in parallel where tools permit; serialize only real dependencies/same-resource writes; a blocked node must not stall unrelated work.
+- Before ending a long tool/session block, report only evidence-backed PASS / FAILED / IN_PROGRESS / BLOCKED state, direct evidence IDs, exact/rounded progress and justified delta. Tool activity by itself is not progress.
 
 ## Current proven source foundations
 
@@ -63,7 +79,50 @@ Current source lineage has automated evidence for:
 
 Dedicated staged-media workflow run `34797198225` at `cddf8dc8358dce25febf0efd6c04c4cd73f602fb`: **SUCCESS**.
 
-This source/CI evidence is not physical company-network/PDA PASS.
+### LAN durable Cloud reconciliation queue — PASS foundation
+
+Current source includes `CloudSyncQueueStore` and dedicated acceptance vectors for:
+
+- transactional due-item claim;
+- retry/backoff;
+- immutable edge-event reconciliation envelope construction;
+- completed Google/Drive receipt attachment;
+- explicit durable conflict evidence;
+- reconciliation completion checkpoint metadata;
+- restart recovery of interrupted `SYNCHRONIZING` claims;
+- race-safe single ownership of a due item.
+
+LAN runtime startup now executes interrupted-claim recovery and advertises implemented durable queue mechanics separately from the still-planned Cloud reconciliation network transport.
+
+Dedicated workflow run `34801533266` at `013d5b310ae0f068510c56cdbfe7cf4ea7ffec66`: **SUCCESS**.
+Earlier dedicated vector run `34801198095`: **SUCCESS**.
+
+This is local source/CI evidence only. Cloud network ingestion/transport, complete sync cursor/delta/rebase behavior, full conflict resolution and physical continuity remain incomplete.
+
+### Online/LAN Web V7 shell — PASS foundation
+
+Current shared Web source provides:
+
+- Vietnamese-only current UI;
+- shared Online/LAN V7 shell;
+- DNSHE-inspired VHDCHY design tokens without DNSHE branding/assets;
+- responsive navigation/dashboard shell;
+- Service, Cloud sync, Google output and conflict status surfaces;
+- local/offline-safe critical UI assets;
+- runtime reads for `/api/v1/meta`, `/api/v1/capabilities`, `/api/v1/sync/status` and fail-closed `/api/v1/auth/me` handling;
+- no direct Google business bypass.
+
+Product-foundation workflow run `34801611019` at `41565f3b2ffdca473f756e33bd71769e16d8af13`: **SUCCESS** for Web, Cloud Service, Android APK and LAN Service jobs, including the Web V7 contract test.
+
+This does not claim completed login/auth flow, full business screens, ADMIN+ conflict-resolution UI or end-to-end Web product acceptance.
+
+### Android/PDA foundation
+
+- Current APK source builds successfully in product-foundation run `34801611019`.
+- Current visible foundation text is Vietnamese-only.
+- The authorized Pick Pack 1291 reference digest confirms the historical full backup and exact Beta128 APK, but the accessible current GitHub reference did not surface the actual final Android UI source/layout tree.
+- Exact Pick Pack visuals remain **not surfaced**; do not invent them.
+- Android product progress remains 15%; translation cleanup/build alone is not enough to advance the phase.
 
 ## Portrait semantic gate — still unresolved
 
@@ -72,66 +131,43 @@ One Owner-level product conflict remains open:
 - current rule requires previous portrait deletion immediately;
 - LAN/offline media semantics allow local staging when Drive is unavailable.
 
-Decision-independent durable media work is valid and now materially implemented/tested, but actual portrait replacement behavior while Drive is unavailable remains fail-closed until explicit Owner authority resolves the conflict.
+Decision-independent durable media work remains valid, but actual portrait replacement behavior while Drive is unavailable stays fail-closed until explicit Owner authority resolves the conflict.
 
-Do not infer that V7 UI decisions resolve this business semantic gate.
-
-## Current LAN acceptance boundary
+## Current LAN/public acceptance boundary
 
 - Public LAN business mutation readiness remains fail-closed until current auth/pairing/security-epoch/permission/domain readiness links the complete reviewed path.
+- Cloud reconciliation local queue is implemented/tested; the reviewed Cloud network ingestion/transport path is the primary next dependency.
 - Physical company ordinary-user Windows + real NLS-MT90 regression is pending.
-- Canonical V6 continuity acceptance: warm up connected, cut Internet while valid LAN remains, then sustain approved App + LAN Web + local business workflow for **Window 2 >=60 minutes**.
+- Canonical continuity acceptance: warm up connected, cut Internet while valid LAN remains, then sustain approved App + LAN Web + local business workflow for **Window 2 >=60 minutes**.
 - External Internet embeds may fail during the timed window.
 - Restoration sync/reconciliation is tested after the timed window.
 - Host restart/power-loss is a separate recovery gate.
 - Capacity gate includes synthetic 10/25/50/100 plus soak.
 
-## Delivery plan / project position
+## Immediate ready queue
 
-`docs/DELIVERY_PLAN_V5.md` is now the full start-to-STABLE plan.
+### Primary chain — Cloud/LAN reconciliation
 
-Current weighted phase baseline:
+1. Lock the Cloud reconciliation transport/API boundary against `docs/SERVICE_API_CONTRACT_V3.md` and existing D1 reconciliation schema.
+2. Implement Cloud ingestion without opening unrelated public mutations.
+3. Prove event/idempotency/device/source collision behavior.
+4. Attach already-completed LAN integration receipts without duplicate downstream Google output.
+5. Return stable reconcile/conflict/retry semantics.
+6. Add CI vectors.
+7. Then connect the LAN network sender and prove E2E retry/restart/reconciliation.
 
-| Phase | Completion |
-|---|---:|
-| 1 Scope/rules/architecture | 95% |
-| 2 Repo/environments/providers/CI | 85% |
-| 3 Cloud data/auth/Service foundation | 80% |
-| 4 Core business Service/API | 65% |
-| 5 Gateway/adapters/integrations | 55% |
-| 6 LAN continuity/offline/reconcile | 50% |
-| 7 Online Web + LAN Web UI | 20% |
-| 8 Android/PDA App | 15% |
-| 9 Account/admin/reporting/support | 35% |
-| 10 Security/observability/recovery | 50% |
-| 11 BETA physical/capacity/UAT | 10% |
-| 12 STABLE production/handover | 0% |
+### Independent parallel lanes
 
-Weighted total: **53.3%**.
+- LAN auth/pairing/security-epoch/permission/readiness and broader current business adapters.
+- Web authenticated/business surfaces where current Service routes/contracts are stable; never fake login success.
+- Android non-visual endpoint/scanner/domain-command/durable-queue work while exact Pick Pack visual source remains blocked.
+- Cloud/Gateway Google receipt/retry/readback and broader provider-neutral business work.
 
-## Reconciled project documents in this audit
+## Physical / STABLE
 
-- `DECISIONS_V7.md` — new Owner UI direction.
-- `docs/PROGRESS_TRACKING_V1.md` — new progress formula/weights/evidence rules.
-- `docs/DELIVERY_PLAN_V5.md` — full beginning-to-final-product delivery plan.
-- `CURRENT_STATE.md` — current 53% position and recent source evidence.
-- `NEXT_ACTIONS.md` — current dependency-aware execution order.
-- `CONTEXT_INDEX.md` — routes V7 + progress + delivery V5.
-- `SERVICE_AUTHORITY.md` — reconciled stale V2 LAN/offline/Web/App authority wording to V3–V7.
-- `docs/LAN_EDGE_STATE_V2.md` — removed stale V5 factor/lifetime block and added V6/V7 continuity/Web boundary.
-- `PROJECT_SCOPE.md` — final deliverable/UI/60-minute scope reconciled.
-- `docs/BETA_ACCEPTANCE_MATRIX.md` — V6/V7, 60-minute continuity, V7 UI, portrait fail-closed and capacity/UAT gates reconciled.
-- `.github/workflows/validate.yml` — validator now requires V7, Delivery Plan V5 and Progress Tracking V1. The immediately prior baseline run failed because the validator still hard-coded V4/V6-era invariants; that validator drift is now corrected and must be rechecked by the next run.
+Final company-network/no-admin/NLS-MT90 evidence remains physical-only and cannot be replaced by CI.
 
-## Immediate execution
-
-1. **Primary:** continue Phase 6 by closing broader current LAN business/auth/reconciliation readiness without opening public mutations prematurely.
-2. **Parallel:** extend Phase 4/5 business/provider coverage and current acceptance vectors.
-3. **Parallel Web:** implement the shared V7 design system, login shell and dashboard shell for Online/LAN Web with local outage-safe assets.
-4. **Parallel App:** surface actual Pick Pack 1291 App UI artifacts, then build the current PDA shell against stable current contracts.
-5. Keep portrait replacement fail-closed at the exact unresolved offline/Drive semantic boundary until Owner decides it.
-6. When source/product readiness is sufficient, execute target company-network/NLS-MT90 physical regression, >=60-minute continuity, capacity/soak and Owner UAT.
-7. STABLE remains blocked until exact BETA acceptance plus explicit Owner promotion approval.
+STABLE infrastructure may be prepared safely in isolation, but production business activation/promotion remains blocked until full BETA acceptance plus explicit Owner approval.
 
 do_not_repeat:
-Do not treat memory as authority. Do not replay provider migrations from remembered state. Do not claim provider delivery/projection live without current evidence. Do not bypass action-safety. Do not open LAN mutation routes before readiness/authz/domain acceptance. Do not mutate raw edge events. Do not make Google business authority. Do not silently last-write-wins conflicts. Do not treat CI as physical company-LAN proof. Do not invent Pick Pack UI details without reference evidence. Do not copy DNSHE branding/assets. Do not reintroduce stale duration-only offline TTL. Do not silently resolve the portrait immediate-delete/offline-staging conflict. Do not promote STABLE without explicit Owner approval.
+Do not treat memory as authority. Do not replay provider migrations from remembered state. Do not claim provider delivery/projection live without current evidence. Do not bypass action-safety. Do not open LAN mutation routes before readiness/authz/domain acceptance. Do not mutate raw edge events. Do not make Google business authority. Do not silently last-write-wins conflicts. Do not treat CI as physical company-LAN proof. Do not invent Pick Pack UI details without actual reference evidence. Do not copy DNSHE branding/assets. Do not reintroduce stale duration-only offline TTL. Do not silently resolve the portrait immediate-delete/offline-staging conflict. Do not build/expose multilingual UI in the current stage. Do not inflate progress from tool/commit activity without acceptance evidence. Do not promote STABLE without explicit Owner approval.
