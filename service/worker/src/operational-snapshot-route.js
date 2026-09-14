@@ -235,14 +235,27 @@ export function createD1OperationalSnapshotStore(db) {
         db.prepare(`
           SELECT e.canonical_event_id, d.ingested_at AS canonical_ingested_at
           FROM edge_event_ingest e
+          INNER JOIN edge_sources s ON s.edge_source_id=e.edge_source_id
           INNER JOIN domain_events d ON d.event_id=e.canonical_event_id
           INNER JOIN json_each(?) requested ON requested.value=e.canonical_event_id
-          WHERE e.edge_source_id=?
+          WHERE s.environment=?
+            AND s.cluster_id=?
+            AND s.edge_instance_id=?
+            AND s.status='ACTIVE'
+            AND s.domain_contract_version=?
+            AND s.edge_schema_version=?
             AND e.status='RECONCILED'
             AND e.canonical_event_id IS NOT NULL
             AND d.cluster_id=?
           ORDER BY e.updated_at, e.edge_event_id
-        `).bind(coverageJson, sourceId, request.clusterId)
+        `).bind(
+          coverageJson,
+          request.environment,
+          request.clusterId,
+          request.edgeInstanceId,
+          request.domainContractVersion,
+          request.edgeSchemaVersion,
+          request.clusterId)
       ];
 
       const result = await db.batch(statements);
@@ -284,9 +297,6 @@ export async function buildOperationalSnapshot(store, request) {
     .sort((a, b) => request.requestedCanonicalEventIds.indexOf(a) - request.requestedCanonicalEventIds.indexOf(b));
 
   if (request.requestedCanonicalEventIds.length > 0) {
-    if (!read.source) {
-      return { ok: false, code: 'SYNC_CONFLICT', status: 409, reason: 'EDGE_SOURCE_REQUIRED_FOR_COVERAGE' };
-    }
     const coverage = new Set(covered);
     const missing = request.requestedCanonicalEventIds.filter(id => !coverage.has(id));
     if (missing.length) {
