@@ -58,7 +58,7 @@ public sealed class LanStagedMediaStore
 
             await using var connection = await OpenAsync(cancellationToken);
             await EnsureSchemaAsync(connection, cancellationToken);
-            using var transaction = connection.BeginTransaction();
+            using var transaction = connection.BeginTransaction(deferred: false);
             try
             {
                 var existing = await ReadRowAsync(connection, transaction, logicalFileKey, cancellationToken);
@@ -158,11 +158,11 @@ public sealed class LanStagedMediaStore
         CancellationToken cancellationToken = default)
     {
         var verified = await ReadVerifiedAsync(logicalFileKey, cancellationToken);
-        if (verified.State is not ("STAGED" or "QUEUED"))
+        if (!string.Equals(verified.State, "STAGED", StringComparison.Ordinal))
         {
             throw new LanStagedMediaException(
                 "STAGED_MEDIA_STATE_INVALID",
-                $"Staged media is not available for Drive work in state {verified.State}.");
+                $"Staged media is not available for new Drive work in state {verified.State}.");
         }
 
         return new LanDriveUploadWork(
@@ -351,7 +351,6 @@ public sealed class LanStagedMediaStore
         }
         catch
         {
-            // Cleanup failure must not mask the authoritative staging/database result.
         }
     }
 
