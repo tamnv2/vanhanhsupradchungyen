@@ -114,6 +114,10 @@ Windows harness markers:
 
 This proves DPAPI-protected PFX at rest plus a working Schannel/Kestrel TLS handshake under the current Windows user without a certificate-store install. It does not prove the intended company laptop/network or a publicly trusted CA certificate.
 
+### User-space certificate manager
+
+`docs/LAN_CERTIFICATE_MANAGER_V1.md` records the separate ACME DNS-01 certificate manager as **IMPLEMENTED_AUTOMATED**. Dedicated workflow `34819836554` at commit `e11c5730a3e9cd7e212d07ea0fbdfc07aff77655` completed **SUCCESS**. This closes the earlier source-construction gate but does not prove live DNS write permission or public CA issuance on the intended host.
+
 ## 7. Provider trust status
 
 Read-only Cloudflare prerequisite inspection at workflow `34816004518`, job `103886701628`: **SUCCESS**.
@@ -131,17 +135,29 @@ This is **read-only evidence only**. DNS Edit permission has not been proven and
 
 Still open:
 
-- actual public-CA issuance/renewal for `lan-beta.supra.cc.cd`;
-- DNS write capability with a reviewed least-privilege credential;
+- DNS write capability with a reviewed least-privilege credential on the intended Windows host;
+- successful ACME staging issuance and cleanup for `lan-beta.supra.cc.cd`;
+- successful production public-CA issuance/renewal;
 - canonical DNS resolution and certificate hostname acceptance on the company LAN;
 - ordinary-user company Windows browser trust;
 - real NLS-MT90/PDA HTTPS/reconnection behavior;
-- ROOT email-OTP HTTP flow;
-- public password-change/recovery route;
+- ROOT email-OTP LAN HTTP flow;
+- public LAN password-change/recovery route;
 - Cloud reconciliation machine/service authentication;
 - physical >=60-minute Internet-cut continuity acceptance;
 - STABLE production acceptance.
 
 ## 9. Next gate
 
-Build/prove a separate user-space certificate manager that performs DNS-01 issuance/renewal with a least-privilege DNS credential, never exposes that credential to LAN Service, writes only a DPAPI-protected PFX for the current Windows user, and cleans challenge records fail-closed. Only after this source path is reviewed may live DNS mutation/issuance be attempted under verified provider permissions.
+The certificate-manager source gate is already complete. The next gate is a controlled target-host acceptance chain, not more speculative certificate-manager design:
+
+1. use the intended ordinary-user Windows LAN host;
+2. supply a dedicated least-privilege DNS credential whose exact account/zone/write scope is verified before mutation;
+3. prove ACME TXT create/read/delete behavior in the challenge namespace and complete **staging** issuance first;
+4. verify the DPAPI-protected PFX, exact SAN/validity and LAN Service HTTPS startup;
+5. only then allow production public-CA issuance;
+6. verify canonical DNS reachability and normal Windows/browser trust;
+7. verify real NLS-MT90/PDA HTTPS/reconnection behavior;
+8. continue to the >=60-minute Internet-cut acceptance and post-restoration reconciliation checks.
+
+The DNS credential remains outside the LAN Service and outside GitHub. Until these live/physical gates pass, status remains `IMPLEMENTED_AUTOMATED`, not `ACCEPTED`.
