@@ -1,9 +1,9 @@
 # CHECKPOINT — VHDCHY
 
-checkpoint_version: 48
+checkpoint_version: 49
 protocol: AI_AUTHORITY_RESUME_V2
 status: EXECUTING_PRODUCT_V7_BETA
-reconciled_through_commit: 3137f0f04eae87ffa4c183bca7123b3e3ed6525f
+reconciled_through_commit: 1c360a4bb25e304d39d3938e3329170173030bf2
 action_mode: AUTONOMOUS_PARALLEL
 active_lanes: REPO_GOVERNANCE / SHARED_DOMAIN / CLOUD_SERVICE / LAN_FULL_SERVICE / AUTH / GOOGLE_SYNC / WEB_ONLINE_LAN / ANDROID_PDA / RECONCILIATION / STABLE_PREPARATION
 paused_lanes: PHYSICAL_CORPORATE_LAN_REGRESSION
@@ -22,7 +22,23 @@ context_index_ref: CONTEXT_INDEX.md
 
 - Evidence-weighted total: **56.2% exact / 56% displayed**.
 - Phase 6 LAN continuity/offline/reconcile: **65%**.
-- No additional progress is credited merely for the post-checkpoint source changes; acceptance remains evidence-gated.
+- No additional product progress is credited for governance-only changes.
+
+## Governance mutation approved and in progress
+
+Owner explicitly approved a stricter execution-termination mechanism after reviewing two premature voluntary stops.
+
+Approved scope:
+
+- add `APPROVED_SCOPE_COMPLETE` as the normal successful finalization condition;
+- add a mandatory `PRE_FINAL_TERMINATION_GUARD`;
+- prohibit final response while approved `READY` work remains;
+- require dependency/ready-queue rebuilding before finalization when scope is incomplete;
+- harden `TOOL_CAPABILITY_LIMIT` so alternate connected tools/APIs/hosted CI/safe indirect paths must be exhausted or proven unavailable first;
+- distinguish progress reporting/checkpointing from session termination;
+- preserve interruption-safe continuation state so checkpoint creation never implies a voluntary stop.
+
+This governance mutation is approved. Continue it end-to-end without routine reconfirmation.
 
 ## Accepted evidence at handoff
 
@@ -75,13 +91,11 @@ Aggregate run `34844597407` had Cloud/LAN/Web PASS and Android APK build PASS. A
 
 ## Reconciled post-checkpoint source state — NOT YET ACCEPTED AS PASS
 
-Changes between the prior reconciled commit `490f56e8aa80827fa5fe62c79f4aca3c40b933fc` and `3137f0f04eae87ffa4c183bca7123b3e3ed6525f` were live-read and reconciled before this checkpoint update.
+Changes between the prior reconciled commit `490f56e8aa80827fa5fe62c79f4aca3c40b933fc` and `3137f0f04eae87ffa4c183bca7123b3e3ed6525f` were live-read and reconciled before checkpoint 48.
 
 The changed LAN/reconciliation source includes a durable Google Sheets/Drive integration-receipt store and lifecycle hardening for retry/readback/idempotency, conflict visibility and recovery, plus corresponding harness/test changes. Governance/authority files also changed in the same range.
 
-These changes are **not** credited as accepted evidence yet. The validation run at HEAD `3137f0f04eae87ffa4c183bca7123b3e3ed6525f` (`34867827875`) stopped at `Validate checkpoint authority freshness`, so downstream build/test evidence was skipped. The observed failure is checkpoint-governance freshness, not a demonstrated LAN source regression.
-
-This checkpoint deliberately reconciles only through the pre-update HEAD. The checkpoint-only commit that creates version 48 must then be validated; if it is green, accept only the behaviors actually covered by its CI receipts. If it is red, fix the concrete failing layer before changing progress/state claims.
+These changes are **not** credited as accepted evidence yet. The generic checkpoint-head CI is not sufficient proof for conflict/recovery behavior; dedicated evidence remains required for those layers.
 
 ## Current blockers / gates
 
@@ -96,11 +110,12 @@ This checkpoint deliberately reconciles only through the pre-update HEAD. The ch
 
 ## Exact next ready work
 
-1. Validate this checkpoint-only reconciliation commit. If CI reaches and passes the LAN/Google receipt lifecycle harness and clean baseline, reconcile the proven delta into `CURRENT_STATE.md`, `NEXT_ACTIONS.md`, `docs/PROGRESS_TRACKING_V1.md` and authority/change records as warranted; otherwise fix the concrete failing layer first.
-2. Keep the live BETA credential/provider proof isolated as `OWNER_PERMISSION_REQUIRED`; when setup is available, require guarded provider preflight/postflight and real LAN -> Cloud -> refresh/rebase/readiness evidence.
-3. Continue independent account/Web/Android lanes where dependency-ready, without inventing missing Pick Pack visual evidence.
-4. Resume physical company-network/PDA/public-trust and >=60-minute outage acceptance only on the intended real environment.
-5. Do not touch STABLE activation without mandatory BETA acceptance and explicit Owner approval.
+1. Complete the approved governance termination-guard mutation in `AI_OPERATING_CONTRACT.md` and `AI_ENTRYPOINT.md`, then persist a post-change checkpoint and verify repository validation/CI.
+2. Resume direct evidence verification for conflict handling at `53ae98a530228badaeaeb9dc2cb03a905ec8df82` and recovery at `3d0a732e33a8d4ce4ac97c3e4efaf9f58838381c`.
+3. Keep the live BETA credential/provider proof isolated as `OWNER_PERMISSION_REQUIRED`; when setup is available, require guarded provider preflight/postflight and real LAN -> Cloud -> refresh/rebase/readiness evidence.
+4. Continue independent account/Web/Android lanes where dependency-ready, without inventing missing Pick Pack visual evidence.
+5. Resume physical company-network/PDA/public-trust and >=60-minute outage acceptance only on the intended real environment.
+6. Do not touch STABLE activation without mandatory BETA acceptance and explicit Owner approval.
 
 do_not_repeat:
-Do not treat memory as authority. Do not replay migrations 0009 or 0014. Do not infer credential-store values. Do not bypass platform safety guards. Do not fabricate canonical coverage or acceptance. Do not count hosted harness evidence as live provider/physical PASS. Do not inflate progress without evidence. Do not promote STABLE without explicit Owner approval.
+Do not treat memory as authority. Do not replay migrations 0009 or 0014. Do not infer credential-store values. Do not bypass platform safety guards. Do not fabricate canonical coverage or acceptance. Do not count hosted harness evidence as live provider/physical PASS. Do not inflate progress without evidence. Do not promote STABLE without explicit Owner approval. Do not voluntarily final while approved READY work remains.
