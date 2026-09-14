@@ -78,6 +78,12 @@ function validatedLanProofHeaders(proof) {
   return headers;
 }
 
+function validSessionEvidence(cached, nowMs = Date.now()) {
+  if (!cached?.principal || !cached?.session) return false;
+  const expiresAtMs = Date.parse(cached.session.expiresAt || '');
+  return Number.isFinite(expiresAtMs) && expiresAtMs > Number(nowMs);
+}
+
 export function createAuthClient(options = {}) {
   const fetchImpl = options.fetchImpl || globalThis.fetch?.bind(globalThis);
   const storage = options.storage || globalThis.sessionStorage;
@@ -177,13 +183,13 @@ export function createAuthClient(options = {}) {
 
     if (runtime === 'LAN') {
       const cached = evidence();
-      if (!cached?.principal) {
+      if (!validSessionEvidence(cached)) {
         clear();
         return null;
       }
       return {
         principal: cached.principal,
-        session: cached.session || null,
+        session: cached.session,
         source: 'LAN_LOGIN_EVIDENCE'
       };
     }
