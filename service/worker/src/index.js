@@ -1,6 +1,7 @@
 import { changePermanentPassword, loginWithPassword } from './auth-service.js';
 import { authenticateRequest } from './session.js';
 import { permissionSummary } from './permission-store.js';
+import { handleReconciliationIngestRoute } from './reconciliation-route.js';
 
 const API_VERSION = "v1";
 const CORE_SCHEMA_VERSION = "business_core_v3";
@@ -320,6 +321,10 @@ export async function handleRequest(request, env) {
       },
       permissions
     }, 200, requestId);
+  }
+
+  if (url.pathname === "/api/v1/reconciliation/events" && request.method === "POST") {
+    return handleReconciliationIngestRoute(request, env, requestId);
   }
 
   if (url.pathname.startsWith("/api/v1/data/") || url.pathname.startsWith("/api/v1/admin/")) {
