@@ -60,7 +60,7 @@ public static class LanTlsCertificateLoader
                 certificate = new X509Certificate2(
                     pfxBytes,
                     (string?)null,
-                    X509KeyStorageFlags.EphemeralKeySet);
+                    RuntimeTlsKeyStorageFlags());
 #pragma warning restore SYSLIB0057
             }
             catch (CryptographicException exception)
@@ -88,7 +88,7 @@ public static class LanTlsCertificateLoader
             certificate = new X509Certificate2(
                 fullPath,
                 password,
-                X509KeyStorageFlags.EphemeralKeySet);
+                RuntimeTlsKeyStorageFlags());
 #pragma warning restore SYSLIB0057
             storageMode = "PLAIN_PFX_COMPATIBILITY";
         }
@@ -161,6 +161,18 @@ public static class LanTlsCertificateLoader
         {
             throw new InvalidOperationException("LAN TLS certificate is not valid for TLS server authentication");
         }
+    }
+
+    private static X509KeyStorageFlags RuntimeTlsKeyStorageFlags()
+    {
+        // Windows Schannel cannot reliably use TLS server certificates whose private
+        // keys were imported with EphemeralKeySet. UserKeySet gives Schannel a
+        // temporary current-user key container without installing the certificate
+        // into a certificate store or requiring administrator rights. Without
+        // PersistKeySet, the temporary key material is released with the cert/process.
+        return OperatingSystem.IsWindows()
+            ? X509KeyStorageFlags.UserKeySet
+            : X509KeyStorageFlags.EphemeralKeySet;
     }
 
     private static byte[] BuildEntropy(string environment, string canonicalHost) =>
