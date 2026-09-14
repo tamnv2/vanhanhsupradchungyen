@@ -1,174 +1,154 @@
-# CURRENT STATE
+# CURRENT STATE — VHDCHY
 
-Updated: 2026-09-13
+Updated: 2026-09-14
 Baseline: `REPO-RESET-20260912-01`
 Product architecture: `docs/TARGET_PRODUCT_ARCHITECTURE_V3.md`
-Execution plan: `docs/DELIVERY_PLAN_V4.md`
-Active decisions: `DECISIONS.md` + `DECISIONS_V3.md` + `DECISIONS_V4.md` + `DECISIONS_V5.md` + `DECISIONS_V6.md`
+Current delivery plan: `docs/DELIVERY_PLAN_V5.md`
+Progress model: `docs/PROGRESS_TRACKING_V1.md`
+Active decisions: `DECISIONS.md` + `DECISIONS_V3.md` + `DECISIONS_V4.md` + `DECISIONS_V5.md` + `DECISIONS_V6.md` + `DECISIONS_V7.md`
 
-## Active product direction
+## Progress
 
-VHDCHY is one platform with four first-class deliverables:
-- Website;
-- Android APK for PDA;
-- Cloud Service;
-- full LAN Service substitute.
+`Overall: 53% | Exact weighted baseline: 53.3% | Primary current phase: Phase 6 — LAN continuity/offline/reconcile`
 
-APK and Website use the same domain/API/business semantics. LAN and Cloud use the same business command/event rules through different persistence/runtime adapters.
+Parallel active lanes: broader core business Service/API, Gateway/integrations, Online+LAN Web V7 UI, Android/PDA App reference/shell preparation.
 
-Legacy repository and the earlier transport-only APK/Agent prototype remain NON_AUTHORITY reference only.
+Progress is evidence-weighted, not time/commit-count based. It may decrease if Owner scope expands. See `docs/PROGRESS_TRACKING_V1.md`.
 
-## Authentication authority — V6 locked, implementation pending
+## Product target
 
-The former unresolved ROOT-factor/lifetime gate in V5 is closed by `DECISIONS_V6.md`.
+VHDCHY is one platform with four first-class product surfaces/runtime deliverables:
 
-Current locked semantics:
-- ROOT normal login uses the fixed approved recovery-email one-time password;
-- credential validity is 5 minutes and resend cooldown is 5 minutes from successful send;
-- credential is single-use;
-- ROOT TOTP is optional; when enabled it is an additional required factor, when disabled a valid email one-time password is sufficient;
-- ROOT one-time login does not create `MUST_CHANGE_PASSWORD`;
-- a normal account using forgot-password one-time login enters restricted `MUST_CHANGE_PASSWORD` until a different permanent password is set;
-- the fixed ROOT email channel cannot be disabled;
-- readable credentials/secrets never belong in source, logs, Sheet/Drive business data or audit payloads.
+- Online Web + LAN Web as one shared Web product/design system;
+- Android/PDA App;
+- Cloud Service/Gateway/integrations;
+- full LAN Service substitute with local continuity.
 
-This authority is not yet equivalent to runtime PASS. Cloud/LAN/Web/APK implementations and acceptance tests remain pending.
+Web and App use the same current business/domain semantics. Cloud and LAN may use different persistence/runtime adapters but may not give the same command different business meaning.
 
-## V3 LAN behavior
+Legacy projects, including Pick Pack 1291 and the old LAN pilot, remain NON_AUTHORITY except for explicitly authorized reference use. V7 explicitly authorizes Pick Pack 1291 as App UI/UX reference only.
 
-LAN is now defined as a full local Service runtime.
+## Active Owner/UI direction — V7
+
+- Android/PDA UI follows the recognizable UI/UX direction of the Owner's Pick Pack 1291 App, adapted to current VHDCHY terminology, workflows, permissions, data and runtime architecture.
+- Do not invent Pick Pack screen details that have not been surfaced from accessible reference evidence.
+- Online Web and LAN Web follow the visual direction of the DNSHE screenshots supplied by the Owner on 2026-09-14: dark navy navigation, light blue/white field, white rounded cards, royal-blue primary CTA, compact icon/status tiles and clean enterprise-console hierarchy.
+- Do not copy DNSHE branding or proprietary assets.
+- Online/LAN Web must remain one product with the same navigation/visual language; core LAN UI assets must be locally available without Internet.
+- V5 language rule remains: Vietnamese / English / Chinese, default English.
+
+## Current source/runtime evidence
+
+### LAN Slice-1 / business core — materially implemented
+
+Current source lineage includes:
+
+- LAN operational-state materialization and rollback/pending-local safeguards;
+- idempotent replay preflight;
+- atomic authenticated actor evidence capture;
+- employee/MNV/attendance business vectors;
+- repeated-IN semantics;
+- atomic active-MNV and one-active-code-per-employee uniqueness claims;
+- race-safe rollback and stable resource-conflict mapping;
+- durable staged-media local store/schema/lifecycle;
+- serialized staged-media identity claims.
+
+The dedicated staged-media workflow run `34797198225` at `cddf8dc8358dce25febf0efd6c04c4cd73f602fb` completed `SUCCESS`.
+
+This is current-source automated evidence. It is **not** physical company-network/PDA acceptance.
+
+### Portrait semantic gate — still open
+
+A specific Owner-rule conflict remains unresolved for portrait replacement:
+
+- one rule requires deletion of the previous portrait immediately;
+- current LAN/offline media semantics permit staging when Drive is unavailable.
+
+Durable staged-media primitives can progress independently, but the product must not silently redefine whether an existing remote portrait may be replaced while Drive is unavailable. Portrait mutation remains fail-closed until the authority conflict is explicitly resolved and implemented/tested.
+
+### LAN public readiness — still fail-closed
+
+- Passing source/business harnesses does not authorize opening public LAN business mutation routes.
+- LAN auth/pairing/security-epoch and broader business/reconciliation coverage remain incomplete.
+- Current physical regression is still pending.
+
+## Cloud / canonical data / Google
+
+- D1 remains central consolidated canonical business storage after synchronization under current architecture.
+- LAN edge current-state + immutable event journal is local operational authority for operations accepted locally.
+- Sheets/Drive remain projection/storage outputs, never canonical business authority.
+- Google operational authority remains `tam95.supra@gmail.com` for current project Drive/Sheets/GAS scope.
+- The locked/unavailable separate domain Google account does not block source/LAN/Web/App implementation and can be revisited later if recovered.
+- Google projection/upload paths still require complete current receipt/deduplication/retry/reconciliation acceptance.
+
+## Cloud/LAN behavior
 
 ### CLOUD_DIRECT
-`Web/APK -> Cloud Service -> D1 -> Google`
+`Web/App -> Cloud Service -> canonical data -> controlled outputs`
 
 ### LAN_PRIMARY_ONLINE
-`Web/APK -> LAN Service -> edge state/event journal`
-
-If Cloud is reachable, LAN synchronizes accepted events to Cloud/D1 continuously/opportunistically even while users remain routed through LAN.
-
-If Google is reachable, LAN may write controlled Sheets projection and upload Drive media directly.
+`Web/App -> LAN Service -> local state/event journal`, while Cloud synchronization and controlled Google work proceed whenever the corresponding provider is reachable.
 
 ### LAN_PRIMARY_CLOUD_UNAVAILABLE
-Internet remains available but Cloud Service is unavailable/degraded. LAN continues normal local business processing. Google projection/upload may continue if Google is reachable. Cloud synchronization waits for Cloud recovery.
+LAN continues normal local business processing; allowed Google work may continue if Internet/Google is reachable; Cloud sync waits for Cloud recovery.
 
 ### LAN_OFFLINE
-Public Internet is unavailable but local Wi-Fi/LAN remains usable. LAN continues normal local business processing using the latest synchronized local authority/configuration snapshot. Google work is queued/staged locally.
+Public Internet is unavailable while LAN remains usable. LAN continues current approved local workflows using the synchronized local authority snapshot; external Google/provider work is queued/staged locally.
 
 ### LOCAL_QUEUE_ONLY
-Only explicitly retry-safe commands may remain on a client when neither Service is reachable.
+Only explicitly retry-safe client work may remain when neither Service is reachable.
 
-## Synchronization and authority
+## Canonical offline acceptance
 
-- D1 is the central consolidated store after synchronization.
-- LAN edge state + immutable event journal is the local operational authority for operations accepted by LAN.
-- Cloud synchronization consumes LAN event/outbox records, not Sheets/Drive as a business source.
-- LAN Google writes/uploads retain stable event/logical-file IDs and receipts so Cloud reconciliation can avoid duplicate rows/files.
-- A client does not need to switch back to Cloud before LAN starts syncing backlog.
-- Remote authority/configuration changes become active for subsequent operations after reconnect/refresh.
-- Previously accepted offline events remain immutable evidence and reconcile explicitly rather than being silently removed.
+The V6 target is no longer a sub-minute failover experiment. Final acceptance requires a minute-level continuity drill with **Window 2 >= 60 minutes** after warmup and Internet cut while valid LAN connectivity remains.
 
-## Offline operation tradeoff
+During that timed window:
 
-Offline login has no duration-only expiry under the Owner requirement and uses the latest synchronized local authority snapshot.
+- App/LAN Web/local workflow must remain usable for the approved local scope;
+- external Internet embeds may fail without failing LAN continuity;
+- restoration sync/reconciliation is tested after the timed window;
+- host restart/power loss is a separate recovery test.
 
-A fully disconnected LAN therefore cannot immediately know about remote account/permission changes made after the last sync. This is recorded as an explicit availability/security consistency tradeoff and must be visible in audit evidence.
+## Website current state
 
-Independent Cloud/LAN writes during a partition can also conflict. V3 requires stable identities/versions, deterministic reconciliation and explicit conflict evidence; silent last-write-wins is prohibited.
+Some operator/service UI foundations and account/provider action flows exist in source lineage, including signed-in staged actions, tab navigation and language-label hardening. They do not count as V7 visual completion automatically.
 
-## Manual LAN control
+Remaining major work:
 
-Only SUPERADMIN/ROOT may deliberately force LAN routing while Cloud is healthy. The action must be audited. Forced LAN routing does not stop background Cloud synchronization when Cloud is reachable.
+- shared DNSHE-inspired VHDCHY design tokens/shell;
+- login and authenticated dashboard shell;
+- business modules on the shared shell;
+- Online/LAN state UX parity;
+- local-only critical assets for LAN outage;
+- full Vietnamese/English/Chinese acceptance.
 
-Technical/provider retry errors remain automatic. Unresolved business/data synchronization conflicts go to ADMIN or higher. ROOT-security conflicts preserve the existing ROOT-exclusive boundary.
+## Android/PDA App current state
 
-## Google / Drive / Sheets / GAS
+Legacy source provides useful proven mechanics for endpoint discovery, hysteresis, durable queue/device sequence, ACK-driven deletion, reconnect/resync and bounded background work. These are reference patterns only and must be adapted to current contracts.
 
-- Current Google authority remains `tam95.supra@gmail.com`.
-- Project root remains `VẬN HÀNH DC HƯNG YÊN` with isolated BETA/STABLE roots.
-- BETA cluster remains `PICK_PACK_1291`.
-- BETA workbook remains `VHDCHY BETA - PICK PACK 1291 - 2026 Q3`.
-- Current projection remains `PROVISIONED_NOT_LIVE`.
-- GAS managed deployment v3 remains deployed fail-closed.
-- V3 requires the controlled Google integration to support authorized Cloud and LAN writers with stable projection/file identities and deduplication.
-- Sheets remains projection/reconciliation/DR, never business authority.
-- Drive remains file/media storage.
+V7 now fixes App UI direction to Pick Pack 1291 adapted for VHDCHY. The backup container is accessible in Drive, but the exact App UI source/evidence has not yet been surfaced sufficiently to claim a faithful visual implementation.
 
-## Cloudflare BETA
-
-- D1 `vhdchy-data-beta` remains `business_core_v3` PASS from the latest verified provider evidence recorded by the project.
-- Worker `vhdchy-beta` foundation/health remains live at `https://beta.supra.cc.cd` from the latest verified provider evidence recorded by the project.
-- Protected business/admin APIs remain fail-closed.
-- Reviewed multi-module manifest exists, but the active provider-mutating deploy workflow still needs safe multi-module packaging support before Worker runtime integration/deploy.
-- Do not bypass platform write-safety guards.
-
-## Cloud source foundation
-
-Source-level foundations already exist for:
-- authentication/session/permission primitives;
-- projection outbox retry/dead-letter primitives;
-- Service API/canonical mutation design.
-
-Still pending runtime/product implementation:
-- V6 authentication state machine and runtime routes/tests;
-- shared provider-neutral domain core;
-- D1 business adapter;
-- LAN reconciliation ingestion;
-- business APIs;
-- secure Google sender path;
-- Drive business flow;
-- Website/APK business surfaces.
-
-## LAN full-Service work
-
-Required product components:
-- edge current-state DB;
-- immutable local event journal;
-- Cloud sync/reconciliation outbox;
-- synchronized local authority/configuration snapshot;
-- direct Google projection/upload path + receipts;
-- offline Google queue/staged media;
-- Cloud sync cursor/delta refresh;
-- explicit conflict queue;
-- locally served Web bundle;
-- no-admin diagnostics/update/recovery.
-
-LAN authentication must implement the same V6 semantics where approved delivery capability exists and must not fabricate successful email delivery while disconnected.
-
-## Website/APK
-
-- Website is the wider management/administration surface.
-- APK is the compact PDA operational surface.
-- Both consume the same business API/domain contract.
-- Both require Cloud/LAN endpoint selection and meaningful sync/Google/conflict states.
-- Both must expose the applicable V6 one-time-password/recovery flow.
-- APK scanner/QR functions must invoke domain commands rather than bypass Service logic.
+Final current App business UI, current Service/LAN integration, real NLS-MT90 acceptance, background/battery and final signed release remain incomplete.
 
 ## Current exact project position
 
 ```text
-Authority through V6 + Cloud/D1/Google foundation
-        |
-        +--> NOW: shared domain + V6 auth + LAN local authority/sync contracts
-                 |
-          +------+------+
-          |             |
-     Cloud runtime   LAN full Service runtime
-          |             |
-          +------+------+
-                 |
-        vertical business slices
-          /      |       \
-        Web     APK   Google outputs
-                 |
-       failover/sync/conflict resolution
-                 |
-            BETA acceptance
+Scope / architecture / authority ..................... mostly complete
+Repo / provider / CI foundation ...................... substantially complete
+Cloud data/auth/Service foundation ................... substantially complete
+Core business Service/API ............................ mid implementation
+Gateway/integrations ................................. mid implementation
+LAN continuity/offline/reconcile ..................... PRIMARY ACTIVE PHASE
+Online Web + LAN Web V7 UI ........................... early implementation
+Android/PDA final App ................................ early implementation
+Physical BETA/UAT/capacity ........................... mostly pending
+STABLE production promotion/handover ................. pending
 ```
 
-Immediate work: keep the multi-module Worker gate fail-closed, implement/reconcile V6 auth contract/runtime/tests, continue shared Service/domain + LAN edge contracts, materialize Cloud/LAN adapters, and build Web/APK foundations in parallel where dependencies are already stable.
+Current numerical baseline: **53.3% (display 53%)**.
 
-## Physical dependencies / STABLE
+## Immediate direction
 
-Final company-network/no-admin/PDA evidence still requires the intended physical environment, but source/product work continues now.
+Primary work remains to extend the current LAN/business slice through broader auth/reconciliation/provider-safe behavior without opening fail-closed public mutations prematurely. In parallel, begin the shared V7 Web design shell and surface the Pick Pack 1291 App UI reference so the current App shell can be built against stable Service/LAN contracts.
 
-STABLE infrastructure may be prepared in isolation but business activation/promotion remains blocked until full BETA PASS + explicit Owner approval.
+Final company-network/no-admin/PDA evidence still requires the intended physical environment. STABLE business activation/promotion remains blocked until full BETA acceptance and explicit Owner approval.
