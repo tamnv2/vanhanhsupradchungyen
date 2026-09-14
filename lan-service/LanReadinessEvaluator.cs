@@ -15,6 +15,7 @@ public sealed class LanReadinessEvaluator
     private readonly Slice1BusinessAdapter _slice1Adapter;
     private readonly LanClientSecurityStore _clientSecurityStore;
     private readonly LanPrimaryCredentialVerifier _primaryCredentialVerifier;
+    private readonly PostReconciliationRebaseTracker _postReconciliationRebaseTracker;
 
     public LanReadinessEvaluator(
         string databasePath,
@@ -56,6 +57,7 @@ public sealed class LanReadinessEvaluator
             expectedDomainContractVersion);
         _clientSecurityStore = new LanClientSecurityStore(databasePath);
         _primaryCredentialVerifier = new LanPrimaryCredentialVerifier(databasePath, expectedDomainContractVersion);
+        _postReconciliationRebaseTracker = new PostReconciliationRebaseTracker(databasePath);
     }
 
     public async Task<LanReadinessReport> EvaluateAsync(CancellationToken cancellationToken = default)
@@ -154,6 +156,21 @@ public sealed class LanReadinessEvaluator
             }
         }
 
+        try
+        {
+            var rebase = await _postReconciliationRebaseTracker.InspectAsync(cancellationToken);
+            if (rebase.Required)
+            {
+                blockers.Add(new LanReadinessBlocker(
+                    "POST_RECONCILIATION_REBASE_REQUIRED",
+                    $"{rebase.PendingCanonicalEventCount} reconciled canonical event(s) require authoritative operational refresh and local rebase before business readiness can recover."));
+            }
+        }
+        catch (PostReconciliationRebaseException error)
+        {
+            blockers.Add(new LanReadinessBlocker(error.Code, error.Message));
+        }
+
         var snapshotPrerequisitesReady = blockers.Count == 0;
 
         foreach (var requiredModule in _requiredModules)
@@ -180,7 +197,7 @@ public sealed class LanReadinessEvaluator
         // Portrait replacement remains command-scoped fail-closed. Other reviewed Slice-1 commands
         // may advance through readiness independently. Public mutations stay globally fail-closed
         // until signed client, synchronized primary-login authority, authenticated LAN session,
-        // permission/domain gate, and reviewed secure route wiring are all linked.
+        // permission/domain gate, reviewed secure route wiring, and post-reconciliation rebase are all linked.
         if (snapshotPrerequisitesReady && supportedCommands.Count > 0)
         {
             var security = await _clientSecurityStore.InspectAsync(cancellationToken);
