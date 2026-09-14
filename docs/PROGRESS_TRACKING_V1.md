@@ -8,7 +8,7 @@ Purpose: provide one evidence-based completion percentage from project start to 
 
 `TOTAL_PRODUCT_COMPLETION` measures completion of the entire target product: Android/PDA App + Online Web + LAN Web + Service/Gateway/LAN continuity + operational/release readiness.
 
-It is not a measure of elapsed time, number of commits, number of documents, or developer effort. A design decision alone cannot be counted as if the corresponding product behavior were already implemented.
+It is not a measure of elapsed time, number of commits, number of documents, number of tool calls, or developer effort. A design decision alone cannot be counted as if the corresponding product behavior were already implemented.
 
 Formula:
 
@@ -52,7 +52,7 @@ The detailed substeps and current evidence for these phases live in `docs/DELIVE
 
 ## 4. Current baseline — 2026-09-14
 
-This baseline reconciles repository source through the LAN Slice-1/business/materialization/media work and the Owner's V7 UI direction.
+This baseline reconciles repository source through current Slice-1/LAN durable-state/media work, the durable Cloud-sync queue state machine, the Vietnamese-only V7 Web shell, and the current product-foundation CI evidence.
 
 | Phase | Weight | Current completion | Weighted contribution |
 |---|---:|---:|---:|
@@ -61,22 +61,34 @@ This baseline reconciles repository source through the LAN Slice-1/business/mate
 | 3. Cloud data / auth / Service foundation | 12% | 80% | 9.60% |
 | 4. Core business Service/API | 14% | 65% | 9.10% |
 | 5. Gateway / adapters / integrations | 10% | 55% | 5.50% |
-| 6. LAN continuity / offline / reconcile | 16% | 50% | 8.00% |
-| 7. Online Web + LAN Web UI | 10% | 20% | 2.00% |
+| 6. LAN continuity / offline / reconcile | 16% | **55%** | **8.80%** |
+| 7. Online Web + LAN Web UI | 10% | **25%** | **2.50%** |
 | 8. Android/PDA App | 10% | 15% | 1.50% |
 | 9. Account/admin/reporting/support | 4% | 35% | 1.40% |
 | 10. Security / observability / recovery | 3% | 50% | 1.50% |
 | 11. BETA physical/capacity/UAT | 3% | 10% | 0.30% |
 | 12. STABLE production/handover | 2% | 0% | 0.00% |
-|  |  | **TOTAL_PRODUCT_COMPLETION = 53.3%** | **53.30%** |
+|  |  | **TOTAL_PRODUCT_COMPLETION = 54.6%** | **54.60%** |
 
-Human-facing status rounds this baseline to **53% complete**.
+Human-facing status rounds this baseline to **55% complete**.
+
+### Evidence supporting the increase from 53.3% to 54.6%
+
+**Phase 6: 50% -> 55%.**
+
+Current LAN source now has a durable Cloud reconciliation queue state machine with claim/retry/reconcile/conflict transitions, restart recovery for interrupted claims, immutable edge-event envelope construction, completed Google/Drive receipt attachment and race-safe single-claim behavior. Dedicated workflow `34801533266` at commit `013d5b310ae0f068510c56cdbfe7cf4ea7ffec66` completed `SUCCESS` after runtime startup recovery was integrated. The earlier dedicated vector run `34801198095` also completed `SUCCESS`. This does not credit the still-missing Cloud network transport/ingestion, broader conflict-resolution UI/business logic, full sync cursor/delta behavior or physical continuity acceptance.
+
+**Phase 7: 20% -> 25%.**
+
+The shared Online/LAN Web source now contains a V7 Vietnamese-only shell with the approved DNSHE-inspired VHDCHY visual direction, responsive navigation/dashboard/status surfaces, explicit Cloud/LAN/sync/Google/conflict presentation, local/offline-safe critical UI assets and no DNSHE branding/assets. Product-foundation workflow `34801611019` at commit `41565f3b2ffdca473f756e33bd71769e16d8af13` completed `SUCCESS`, including the `web-contract`, `cloud-service`, `android-apk` and `lan-service` jobs. The Web contract test verifies Vietnamese-only language, local critical assets, runtime state surfaces, responsive tokens and no direct Google bypass. This does not credit the missing authenticated login flow, completed business screens, conflict-resolution UI or full Web E2E acceptance.
+
+The Android phase remains at 15%: visible shell text is now Vietnamese and the current APK builds, but this language cleanup alone is not sufficient to advance the product phase. The actual Pick Pack 1291 visual source/artifacts still need to be surfaced before claiming faithful UI reuse.
 
 ## 5. Why the project is not scored higher
 
-The repository has substantial architecture, business/data contracts, Cloud/Service foundation and a materially implemented LAN Slice-1 with automated evidence. Recent current-source work includes LAN operational state materialization, idempotent business replay, actor evidence, employee/MNV/attendance business vectors, atomic employee-code uniqueness, durable staged media and a successful staged-media CI workflow.
+The repository has substantial architecture, business/data contracts, Cloud/Service foundation and a materially implemented LAN Slice-1 with automated evidence. Current source work now also includes durable staged media, durable LAN Cloud-sync queue mechanics and a tested shared Online/LAN Web shell.
 
-However, the final product still lacks enough evidence to credit the remaining half as complete: V7 Web visual implementation is not finished; the current Android/PDA product is not yet a fully accepted final App; current-LAN physical regression on the target company network/PDA is pending; the 60-minute internet-cut acceptance is pending; broader business coverage/reconciliation/provider paths remain; capacity/soak/UAT remain; and STABLE production promotion/handover has not been completed.
+However, the final product still lacks enough evidence to credit the remaining work as complete: current Android/PDA product UI is not yet faithfully reconstructed from the authorized Pick Pack 1291 visual source; Web authentication and business modules are not complete; Cloud reconciliation network ingestion/transport is incomplete; target-company-network/NLS-MT90 physical regression is pending; the 60-minute internet-cut acceptance is pending; broader business/provider paths remain; capacity/soak/UAT remain; and STABLE production promotion/handover has not been completed.
 
 ## 6. Update rules
 
@@ -88,6 +100,7 @@ However, the final product still lacks enough evidence to credit the remaining h
 6. Never round a phase to 100% while an acceptance item required by that phase is still open.
 7. `CURRENT_STATE.md` must publish the current rounded percentage, exact computed value, active phase(s), evidence-through commit and date.
 8. `CHECKPOINT.md` must identify the latest progress source/version whenever project state is reconciled.
+9. Source edits or tool activity without successful validation do not increase progress. If a long execution block produces no new accepted evidence, the percentage remains unchanged.
 
 ## 7. User-facing display convention
 
@@ -96,3 +109,5 @@ When the Owner asks where the project is or asks to continue work, report at min
 `Overall: NN% | Current: Phase X — <name> | Next gate: <gate>`
 
 If parallel work is active, identify the primary phase and the parallel lane rather than pretending the project is strictly sequential.
+
+Before ending a long tool/session block, report factual PASS/FAIL/IN_PROGRESS/BLOCKED state, direct evidence IDs where available, current exact/rounded progress, and any justified delta from the start of that block.
