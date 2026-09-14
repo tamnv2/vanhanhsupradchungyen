@@ -24,6 +24,17 @@ var tlsLoadResult = LanTlsCertificateLoader.LoadFromEnvironment(environment, can
 var tlsCertificate = tlsLoadResult?.Certificate;
 var secureHttpEnabled = tlsCertificate is not null;
 
+var cloudReconciliationUrlText = Environment.GetEnvironmentVariable("VHDCHY_CLOUD_RECONCILIATION_URL")?.Trim();
+var cloudReconciliationKeyId = Environment.GetEnvironmentVariable("VHDCHY_CLOUD_RECONCILIATION_KEY_ID")?.Trim();
+var cloudReconciliationKeyMaterial = Environment.GetEnvironmentVariable("VHDCHY_CLOUD_RECONCILIATION_KEY")?.Trim();
+var cloudConfigValues = new[] { cloudReconciliationUrlText, cloudReconciliationKeyId, cloudReconciliationKeyMaterial };
+var cloudConfigCount = cloudConfigValues.Count(value => !string.IsNullOrWhiteSpace(value));
+if (cloudConfigCount is > 0 and < 3)
+{
+    throw new InvalidOperationException("Cloud reconciliation transport configuration is incomplete.");
+}
+var cloudReconciliationConfigured = cloudConfigCount == 3;
+
 var rootOverride = Environment.GetEnvironmentVariable("VHDCHY_LAN_DATA_ROOT")?.Trim();
 var root = string.IsNullOrWhiteSpace(rootOverride)
     ? Path.Combine(
@@ -79,6 +90,27 @@ builder.WebHost.ConfigureKestrel(options =>
 });
 var app = builder.Build();
 
+HttpClient? cloudReconciliationHttpClient = null;
+Task? cloudReconciliationPumpTask = null;
+if (cloudReconciliationConfigured)
+{
+    cloudReconciliationHttpClient = new HttpClient
+    {
+        Timeout = TimeSpan.FromSeconds(15)
+    };
+    var cloudEndpoint = new Uri(cloudReconciliationUrlText!, UriKind.Absolute);
+    var cloudSender = new CloudReconciliationHttpSender(
+        cloudReconciliationHttpClient,
+        cloudEndpoint,
+        environment,
+        cloudReconciliationKeyId!,
+        cloudReconciliationKeyMaterial!);
+    var cloudEnvelopeBuilder = new CloudSyncTransportEnvelopeBuilder(edgeStore.DatabasePath);
+    var cloudPump = new CloudReconciliationPump(cloudSyncQueue, cloudEnvelopeBuilder, cloudSender);
+    cloudReconciliationPumpTask = Task.Run(() =>
+        cloudPump.RunAsync(TimeSpan.FromSeconds(5), app.Lifetime.ApplicationStopping));
+}
+
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
@@ -108,6 +140,7 @@ app.MapGet("/health", async (CancellationToken cancellationToken) =>
         readiness = state.Readiness,
         publicReadiness = publicReadiness.Readiness,
         businessMutationEnabled = secureHttpEnabled && publicReadiness.Ready,
+        cloudReconciliationTransportConfigured = cloudReconciliationConfigured,
         recoveredInterruptedCloudSync,
         localDataRoot = root
     });
@@ -133,6 +166,7 @@ app.MapGet("/api/v1/meta", async (CancellationToken cancellationToken) =>
         tlsCertificateNotAfterUtc = tlsLoadResult?.NotAfterUtc,
         domainContractVersion = DomainContractVersion,
         edgeSchemaVersion = EdgeStore.SchemaVersion,
+        cloudReconciliationTransportConfigured = cloudReconciliationConfigured,
         readiness = state.Readiness
     });
 });
@@ -167,7 +201,8 @@ app.MapGet("/api/v1/capabilities", async (CancellationToken cancellationToken) =
             "TLS_GATED_PRIMARY_LOGIN",
             "TLS_GATED_SLICE1_BUSINESS_ROUTE",
             "WINDOWS_DPAPI_CURRENT_USER_TLS_PFX",
-            "CLOUD_RECONCILIATION_TRANSPORT_PLANNED",
+            "CLOUD_RECONCILIATION_HMAC_V1",
+            cloudReconciliationConfigured ? "CLOUD_RECONCILIATION_NETWORK_SENDER_ACTIVE" : "CLOUD_RECONCILIATION_NETWORK_SENDER_NOT_CONFIGURED",
             "DIRECT_GOOGLE_SENDER_PLANNED"
         }
     });
@@ -186,7 +221,8 @@ app.MapGet("/api/v1/sync/status", async (CancellationToken cancellationToken) =>
         lastCloudSyncAt = state.LastCloudSyncAt,
         pendingCloudSync = state.PendingCloudSync,
         pendingGoogleWork = state.PendingGoogleWork,
-        conflictCount = state.ConflictCount
+        conflictCount = state.ConflictCount,
+        cloudReconciliationTransportConfigured = cloudReconciliationConfigured
     });
 });
 
@@ -221,7 +257,7 @@ if (tlsLoadResult is not null)
 {
     Console.WriteLine($"TLS certificate loaded from {tlsLoadResult.StorageMode}; notAfterUtc={tlsLoadResult.NotAfterUtc:O}.");
 }
-Console.WriteLine($"Cloud sync queue recovery active; interruptedClaimsRecovered={recoveredInterruptedCloudSync}; transport remains PLANNED.");
+Console.WriteLine($"Cloud sync queue recovery active; interruptedClaimsRecovered={recoveredInterruptedCloudSync}; machineAuth={CloudReconciliationHttpSender.AuthVersion}; networkSenderConfigured={cloudReconciliationConfigured}.");
 Console.WriteLine(secureHttpEnabled
     ? "Secure LAN login and reviewed Slice-1 business routes are TLS-gated; runtime readiness still fails closed on missing synchronized authority/operational/security prerequisites."
     : "LAN runtime is HTTP read-only. All business mutation remains FAIL_CLOSED until a reviewed TLS certificate is configured.");
@@ -232,5 +268,16 @@ try
 }
 finally
 {
+    if (cloudReconciliationPumpTask is not null)
+    {
+        try
+        {
+            await cloudReconciliationPumpTask;
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+    cloudReconciliationHttpClient?.Dispose();
     tlsCertificate?.Dispose();
 }
