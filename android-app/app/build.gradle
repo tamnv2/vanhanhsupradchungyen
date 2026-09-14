@@ -37,5 +37,27 @@ android {
     }
 }
 
+def transportHarnessClasses = layout.buildDirectory.dir('transport-harness/classes')
+
+tasks.register('compileTransportBehaviorHarness', JavaCompile) {
+    source = files(
+        fileTree('src/main/java/vn/vhdchy/app/transport') { include '*.java' },
+        fileTree('../transport-harness') { include '**/*.java' }
+    )
+    classpath = files()
+    destinationDirectory.set(transportHarnessClasses)
+    options.release.set(17)
+}
+
+tasks.register('transportBehaviorHarness', JavaExec) {
+    dependsOn tasks.named('compileTransportBehaviorHarness')
+    classpath = files(transportHarnessClasses)
+    mainClass.set('vn.vhdchy.app.transport.TransportBehaviorHarness')
+}
+
+tasks.named('preBuild').configure {
+    dependsOn tasks.named('transportBehaviorHarness')
+}
+
 dependencies {
 }
