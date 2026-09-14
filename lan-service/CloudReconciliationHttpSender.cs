@@ -163,6 +163,7 @@ public sealed class CloudReconciliationHttpSender
 
 public sealed class CloudReconciliationPump
 {
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private readonly CloudSyncQueueStore _queueStore;
     private readonly CloudSyncTransportEnvelopeBuilder _envelopeBuilder;
     private readonly CloudReconciliationHttpSender _sender;
