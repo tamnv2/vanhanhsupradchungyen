@@ -1,6 +1,6 @@
 {
-  "enabled": true,
+  "enabled": false,
   "target": "beta",
   "operation": "migrate_employee_code_entity_version_0014",
-  "reason": "Apply reviewed additive employee-code entity version after exact BETA preflight ABSENT with zero employee-code rows"
+  "reason": "Migration 0014 applied and postflight passed; return dispatcher to safe idle state"
 }
