@@ -1,9 +1,9 @@
 # CHECKPOINT — VHDCHY
 
-checkpoint_version: 34
+checkpoint_version: 35
 protocol: AI_AUTHORITY_RESUME_V2
 status: EXECUTING_PRODUCT_V7_BETA
-reconciled_through_commit: 6c28cf203a42670f0dd405f4154226445ebc8f4f
+reconciled_through_commit: 4ecbea301d561c0b26b3eadcc413c00c44f650be
 action_mode: AUTONOMOUS_PARALLEL
 active_lanes: REPO_GOVERNANCE / SHARED_DOMAIN / CLOUD_SERVICE / LAN_FULL_SERVICE / AUTH / GOOGLE_SYNC / WEB_ONLINE_LAN / ANDROID_PDA / RECONCILIATION / STABLE_PREPARATION
 paused_lanes: PHYSICAL_CORPORATE_LAN_REGRESSION
@@ -37,7 +37,7 @@ context_index_ref: CONTEXT_INDEX.md
 - Ready-queue parallel execution remains mandatory. A blocked node must not stall independent safe work.
 - PASS requires reproducible evidence. CI/source PASS never substitutes for physical company-network/PDA PASS.
 
-## Reconciled evidence through `6c28cf203a42670f0dd405f4154226445ebc8f4f`
+## Reconciled evidence through `4ecbea301d561c0b26b3eadcc413c00c44f650be`
 
 ### Secure LAN HTTPS login/session -> public Slice-1 HTTP route — SOURCE/CI PASS
 
