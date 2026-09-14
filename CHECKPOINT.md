@@ -1,9 +1,9 @@
 # CHECKPOINT — VHDCHY
 
-checkpoint_version: 46
+checkpoint_version: 47
 protocol: AI_AUTHORITY_RESUME_V2
 status: EXECUTING_PRODUCT_V7_BETA
-reconciled_through_commit: 815deeb87fed06690b82545c1f56418a37264689
+reconciled_through_commit: 490f56e8aa80827fa5fe62c79f4aca3c40b933fc
 action_mode: AUTONOMOUS_PARALLEL
 active_lanes: REPO_GOVERNANCE / SHARED_DOMAIN / CLOUD_SERVICE / LAN_FULL_SERVICE / AUTH / GOOGLE_SYNC / WEB_ONLINE_LAN / ANDROID_PDA / RECONCILIATION / STABLE_PREPARATION
 paused_lanes: PHYSICAL_CORPORATE_LAN_REGRESSION
@@ -20,64 +20,77 @@ context_index_ref: CONTEXT_INDEX.md
 
 ## Progress
 
-- Evidence-weighted total: **55.4% exact / 55% displayed**.
-- Phase 6 LAN continuity/offline/reconcile: **60%**.
-- No percentage increase from this block because runtime rebase enforcement and signed live LAN->Cloud->refresh/rebase E2E remain incomplete.
+- Evidence-weighted total: **56.2% exact / 56% displayed**.
+- Phase 6 LAN continuity/offline/reconcile: **65%**.
+- Delta from the previous checkpoint is accepted only for the automated operational refresh/rebase/readiness sub-slice; live provider and physical acceptance remain uncredited.
 
 ## Accepted evidence at handoff
 
-### Post-reconciliation rebase tracker
+### Cloud operational snapshot + LAN post-reconciliation refresh/rebase — SOURCE/CI PASS
 
-- Source/harness behavior is PASS.
+Source evidence through commit `42590dcf73ecbe8d1d8ee8dfbd6275aabf9d64fd` is accepted.
+
+Implemented/proven behavior:
+
+- machine-authenticated Cloud operational snapshot endpoint;
+- authoritative Slice-1 D1 state for employees, employee codes and presence;
+- explicit canonical reconciliation coverage with no fabricated/default coverage;
+- coverage remains recoverable across LAN restart through persistent `edgeInstanceId`, while current `edgeEpoch` remains part of request/machine identity;
+- signed LAN operational-snapshot HTTP client;
+- authoritative refresh coordinator/pump;
+- incomplete coverage is rejected before active snapshot replacement;
+- complete snapshot import is atomic;
+- post-reconciliation rebase cursor advances only with verified coverage;
+- readiness fails closed while canonical events remain unre-based and recovers after verified rebase.
+
+Evidence:
+
+- dedicated integration run `34851773729`: **SUCCESS**;
+- same-source clean-baseline run `34851772963`: **SUCCESS**;
+- clean baseline includes authority invariants, Worker syntax/tests, auth contract, clean D1 schema and schema/runtime validation.
+
+The harness uses test-assembly friend access only; runtime internals were not made public merely for testing. An attempted workflow-based process-orchestration rewrite was blocked by platform safety guard and was not bypassed.
+
+### Prior post-reconciliation tracker evidence retained
+
 - Dedicated run `34844270179`: **SUCCESS**.
-- Proven: stale snapshot rejection, incomplete canonical coverage rejection, complete coverage cursor advance, and correct behavior for a later canonical event.
-- Runtime business-readiness enforcement is still pending. A direct security-gate integration write was blocked by platform safety guard; no bypass was attempted.
+- Proven: stale snapshot rejection, incomplete canonical coverage rejection, complete coverage cursor advance and correct later-canonical-event reopening behavior.
 
-### BETA D1 employee-code version parity
+### BETA D1 employee-code version parity retained
 
-Migration `0014_employee_code_entity_version.sql` is **LIVE BETA PASS**.
+Migration `0014_employee_code_entity_version.sql` remains **LIVE BETA PASS**.
 
 Evidence:
 
 - clean-baseline run `34844597357`: SUCCESS;
 - read-only BETA preflight run `34844821406`: SUCCESS, prestate ABSENT and zero employee-code rows;
 - guarded migration run `34844932823`: SUCCESS;
-- migration apply PASS;
-- poststate FINAL;
-- row-count invariance PASS;
-- version metadata PASS;
-- foreign-key and quick-check PASS.
+- poststate FINAL, row-count invariance PASS, version metadata PASS, foreign-key check PASS and quick-check PASS.
 
-Migration dispatch has been returned to disabled state. **Do not replay migration 0014.**
+Migration dispatch is disabled. **Do not replay migration 0014.**
 
-### Aggregate Android note
+### Aggregate Android note retained
 
 Aggregate run `34844597407` had Cloud/LAN/Web PASS and Android APK build PASS. Android failed only during GitHub artifact finalization with `ECONNRESET`; classify this as artifact infrastructure failure, not an APK build regression.
 
-## Current execution evidence — not yet accepted as PASS
-
-- Cloud operational snapshot route core created at commit `9db72384fdc649f3e27f0579f04355fa629042ff`.
-- Worker route wiring commit `c1666a1acb120a6a9ff2d2e63f252d5748b7bd05`.
-- Auth/identity/empty-state/real-state/canonical-coverage test matrix commit `6ba82d7e503dbda0ac9ec4e8d72f78c4cd93b6a1`.
-- First validation run `34848259655` failed before Worker source syntax/tests because resume-invariant metadata from the previous handoff was incomplete; this is not source PASS or source FAIL.
-- `CURRENT_STATE.md` delivery-plan invariant restored at commit `815deeb87fed06690b82545c1f56418a37264689`.
-- Hosted validation must be rerun after this checkpoint before the new route can be accepted.
-
 ## Current blockers / gates
 
-- Worker reconciliation credential provisioning: `OWNER_PERMISSION_REQUIRED`; keep this lane isolated and continue independent work.
+- Live BETA LAN/Worker machine credential provisioning and exact real endpoint proof: `OWNER_PERMISSION_REQUIRED`; do not request or infer raw credential material.
 - Physical company-network/PDA and >=60-minute Internet-cut acceptance remain pending.
 - ROOT OTP real delivery/recovery live E2E remains incomplete.
+- Web authenticated business surfaces remain incomplete.
+- Android/PDA final current-product workflows/UI and physical-device acceptance remain incomplete.
+- Google projection/upload receipt/readback and broader conflict-recovery coverage remain incomplete.
 - Portrait replacement semantics remain an Owner decision gate.
 - STABLE activation/promotion still requires mandatory BETA acceptance plus explicit Owner approval.
 
 ## Exact next ready work
 
-1. Complete hosted validation of the machine-authenticated Cloud operational snapshot route and fix any source/test defects found.
-2. Connect LAN authoritative refresh/rebase consumption to the accepted Cloud snapshot response.
-3. Enforce fail-closed business readiness while reconciled canonical events remain unre-based, when the reviewed runtime mutation can be applied without violating platform safety guard.
-4. Prove end-to-end: canonical ACK -> local stale/rebase-required -> authoritative refresh -> verified coverage -> rebase cursor advance -> readiness recovery.
-5. Continue independent account/Web/Android/Gateway lanes where ready.
+1. Keep the live BETA credential/provider proof isolated as `OWNER_PERMISSION_REQUIRED`; when setup is available, require guarded provider preflight/postflight and real LAN -> Cloud -> refresh/rebase/readiness evidence.
+2. Continue the independent reconciliation/provider source lane: Google/Drive receipt deduplication, retry/readback and operator-visible conflict/recovery hardening.
+3. Continue independent account/Web/Android lanes where dependency-ready, without inventing missing Pick Pack visual evidence.
+4. Resume physical company-network/PDA/public-trust and >=60-minute outage acceptance only on the intended real environment.
+5. Do not touch STABLE activation without mandatory BETA acceptance and explicit Owner approval.
 
 do_not_repeat:
-Do not treat memory as authority. Do not replay migrations 0009 or 0014. Do not infer credential-store values. Do not bypass platform safety guards. Do not fabricate canonical coverage or acceptance. Do not inflate progress without evidence. Do not promote STABLE without explicit Owner approval.
+Do not treat memory as authority. Do not replay migrations 0009 or 0014. Do not infer credential-store values. Do not bypass platform safety guards. Do not fabricate canonical coverage or acceptance. Do not count hosted harness evidence as live provider/physical PASS. Do not inflate progress without evidence. Do not promote STABLE without explicit Owner approval.
