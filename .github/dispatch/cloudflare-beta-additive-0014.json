@@ -1,0 +1,6 @@
+{
+  "enabled": false,
+  "target": "beta",
+  "operation": "migrate_employee_code_entity_version_0014",
+  "reason": "Read-only preflight first; additive provider migration remains disabled by default"
+}
