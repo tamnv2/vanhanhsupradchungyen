@@ -52,7 +52,7 @@ The detailed substeps and current evidence for these phases live in `docs/DELIVE
 
 ## 4. Current baseline — 2026-09-14
 
-This baseline reconciles repository source through current Slice-1/LAN durable-state/media work, the durable Cloud-sync queue state machine, the Vietnamese-only V7 Web shell, and the current product-foundation CI evidence.
+This baseline reconciles repository source through the secure LAN HTTPS login/session + reviewed public Slice-1 business HTTP route E2E, earlier LAN durable-state/media/reconciliation queue work, the Vietnamese-only V7 Web shell, and current product-foundation CI evidence.
 
 | Phase | Weight | Current completion | Weighted contribution |
 |---|---:|---:|---:|
@@ -61,34 +61,42 @@ This baseline reconciles repository source through current Slice-1/LAN durable-s
 | 3. Cloud data / auth / Service foundation | 12% | 80% | 9.60% |
 | 4. Core business Service/API | 14% | 65% | 9.10% |
 | 5. Gateway / adapters / integrations | 10% | 55% | 5.50% |
-| 6. LAN continuity / offline / reconcile | 16% | **55%** | **8.80%** |
+| 6. LAN continuity / offline / reconcile | 16% | **60%** | **9.60%** |
 | 7. Online Web + LAN Web UI | 10% | **25%** | **2.50%** |
 | 8. Android/PDA App | 10% | 15% | 1.50% |
 | 9. Account/admin/reporting/support | 4% | 35% | 1.40% |
 | 10. Security / observability / recovery | 3% | 50% | 1.50% |
 | 11. BETA physical/capacity/UAT | 3% | 10% | 0.30% |
 | 12. STABLE production/handover | 2% | 0% | 0.00% |
-|  |  | **TOTAL_PRODUCT_COMPLETION = 54.6%** | **54.60%** |
+|  |  | **TOTAL_PRODUCT_COMPLETION = 55.4%** | **55.40%** |
 
 Human-facing status rounds this baseline to **55% complete**.
 
-### Evidence supporting the increase from 53.3% to 54.6%
+### Evidence supporting the increase from 54.6% to 55.4%
 
-**Phase 6: 50% -> 55%.**
+**Phase 6: 55% -> 60%.**
 
-Current LAN source now has a durable Cloud reconciliation queue state machine with claim/retry/reconcile/conflict transitions, restart recovery for interrupted claims, immutable edge-event envelope construction, completed Google/Drive receipt attachment and race-safe single-claim behavior. Dedicated workflow `34801533266` at commit `013d5b310ae0f068510c56cdbfe7cf4ea7ffec66` completed `SUCCESS` after runtime startup recovery was integrated. The earlier dedicated vector run `34801198095` also completed `SUCCESS`. This does not credit the still-missing Cloud network transport/ingestion, broader conflict-resolution UI/business logic, full sync cursor/delta behavior or physical continuity acceptance.
+The LAN runtime now has an implemented secure public HTTP slice rather than only an internal coordinator: direct Kestrel HTTPS using a user-space PFX, a fail-closed HTTP read-only fallback when TLS is absent, paired-device signed normal-user login, durable session issuance, and the reviewed signed-session `POST /api/v1/data/commands` path into `LanBusinessRouteCoordinator`. Dedicated workflow `34811861697`, job/check `103874646267`, at commit `63ceeb6a8db865ced1870209c7cb74d4f65baea1` completed `SUCCESS`. It proves TLS-only credential handling at runtime, wrong-password and signed-body tamper rejection, login/business replay rejection, authorized `EMPLOYEE_CREATE`, restart session continuity, no captured password leakage, and SQLite integrity. Baseline workflow `34811861613` on the same HEAD also completed `SUCCESS`.
 
-**Phase 7: 20% -> 25%.**
+This is credited as `IMPLEMENTED_AUTOMATED` progress for a material LAN sub-slice, not physical acceptance. It does not credit publicly trusted BETA certificate issuance/renewal, canonical DNS and real company-network/browser/PDA trust, ROOT email-OTP HTTP flow, public password-change/recovery, Cloud reconciliation machine/service authentication, portrait semantic resolution, >=60-minute Internet-cut physical continuity, capacity/UAT, or STABLE activation. See `docs/LAN_SECURE_HTTP_V1.md`.
 
-The shared Online/LAN Web source now contains a V7 Vietnamese-only shell with the approved DNSHE-inspired VHDCHY visual direction, responsive navigation/dashboard/status surfaces, explicit Cloud/LAN/sync/Google/conflict presentation, local/offline-safe critical UI assets and no DNSHE branding/assets. Product-foundation workflow `34801611019` at commit `41565f3b2ffdca473f756e33bd71769e16d8af13` completed `SUCCESS`, including the `web-contract`, `cloud-service`, `android-apk` and `lan-service` jobs. The Web contract test verifies Vietnamese-only language, local critical assets, runtime state surfaces, responsive tokens and no direct Google bypass. This does not credit the missing authenticated login flow, completed business screens, conflict-resolution UI or full Web E2E acceptance.
+### Earlier evidence retained in the baseline
 
-The Android phase remains at 15%: visible shell text is now Vietnamese and the current APK builds, but this language cleanup alone is not sufficient to advance the product phase. The actual Pick Pack 1291 visual source/artifacts still need to be surfaced before claiming faithful UI reuse.
+**Phase 6 durable reconciliation foundation.**
+
+Current LAN source has a durable Cloud reconciliation queue state machine with claim/retry/reconcile/conflict transitions, restart recovery for interrupted claims, immutable edge-event envelope construction, completed Google/Drive receipt attachment and race-safe single-claim behavior. Dedicated workflow `34801533266` at commit `013d5b310ae0f068510c56cdbfe7cf4ea7ffec66` completed `SUCCESS`; earlier vector run `34801198095` also completed `SUCCESS`.
+
+**Phase 7: 20% -> 25% earlier increase.**
+
+The shared Online/LAN Web source contains a V7 Vietnamese-only shell with the approved DNSHE-inspired VHDCHY visual direction, responsive navigation/dashboard/status surfaces, explicit Cloud/LAN/sync/Google/conflict presentation, local/offline-safe critical UI assets and no DNSHE branding/assets. Product-foundation workflow `34801611019` at commit `41565f3b2ffdca473f756e33bd71769e16d8af13` completed `SUCCESS`, including the `web-contract`, `cloud-service`, `android-apk` and `lan-service` jobs. This still does not credit missing authenticated Web login, completed business screens, conflict-resolution UI or full Web E2E acceptance.
+
+The Android phase remains at 15%: visible shell text is Vietnamese and the current APK builds, but this language cleanup alone is not sufficient to advance the product phase. The actual Pick Pack 1291 visual source/artifacts still need to be surfaced before claiming faithful UI reuse.
 
 ## 5. Why the project is not scored higher
 
-The repository has substantial architecture, business/data contracts, Cloud/Service foundation and a materially implemented LAN Slice-1 with automated evidence. Current source work now also includes durable staged media, durable LAN Cloud-sync queue mechanics and a tested shared Online/LAN Web shell.
+The repository has substantial architecture, business/data contracts, Cloud/Service foundation and a materially implemented LAN Slice-1 with automated evidence. LAN now also includes durable staged media, durable Cloud-sync queue mechanics and an automated secure HTTPS login/session -> public Slice-1 business route.
 
-However, the final product still lacks enough evidence to credit the remaining work as complete: current Android/PDA product UI is not yet faithfully reconstructed from the authorized Pick Pack 1291 visual source; Web authentication and business modules are not complete; Cloud reconciliation network ingestion/transport is incomplete; target-company-network/NLS-MT90 physical regression is pending; the 60-minute internet-cut acceptance is pending; broader business/provider paths remain; capacity/soak/UAT remain; and STABLE production promotion/handover has not been completed.
+However, the final product still lacks enough evidence to credit the remaining work as complete: the production-trusted LAN certificate/DNS/real-device path is unproven; current Android/PDA product UI is not yet faithfully reconstructed from the authorized Pick Pack 1291 visual source; Web authentication and business modules are incomplete; Cloud reconciliation machine-authenticated network ingestion/transport is incomplete; target-company-network/NLS-MT90 physical regression is pending; the 60-minute Internet-cut acceptance is pending; broader business/provider paths remain; capacity/soak/UAT remain; and STABLE production promotion/handover has not been completed.
 
 ## 6. Update rules
 
