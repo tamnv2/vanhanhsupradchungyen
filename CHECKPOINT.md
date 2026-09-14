@@ -1,9 +1,9 @@
 # CHECKPOINT — VHDCHY
 
-checkpoint_version: 31
+checkpoint_version: 32
 protocol: AI_AUTHORITY_RESUME_V2
 status: EXECUTING_PRODUCT_V7_BETA
-reconciled_through_commit: 471d529b5b374d165507a7e1940e8058df08f9a4
+reconciled_through_commit: 58587a15521f4025dd268b3536eebfdfbe370747
 action_mode: AUTONOMOUS_PARALLEL
 active_lanes: REPO_GOVERNANCE / SHARED_DOMAIN / CLOUD_SERVICE / LAN_FULL_SERVICE / AUTH / GOOGLE_SYNC / WEB_ONLINE_LAN / ANDROID_PDA / RECONCILIATION / STABLE_PREPARATION
 paused_lanes: PHYSICAL_CORPORATE_LAN_REGRESSION
@@ -24,150 +24,109 @@ context_index_ref: CONTEXT_INDEX.md
 
 - Evidence-weighted total: **54.6% exact / 55% displayed**.
 - Primary active phase: **Phase 6 — LAN continuity, local state, offline operation and reconciliation**.
-- Parallel incomplete lanes: Phase 4 core business Service/API; Phase 5 Gateway/integrations; Phase 7 Online+LAN Web V7 UI; Phase 8 Android/PDA App.
-- Current phase completion baseline:
-  - Phase 1 Scope/rules/architecture: 95%
-  - Phase 2 Repo/environments/providers/CI: 85%
-  - Phase 3 Cloud data/auth/Service foundation: 80%
-  - Phase 4 Core business Service/API: 65%
-  - Phase 5 Gateway/adapters/integrations: 55%
-  - Phase 6 LAN continuity/offline/reconcile: **55%**
-  - Phase 7 Online Web + LAN Web UI: **25%**
-  - Phase 8 Android/PDA App: 15%
-  - Phase 9 Account/admin/reporting/support: 35%
-  - Phase 10 Security/observability/recovery: 50%
-  - Phase 11 BETA physical/capacity/UAT: 10%
-  - Phase 12 STABLE production/handover: 0%
-- Progress is evidence-weighted, never elapsed-time/commit/tool-call based. Scope expansion may legitimately reduce the percentage.
+- Parallel lanes: Phase 4 core business Service/API; Phase 5 Gateway/integrations; Phase 7 Online+LAN Web V7 UI; Phase 8 Android/PDA App.
+- No progress increase is claimed from the post-checkpoint commits because the integrated LAN readiness gate is currently FAILED and no new physical/E2E acceptance gate has closed.
 
-## Owner V7 UI / language / execution authority — ACTIVE
+## Authority / UI / execution state
 
-- Current user-facing Web and Android/PDA implementation is **Vietnamese only**.
-- Multilingual switching, translation catalogs, locale persistence and Vietnamese/English/Chinese acceptance are deferred until a later explicit Owner decision.
-- Android/PDA App UI/UX direction: actual Owner Pick Pack 1291 App reference, adapted to current VHDCHY workflows/terminology/permissions/data/runtime.
-- `BACKUP PICK PACK 1291` remains NON_AUTHORITY except for this explicit UI/UX reference use. Do not inherit old business logic/data/credentials/runtime architecture.
-- Exact Pick Pack visual details must come from accessible actual source/artifacts; do not invent unavailable screen details.
-- Online Web + LAN Web visual direction: Owner-supplied DNSHE screenshots from 2026-09-14 — dark navy navigation, light blue/white field, white rounded cards, royal-blue primary actions, compact status/icon tiles, clean enterprise-console hierarchy.
-- Do not copy DNSHE branding/proprietary assets.
-- Online/LAN Web remain one product/shared design system. LAN-critical UI assets must be available locally without Internet.
-- Ready-queue parallel execution is mandatory: execute all independent safe ready nodes in parallel where tools permit; serialize only real dependencies/same-resource writes; a blocked node must not stall unrelated work.
-- Before ending a long tool/session block, report only evidence-backed PASS / FAILED / IN_PROGRESS / BLOCKED state, direct evidence IDs, exact/rounded progress and justified delta. Tool activity by itself is not progress.
+- Current Web and Android/PDA user-facing implementation is **Vietnamese only**; multilingual UI is deferred.
+- Android/PDA visual direction uses actual Pick Pack 1291 UI/UX evidence only; legacy business/data/credentials/runtime remain NON_AUTHORITY.
+- Online Web + LAN Web share the V7 VHDCHY design direction inspired by Owner-supplied DNSHE screenshots without copying DNSHE branding/assets.
+- Ready-queue parallel execution remains mandatory. A blocked node must not stall independent safe work.
+- PASS requires reproducible evidence. CI/source PASS never substitutes for physical company-network/PDA PASS.
 
-## Current proven source foundations
+## Reconciled evidence through `58587a15521f4025dd268b3536eebfdfbe370747`
 
-### Cloud/data/auth
+### Cloud reconciliation ingestion — PASS foundation
 
-- D1 remains central consolidated canonical business store after synchronization under V3.
-- Sheets/Drive remain projection/file-storage outputs, never canonical business authority.
-- Current Google Drive/Sheets/GAS authority is `tam95.supra@gmail.com`.
-- BETA provider/runtime facts in `SERVICE_AUTHORITY.md` must be live-verified before any provider mutation/deploy.
-- Public business/admin/provider paths remain fail-closed where current readiness/handler/provider acceptance is incomplete.
+Post-checkpoint source added and packaged the reviewed Cloud LAN-reconciliation ingestion core. Evidence includes preservation of LAN actor/source/event identity, collision handling and completed integration-receipt ingestion/deduplication behavior at the source-test level.
 
-### LAN operational state / Slice-1
+Key evidence:
 
-Current source lineage has automated evidence for:
+- `19c3463a633389b0cd85ddcede6a4525ccaa522a` — Cloud reconciliation ingestion core;
+- `591c4083973141155530357f5bddd4ee58efbdc7` — package reconciliation module;
+- workflow `34803221835` — `Validate clean baseline` **SUCCESS** at `591c408...`;
+- workflow `34803221873` — `Build product foundations` **SUCCESS** at `591c408...`.
 
-- LAN operational snapshot/state materialization with rollback and pending-local overwrite guard;
-- idempotent local replay preflight;
-- immutable authenticated actor evidence capture;
-- employee/MNV/attendance Slice-1 business behavior;
-- repeated-IN semantics;
-- atomic active-MNV and one-active-code-per-employee uniqueness claims with race rollback;
-- stable resource conflict mapping;
-- durable staged-media local store/schema/lifecycle;
-- serialized staged-media identity claims.
+Remaining: reviewed authenticated network/API route, LAN sender -> Cloud E2E, retry/restart E2E, complete cursor/rebase/conflict UX and provider/physical acceptance.
 
-Dedicated staged-media workflow run `34797198225` at `cddf8dc8358dce25febf0efd6c04c4cd73f602fb`: **SUCCESS**.
+### LAN durable local foundation — PASS
 
-### LAN durable Cloud reconciliation queue — PASS foundation
+Previously proven foundations remain valid: operational snapshots/materialized Slice-1, immutable local event/outbox, idempotent replay, actor evidence, employee/MNV/attendance, atomic active-code uniqueness, staged media and durable Cloud-sync queue.
 
-Current source includes `CloudSyncQueueStore` and dedicated acceptance vectors for:
+Dedicated durable queue workflow `34801533266` at `013d5b310ae0f068510c56cdbfe7cf4ea7ffec66`: **SUCCESS**.
 
-- transactional due-item claim;
-- retry/backoff;
-- immutable edge-event reconciliation envelope construction;
-- completed Google/Drive receipt attachment;
-- explicit durable conflict evidence;
-- reconciliation completion checkpoint metadata;
-- restart recovery of interrupted `SYNCHRONIZING` claims;
-- race-safe single ownership of a due item.
+### LAN client security / user session / primary credential — dedicated PASS
 
-LAN runtime startup now executes interrupted-claim recovery and advertises implemented durable queue mechanics separately from the still-planned Cloud reconciliation network transport.
+Post-checkpoint source now includes:
 
-Dedicated workflow run `34801533266` at `013d5b310ae0f068510c56cdbfe7cf4ea7ffec66`: **SUCCESS**.
-Earlier dedicated vector run `34801198095`: **SUCCESS**.
+- P-256 paired-client signed request verification;
+- replay defense and security-epoch fencing;
+- durable LAN user-session binding;
+- authority snapshot V2 synchronized primary password verifier;
+- V1/V2 authorization compatibility;
+- primary credential -> authenticated evidence -> session chain.
 
-This is local source/CI evidence only. Cloud network ingestion/transport, complete sync cursor/delta/rebase behavior, full conflict resolution and physical continuity remain incomplete.
+Dedicated workflow `34805395079` at `583b3d0329166804b207332dadf6d449b07c0abf`: **SUCCESS**.
 
-### Online/LAN Web V7 shell — PASS foundation
+This isolated PASS does not authorize public mutation routes.
 
-Current shared Web source provides:
+### Integrated LAN readiness — FAILED / fail-closed
 
-- Vietnamese-only current UI;
-- shared Online/LAN V7 shell;
-- DNSHE-inspired VHDCHY design tokens without DNSHE branding/assets;
-- responsive navigation/dashboard shell;
-- Service, Cloud sync, Google output and conflict status surfaces;
-- local/offline-safe critical UI assets;
-- runtime reads for `/api/v1/meta`, `/api/v1/capabilities`, `/api/v1/sync/status` and fail-closed `/api/v1/auth/me` handling;
-- no direct Google business bypass.
+HEAD `609a77ee3ef48eca9b1df5d91f63d2e7d875508f` attempted to prove the evaluator advances through synchronized snapshots, client security and primary credential authority to the reviewed blocker `LAN_USER_SESSION_ROUTE_WIRING_REQUIRED`.
 
-Product-foundation workflow run `34801611019` at `41565f3b2ffdca473f756e33bd71769e16d8af13`: **SUCCESS** for Web, Cloud Service, Android APK and LAN Service jobs, including the Web V7 contract test.
+Workflow `34805628566` (`Validate LAN fail-closed readiness gate`) **FAILED** at `Prove readiness advances only to reviewed route-wiring gate`.
 
-This does not claim completed login/auth flow, full business screens, ADMIN+ conflict-resolution UI or end-to-end Web product acceptance.
+Therefore:
 
-### Android/PDA foundation
+- route-wiring readiness is not PASS;
+- public LAN business mutation remains fail-closed;
+- do not relax security/readiness assertions to make CI green;
+- next primary source node is diagnosis/fix of the integrated readiness invariant.
 
-- Current APK source builds successfully in product-foundation run `34801611019`.
-- Current visible foundation text is Vietnamese-only.
-- The authorized Pick Pack 1291 reference digest confirms the historical full backup and exact Beta128 APK, but the accessible current GitHub reference did not surface the actual final Android UI source/layout tree.
-- Exact Pick Pack visuals remain **not surfaced**; do not invent them.
-- Android product progress remains 15%; translation cleanup/build alone is not enough to advance the phase.
+The same HEAD's baseline run `34805628608` failed only at checkpoint freshness. This checkpoint reconciles that governance gap through the current-state updates immediately preceding it.
 
-## Portrait semantic gate — still unresolved
+### Web / Android foundations
 
-One Owner-level product conflict remains open:
+- Shared V7 Online/LAN Web shell remains PASS in product-foundation workflow `34801611019` at `41565f3b2ffdca473f756e33bd71769e16d8af13`.
+- Android foundation continues to build; exact final Pick Pack screen/layout evidence remains not sufficiently surfaced, so exact visual details must not be invented.
 
-- current rule requires previous portrait deletion immediately;
-- LAN/offline media semantics allow local staging when Drive is unavailable.
+## Current dependency graph / ready queue
 
-Decision-independent durable media work remains valid, but actual portrait replacement behavior while Drive is unavailable stays fail-closed until explicit Owner authority resolves the conflict.
+### Primary — integrated LAN readiness
 
-## Current LAN/public acceptance boundary
+1. add source-level diagnostic evidence around the failing readiness stage;
+2. identify the exact invariant mismatch;
+3. fix the integration defect without weakening fail-closed behavior;
+4. prove exact transition to `LAN_USER_SESSION_ROUTE_WIRING_REQUIRED` by dedicated CI;
+5. implement authenticated session -> authorization/domain -> supported Slice-1 route wiring;
+6. add negative authz/session/device/epoch/unsupported-command vectors;
+7. only after PASS, consider exposing the approved public LAN mutation subset.
 
-- Public LAN business mutation readiness remains fail-closed until current auth/pairing/security-epoch/permission/domain readiness links the complete reviewed path.
-- Cloud reconciliation local queue is implemented/tested; the reviewed Cloud network ingestion/transport path is the primary next dependency.
-- Physical company ordinary-user Windows + real NLS-MT90 regression is pending.
-- Canonical continuity acceptance: warm up connected, cut Internet while valid LAN remains, then sustain approved App + LAN Web + local business workflow for **Window 2 >=60 minutes**.
-- External Internet embeds may fail during the timed window.
-- Restoration sync/reconciliation is tested after the timed window.
-- Host restart/power-loss is a separate recovery gate.
-- Capacity gate includes synthetic 10/25/50/100 plus soak.
+### Parallel — reconciliation network E2E
 
-## Immediate ready queue
+1. wire the already-tested Cloud ingestion core behind the reviewed authenticated network/API boundary;
+2. connect LAN sender;
+3. prove idempotent retry/restart/result mapping;
+4. prove completed Google/Drive receipts do not duplicate output;
+5. add cursor/delta/rebase and conflict resolution after transport is stable.
 
-### Primary chain — Cloud/LAN reconciliation
+### Other independent lanes
 
-1. Lock the Cloud reconciliation transport/API boundary against `docs/SERVICE_API_CONTRACT_V3.md` and existing D1 reconciliation schema.
-2. Implement Cloud ingestion without opening unrelated public mutations.
-3. Prove event/idempotency/device/source collision behavior.
-4. Attach already-completed LAN integration receipts without duplicate downstream Google output.
-5. Return stable reconcile/conflict/retry semantics.
-6. Add CI vectors.
-7. Then connect the LAN network sender and prove E2E retry/restart/reconciliation.
+- Web authenticated/business surfaces against real Service routes;
+- Android non-visual endpoint/scanner/session/durable-queue work while visual reference remains blocked;
+- broader Cloud/Gateway/Google receipt/retry/readback work;
+- broader business adapter coverage.
 
-### Independent parallel lanes
+## Portrait semantic gate
 
-- LAN auth/pairing/security-epoch/permission/readiness and broader current business adapters.
-- Web authenticated/business surfaces where current Service routes/contracts are stable; never fake login success.
-- Android non-visual endpoint/scanner/domain-command/durable-queue work while exact Pick Pack visual source remains blocked.
-- Cloud/Gateway Google receipt/retry/readback and broader provider-neutral business work.
+The portrait rule conflict remains unresolved: immediate deletion of the previous remote portrait versus offline staging while Drive is unavailable. Decision-independent media infrastructure may continue. Actual offline portrait-replacement semantics remain fail-closed until explicit Owner authority.
 
-## Physical / STABLE
+## Physical / STABLE boundary
 
-Final company-network/no-admin/NLS-MT90 evidence remains physical-only and cannot be replaced by CI.
-
-STABLE infrastructure may be prepared safely in isolation, but production business activation/promotion remains blocked until full BETA acceptance plus explicit Owner approval.
+- Physical company ordinary-user Windows + target network + real NLS-MT90 regression remains pending.
+- Canonical offline continuity acceptance remains **Window 2 >=60 minutes** after Internet cut while valid LAN remains.
+- STABLE business activation/promotion remains blocked until mandatory BETA acceptance and explicit Owner approval.
 
 do_not_repeat:
-Do not treat memory as authority. Do not replay provider migrations from remembered state. Do not claim provider delivery/projection live without current evidence. Do not bypass action-safety. Do not open LAN mutation routes before readiness/authz/domain acceptance. Do not mutate raw edge events. Do not make Google business authority. Do not silently last-write-wins conflicts. Do not treat CI as physical company-LAN proof. Do not invent Pick Pack UI details without actual reference evidence. Do not copy DNSHE branding/assets. Do not reintroduce stale duration-only offline TTL. Do not silently resolve the portrait immediate-delete/offline-staging conflict. Do not build/expose multilingual UI in the current stage. Do not inflate progress from tool/commit activity without acceptance evidence. Do not promote STABLE without explicit Owner approval.
+Do not treat memory as authority. Do not replay provider mutations from remembered state. Do not claim provider delivery/projection live without current evidence. Do not bypass action-safety. Do not open LAN mutation routes before readiness/authz/domain acceptance. Do not weaken a failing readiness assertion merely to make CI pass. Do not mutate raw edge events. Do not make Google business authority. Do not silently last-write-wins conflicts. Do not treat CI as physical company-LAN proof. Do not invent Pick Pack UI details without actual reference evidence. Do not copy DNSHE branding/assets. Do not reintroduce stale duration-only offline TTL. Do not silently resolve the portrait immediate-delete/offline-staging conflict. Do not build/expose multilingual UI in the current stage. Do not inflate progress from tool/commit activity without acceptance evidence. Do not promote STABLE without explicit Owner approval.
