@@ -1,0 +1,174 @@
+name: Cloudflare D1 BETA additive migration 0013 reconciliation V2 backfill
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/dispatch/cloudflare-beta-additive-0013.json'
+      - '.github/workflows/cloudflare-beta-additive-0013.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudflare-d1-beta-additive-0013
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    environment: beta
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      D1_DATABASE_ID: 37eb7d59-05c0-4ba2-8162-cb6a9fe5d492
+      MIGRATION_FILE: service/worker/migrations/0013_edge_reconciliation_backfill_v2.sql
+      MIGRATION_BLOB_SHA: 0056e9a5e8a1818c13241810fbd35e967f2d13f7
+
+    steps:
+      - name: Checkout authoritative main
+        uses: actions/checkout@v4
+
+      - name: Read fixed dispatch state
+        id: dispatch
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main"
+          jq -e '
+            .target == "beta" and
+            .operation == "migrate_edge_reconciliation_backfill_v2_0013" and
+            (.enabled == true or .enabled == false)
+          ' .github/dispatch/cloudflare-beta-additive-0013.json >/dev/null
+          enabled="$(jq -r '.enabled' .github/dispatch/cloudflare-beta-additive-0013.json)"
+          echo "enabled=${enabled}" >> "$GITHUB_OUTPUT"
+
+      - name: Safe idle when disabled
+        if: steps.dispatch.outputs.enabled != 'true'
+        run: echo 'D1_ADDITIVE_0013_IDLE enabled=false; provider mutation skipped'
+
+      - name: Validate reviewed migration source identity
+        if: steps.dispatch.outputs.enabled == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$MIGRATION_FILE"
+          actual="$(git hash-object "$MIGRATION_FILE")"
+          test "$actual" = "$MIGRATION_BLOB_SHA"
+          echo "MIGRATION_SOURCE_IDENTITY_PASS blob=${actual}"
+
+      - name: Exact BETA D1 preflight
+        if: steps.dispatch.outputs.enabled == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+          const token = process.env.CLOUDFLARE_API_TOKEN;
+          const databaseId = process.env.D1_DATABASE_ID;
+          const expectedAccount = '1b1695e4f2a3abfe08dc475b352c7f42';
+          const expectedDb = '37eb7d59-05c0-4ba2-8162-cb6a9fe5d492';
+          if (accountId !== expectedAccount || databaseId !== expectedDb || !token) throw new Error('PRECHECK fixed provider identity mismatch');
+          const base = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}`;
+          async function api(path, body) {
+            const response = await fetch(`${base}${path}`, { method: body ? 'POST' : 'GET', headers: { authorization: `Bearer ${token}`, ...(body ? {'content-type':'application/json'} : {}) }, ...(body ? {body: JSON.stringify(body)} : {}) });
+            const payload = await response.json();
+            if (!response.ok || payload?.success !== true) throw new Error(`PRECHECK Cloudflare API failed ${response.status}`);
+            return payload;
+          }
+          async function query(sql, params=[]) {
+            const payload = await api(`/d1/database/${encodeURIComponent(databaseId)}/query`, {sql, params});
+            const first = Array.isArray(payload.result) ? payload.result[0] : payload.result;
+            if (!first || first.success !== true) throw new Error('PRECHECK D1 query failed');
+            return first.results || [];
+          }
+          const dbs = await api(`/d1/database?name=${encodeURIComponent('vhdchy-data-beta')}&per_page=100`);
+          const db = (dbs.result || []).find(x => x?.name === 'vhdchy-data-beta');
+          if ((db?.uuid || db?.id || '') !== expectedDb) throw new Error('PRECHECK D1 database identity mismatch');
+          const schema = await query('SELECT value FROM vhdchy_meta WHERE key=? LIMIT 1', ['schema_version']);
+          if (String(schema[0]?.value || '') !== 'business_core_v3') throw new Error('PRECHECK schema_version mismatch');
+          const tables = (await query("SELECT name FROM sqlite_schema WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name")).map(x => String(x.name));
+          for (const required of ['vhdchy_meta','clusters','device_registry','domain_events','conflict_corrections','auth_permissions']) if (!tables.includes(required)) throw new Error(`PRECHECK base table missing ${required}`);
+          const reconciliation = ['edge_sources','edge_event_ingest','integration_receipts','edge_sync_checkpoints'];
+          const present = reconciliation.filter(x => tables.includes(x));
+          if (present.length !== 0 && present.length !== reconciliation.length) throw new Error(`PRECHECK partial reconciliation tables ${present.join(',')}`);
+          if (present.length === reconciliation.length) {
+            const columns = (await query('PRAGMA table_info(edge_event_ingest)')).map(x => String(x.name));
+            for (const required of ['resulting_entity_version','payload_json','actor_user_id']) if (!columns.includes(required)) throw new Error(`PRECHECK partial reconciliation column ${required}`);
+          }
+          const counts = {};
+          for (const table of tables) {
+            if (table === '_cf_KV' || table === 'vhdchy_meta') continue;
+            if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(table)) throw new Error(`PRECHECK unsafe table ${table}`);
+            const rows = await query(`SELECT COUNT(*) AS row_count FROM "${table}"`);
+            counts[table] = Number(rows[0]?.row_count || 0);
+          }
+          fs.writeFileSync(`${process.env.RUNNER_TEMP}/d1-0013-pre.json`, JSON.stringify({tables, counts, state: present.length === 0 ? 'ABSENT' : 'FINAL'}));
+          console.log(`D1_ADDITIVE_0013_PRECHECK_PASS state=${present.length === 0 ? 'ABSENT' : 'FINAL'} tables=${tables.length}`);
+          NODE
+
+      - name: Apply reviewed additive migration 0013 when absent
+        if: steps.dispatch.outputs.enabled == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const pre = JSON.parse(fs.readFileSync(`${process.env.RUNNER_TEMP}/d1-0013-pre.json`, 'utf8'));
+          if (pre.state === 'FINAL') { console.log('D1_ADDITIVE_0013_APPLY_SKIPPED state=FINAL'); process.exit(0); }
+          if (pre.state !== 'ABSENT') throw new Error(`Unsafe pre-state ${pre.state}`);
+          const sql = fs.readFileSync(process.env.MIGRATION_FILE, 'utf8').trim();
+          const url = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(process.env.CLOUDFLARE_ACCOUNT_ID)}/d1/database/${encodeURIComponent(process.env.D1_DATABASE_ID)}/query`;
+          const response = await fetch(url, { method:'POST', headers:{authorization:`Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,'content-type':'application/json'}, body:JSON.stringify({sql}) });
+          const payload = await response.json();
+          if (!response.ok || payload?.success !== true) throw new Error(`D1 additive migration failed HTTP ${response.status}: ${JSON.stringify(payload?.errors || []).slice(0,1000)}`);
+          const results = Array.isArray(payload.result) ? payload.result : [payload.result];
+          if (!results.length || results.some(x => !x || x.success !== true)) throw new Error('D1 additive migration contains failed statement');
+          console.log(`D1_ADDITIVE_0013_APPLY_PASS results=${results.length}`);
+          NODE
+
+      - name: Verify reconciliation V2 post-state and invariants
+        if: steps.dispatch.outputs.enabled == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const pre = JSON.parse(fs.readFileSync(`${process.env.RUNNER_TEMP}/d1-0013-pre.json`, 'utf8'));
+          const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+          const token = process.env.CLOUDFLARE_API_TOKEN;
+          const databaseId = process.env.D1_DATABASE_ID;
+          const url = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/d1/database/${encodeURIComponent(databaseId)}/query`;
+          async function query(sql, params=[]) {
+            const response = await fetch(url,{method:'POST',headers:{authorization:`Bearer ${token}`,'content-type':'application/json'},body:JSON.stringify({sql,params})});
+            const payload = await response.json();
+            if (!response.ok || payload?.success !== true) throw new Error(`POSTCHECK query failed ${response.status}`);
+            const first = Array.isArray(payload.result) ? payload.result[0] : payload.result;
+            if (!first || first.success !== true) throw new Error('POSTCHECK D1 result failed');
+            return first.results || [];
+          }
+          const tables = (await query("SELECT name FROM sqlite_schema WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name")).map(x=>String(x.name));
+          for (const required of ['edge_sources','edge_event_ingest','integration_receipts','edge_sync_checkpoints']) if (!tables.includes(required)) throw new Error(`POSTCHECK table missing ${required}`);
+          const columns = (await query('PRAGMA table_info(edge_event_ingest)')).map(x=>String(x.name));
+          for (const required of ['resulting_entity_version','payload_json','actor_user_id']) if (!columns.includes(required)) throw new Error(`POSTCHECK column missing ${required}`);
+          const indexes = (await query("SELECT name FROM sqlite_schema WHERE type='index' ORDER BY name")).map(x=>String(x.name));
+          for (const required of ['ix_edge_sources_cluster_status','ux_edge_ingest_source_idempotency','ux_edge_ingest_device_sequence','ix_edge_ingest_status_order','ix_edge_ingest_actor_time','ix_integration_receipts_event']) if (!indexes.includes(required)) throw new Error(`POSTCHECK index missing ${required}`);
+          const metaRows = await query("SELECT key,value FROM vhdchy_meta WHERE key IN ('domain_contract_version','permission_catalog_version','edge_reconciliation_model')");
+          const meta = Object.fromEntries(metaRows.map(x=>[String(x.key),String(x.value)]));
+          if (meta.domain_contract_version !== 'VHDCHY_DOMAIN_V1' || meta.permission_catalog_version !== 'VHDCHY_PERMISSION_CATALOG_V1' || meta.edge_reconciliation_model !== 'edge_reconciliation_v2') throw new Error(`POSTCHECK meta mismatch ${JSON.stringify(meta)}`);
+          const counts = {};
+          for (const table of tables) {
+            if (table === '_cf_KV' || table === 'vhdchy_meta') continue;
+            if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(table)) throw new Error(`POSTCHECK unsafe table ${table}`);
+            const rows = await query(`SELECT COUNT(*) AS row_count FROM "${table}"`);
+            counts[table] = Number(rows[0]?.row_count || 0);
+          }
+          for (const [table,before] of Object.entries(pre.counts || {})) if (counts[table] !== before) throw new Error(`POSTCHECK existing row count changed ${table}:${before}->${counts[table]}`);
+          if (pre.state === 'ABSENT') for (const table of ['edge_sources','edge_event_ingest','integration_receipts','edge_sync_checkpoints']) if (counts[table] !== 0) throw new Error(`POSTCHECK new table not empty ${table}`);
+          const fk = await query('PRAGMA foreign_key_check');
+          if (fk.length) throw new Error(`POSTCHECK foreign_key_check failed ${JSON.stringify(fk)}`);
+          const quick = await query('PRAGMA quick_check');
+          if (String(quick[0]?.quick_check ?? Object.values(quick[0] || {})[0] ?? '').toLowerCase() !== 'ok') throw new Error(`POSTCHECK quick_check failed ${JSON.stringify(quick)}`);
+          console.log(`D1_ADDITIVE_0013_PASS state=${pre.state}->FINAL tables=${tables.length} integrity=PASS`);
+          NODE
