@@ -20,8 +20,10 @@ if (!globalThis.crypto?.subtle) {
 const keyId = 'lan-beta-machine-01';
 const keyMaterial = 'test-only-reconciliation-key-material-2026-09-14';
 const routePath = '/api/v1/reconciliation/events';
+const canonicalPayloadJson = '{"employeeId":"employee-route-1"}';
+const canonicalPayloadHash = '254121539a413b7790d2ea6c99b6106bed27c0c9dc8a9453e2bc817ab7ca0a0d';
 
-function envelope() {
+function envelope(overrides = {}) {
   return {
     eventId: 'edge-route-event-1',
     requestId: 'edge-route-request-1',
@@ -38,14 +40,15 @@ function envelope() {
     entityId: 'employee-route-1',
     baseVersion: 1,
     resultingVersion: 2,
-    payloadJson: '{"employeeId":"employee-route-1"}',
-    payloadHash: 'payload-route-hash-1',
+    payloadJson: canonicalPayloadJson,
+    payloadHash: canonicalPayloadHash,
     acceptedAt: '2026-09-14T04:00:00.000Z',
     authoritySnapshotVersion: 'authority-route-1',
     domainContractVersion: 'VHDCHY_DOMAIN_V1',
     edgeSchemaVersion: EDGE_SCHEMA_VERSION,
     actorUserId: 'operator-route-1',
-    completedIntegrationReceipts: []
+    completedIntegrationReceipts: [],
+    ...overrides
   };
 }
 
@@ -118,7 +121,7 @@ test('reconciliation route rejects missing machine authentication', async () => 
   assert.equal(body.error.code, 'MACHINE_AUTH_INVALID');
 });
 
-test('reconciliation route accepts a correctly signed LAN envelope', async () => {
+test('reconciliation route accepts a correctly signed LAN envelope with matching payload hash', async () => {
   const db = fakeD1();
   const rawBody = JSON.stringify(envelope());
   const response = await handleRequest(new Request(`https://beta.example${routePath}`, {
@@ -134,6 +137,24 @@ test('reconciliation route accepts a correctly signed LAN envelope', async () =>
   assert.equal(body.edgeEventId, 'edge-route-event-1');
   assert.equal(body.machineAuthVersion, RECONCILIATION_AUTH_VERSION);
   assert.equal(db.state.batches.length, 1);
+});
+
+test('reconciliation route rejects a correctly signed envelope when payload hash does not match payloadJson', async () => {
+  const db = fakeD1();
+  const value = envelope({ payloadHash: '0'.repeat(64) });
+  const rawBody = JSON.stringify(value);
+  const response = await handleRequest(new Request(`https://beta.example${routePath}`, {
+    method: 'POST',
+    headers: await signedHeaders(rawBody, Date.now(), 'hash_mismatch_nonce_12345'),
+    body: rawBody
+  }), env(db));
+
+  assert.equal(response.status, 422);
+  const body = await response.json();
+  assert.equal(body.ok, false);
+  assert.equal(body.error.code, 'INVALID_INPUT');
+  assert.equal(body.error.reason, 'PAYLOAD_HASH_MISMATCH');
+  assert.equal(db.state.batches.length, 0);
 });
 
 test('signature binds the exact request body', async () => {
