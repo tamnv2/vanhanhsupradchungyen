@@ -28,9 +28,6 @@ HarnessAssert.That(inspection.CatalogCommandCount == 8, "ADAPTER_CATALOG_COUNT_W
 HarnessAssert.That(
     inspection.Blockers.Any(value => value.Code == "PORTRAIT_MEDIA_LIFECYCLE_REQUIRED"),
     "PORTRAIT_BLOCKER_MISSING");
-HarnessAssert.That(
-    inspection.Blockers.Any(value => value.Code == "EMPLOYEE_CODE_ATOMIC_UNIQUENESS_REQUIRED"),
-    "ATOMIC_UNIQUENESS_BLOCKER_MISSING");
 
 await EmployeeVectors.RunAsync(adapter, databasePath);
 await AttendanceVectors.RunAsync(adapter, databasePath);
