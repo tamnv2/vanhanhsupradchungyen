@@ -43,6 +43,54 @@ static (string Algorithm, string SecretHash) PasswordRecord(string password)
     return ($"PBKDF2-SHA256${iterations}${Base64Url(salt)}", Base64Url(digest));
 }
 
+var authorityStore = new AuthoritySnapshotStore(databasePath);
+var operationalStore = new OperationalSnapshotStore(databasePath);
+
+// Seed the readiness harness independently. V1 is valid synchronized authority for
+// ordinary authorization inspection, but intentionally cannot satisfy the V2 primary
+// credential verifier. No local command vectors run on this database.
+const string v1Payload = """
+{
+  "schemaVersion":"VHDCHY_AUTHORITY_SNAPSHOT_V1",
+  "permissionCatalogVersion":"VHDCHY_PERMISSION_CATALOG_V1",
+  "users":[
+    {"userId":"U_READINESS_V1","status":"ACTIVE","securityLevel":"NORMAL"}
+  ],
+  "roles":[],
+  "permissions":[],
+  "rolePermissionGrants":[],
+  "userRoleGrants":[],
+  "userPermissionGrants":[]
+}
+""";
+
+await authorityStore.ImportAsync(
+    new AuthoritySnapshotEnvelope(
+        "AUTH-READINESS-V1",
+        environment,
+        clusterId,
+        "readiness-authority-v1",
+        compatibility,
+        authorityScope,
+        v1Payload),
+    environment,
+    clusterId,
+    compatibility);
+
+await operationalStore.ImportAsync(
+    new OperationalSnapshotEnvelope(
+        "OP-READINESS-V1",
+        environment,
+        clusterId,
+        "readiness-operational-v1",
+        compatibility,
+        "{\"generation\":1,\"modules\":[\"IDENTITY_EMPLOYEE_ATTENDANCE\"]}",
+        "{\"employees\":[],\"presence\":[],\"generation\":1}"),
+    environment,
+    clusterId,
+    compatibility,
+    new[] { moduleId });
+
 var evaluator = new LanReadinessEvaluator(
     databasePath,
     environment,
@@ -54,9 +102,9 @@ var report = await evaluator.EvaluateAsync();
 Assert(!report.Ready, "READINESS_MUST_REMAIN_FALSE_WITHOUT_CLIENT_SECURITY");
 Assert(report.Readiness == "EDGE_NOT_READY", "READINESS_STATE_WRONG");
 Assert(report.SnapshotPrerequisitesReady, "SNAPSHOT_PREREQUISITES_NOT_READY");
-Assert(report.AuthoritySnapshotVersion == "AUTH-TEST-2", "READINESS_AUTHORITY_VERSION_WRONG");
-Assert(report.OperationalSnapshotVersion == "OP-TEST-2", "READINESS_OPERATIONAL_VERSION_WRONG");
-Assert(report.OperationalAuthoritySnapshotVersion == "AUTH-TEST-2", "READINESS_OPERATIONAL_AUTHORITY_LINK_WRONG");
+Assert(report.AuthoritySnapshotVersion == "AUTH-READINESS-V1", "READINESS_AUTHORITY_VERSION_WRONG");
+Assert(report.OperationalSnapshotVersion == "OP-READINESS-V1", "READINESS_OPERATIONAL_VERSION_WRONG");
+Assert(report.OperationalAuthoritySnapshotVersion == "AUTH-READINESS-V1", "READINESS_OPERATIONAL_AUTHORITY_LINK_WRONG");
 Assert(report.RequiredModules.SequenceEqual(new[] { moduleId }), "READINESS_REQUIRED_MODULES_WRONG");
 Assert(report.SupportedCommandCodes.Count == 7, "READINESS_SUPPORTED_COMMAND_COUNT_WRONG");
 Assert(report.SupportedCommandCodes.Contains("EMPLOYEE_CREATE"), "READINESS_EMPLOYEE_CREATE_NOT_LINKED");
@@ -124,7 +172,6 @@ var v2Payload = JsonSerializer.Serialize(new
     userPermissionGrants = Array.Empty<object>()
 });
 
-var authorityStore = new AuthoritySnapshotStore(databasePath);
 await authorityStore.ImportAsync(
     new AuthoritySnapshotEnvelope(
         "AUTH-READINESS-V2",
@@ -138,7 +185,6 @@ await authorityStore.ImportAsync(
     clusterId,
     compatibility);
 
-var operationalStore = new OperationalSnapshotStore(databasePath);
 await operationalStore.ImportAsync(
     new OperationalSnapshotEnvelope(
         "OP-READINESS-V2",
@@ -146,8 +192,8 @@ await operationalStore.ImportAsync(
         clusterId,
         "readiness-operational-v2",
         compatibility,
-        "{\"generation\":3,\"modules\":[\"IDENTITY_EMPLOYEE_ATTENDANCE\"]}",
-        "{\"employees\":[],\"presence\":[],\"generation\":3}"),
+        "{\"generation\":2,\"modules\":[\"IDENTITY_EMPLOYEE_ATTENDANCE\"]}",
+        "{\"employees\":[],\"presence\":[],\"generation\":2}"),
     environment,
     clusterId,
     compatibility,
