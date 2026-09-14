@@ -2,5 +2,5 @@
   "enabled": true,
   "target": "beta",
   "operation": "verify",
-  "request_id": "reconciliation-finality-binding-schema-preflight-20260914"
+  "request_id": "reconciliation-d1-postmigration-20260914"
 }
