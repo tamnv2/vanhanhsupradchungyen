@@ -8,147 +8,71 @@ Primary phase: **Phase 6 — LAN continuity/offline/reconcile**
 
 ## Execution rule
 
-Default is `CONTINUE` with a mandatory ready-queue scheduler. Execute independent safe work in parallel where tools permit; serialize dependency-bound or same-resource writes. A failed node must not stall unrelated ready work.
+Default is `CONTINUE` with dependency-aware parallel execution. Evidence is required before PASS. A failed lane does not stop unrelated ready work.
 
-Public business mutation paths remain fail-closed unless the corresponding current transport/readiness/security/domain acceptance gates are satisfied. Evidence is required before PASS.
+## A — Aggregate LAN regression — IMMEDIATE
 
-## Ready queue NOW
+At HEAD `4b202351c62d7439569fb72b9aa39794c34769c7`:
 
-### A — Live-host public CA + real-device acceptance — PRIMARY PHYSICAL/PROVIDER CHAIN
+- `Validate LAN Cloud reconciliation queue` run `34833117039`: **SUCCESS**.
+- `Validate clean baseline` run `34833117051`: **SUCCESS**.
+- `Build portable LAN Windows host package` run `34833117192`: **SUCCESS**.
+- aggregate `Build product foundations` run `34833117353`: **FAILURE** only in job `lan-service` / check `103940791504`, step `Build and smoke-test LAN Service`.
+- sibling jobs `android-apk`, `web-contract`, `cloud-service`: **SUCCESS**.
 
-Already SOURCE/CI PASS:
+Next: inspect and repair the aggregate LAN smoke-test regression, then require both the aggregate LAN job and the dedicated reconciliation harness to PASS at the repaired HEAD. Do not raise project % from CI repair alone unless the progress model justifies it.
 
-- Kestrel HTTPS transport with no-TLS `HTTP_READ_ONLY` fallback;
-- paired signed normal-user login and durable LAN session;
-- signed session -> authorization/domain -> reviewed Slice-1 business route;
-- Windows DPAPI CurrentUser protected PFX;
-- Schannel-compatible current-user key handling without certificate-store installation/admin;
-- canonical SAN validation, wrong-host rejection, corrupt-protected-PFX rejection and no raw PFX disk leak;
-- separate ACME DNS-01 certificate manager;
-- exact Cloudflare account/zone precondition checks;
-- ACME challenge write/read/cleanup logic restricted to `_acme-challenge.<canonical-host>`;
-- staging-by-default ACME behavior and explicit production opt-in;
-- renewal threshold + protected ACME account-key handling;
-- portable self-contained Windows host package `0.2.2`;
-- certificate-manager/host CI receives no GitHub secrets.
+## B — Cloud/LAN reconciliation — SOURCE/CI PASS, LIVE E2E PENDING
 
-Evidence includes secure HTTP workflow `34811861697`, Windows DPAPI TLS workflow `34817069447`, certificate-manager workflow `34819836554`, portable-host workflow `34821013175` and the corresponding successful baseline validators recorded in `CURRENT_STATE.md`.
+Current PASS source boundary:
 
-Cloudflare read-only provider evidence verifies the intended project account and active `supra.cc.cd` zone, but does **not** prove DNS Edit permission for the credential that will execute on the real LAN host.
+- durable LAN reconciliation queue and immutable event envelope;
+- isolated Worker route `POST /api/v1/reconciliation/events`;
+- signed machine-request verification bound to request metadata and body hash;
+- stale/unsigned/mismatched requests rejected;
+- LAN HTTPS sender compatible with the Worker verifier;
+- background sender starts only with complete runtime configuration;
+- `RECEIVED` is durable inbox receipt only and is not treated as final `RECONCILED`/canonical commit.
 
-Next dependency chain:
+Evidence:
 
-1. use a **dedicated least-privilege DNS credential on the intended ordinary-user Windows LAN host**; do not move the final private key/PFX through GitHub;
-2. live-verify exact account/zone and prove TXT create/read/delete only in `_acme-challenge.lan-beta.supra.cc.cd`;
-3. run Let’s Encrypt **staging** issuance on that target Windows user/machine context;
-4. verify the DPAPI protected PFX, canonical SAN and LAN Service HTTPS startup/restart;
-5. only after staging PASS, explicitly enable production issuance and obtain the publicly trusted BETA certificate;
-6. prove canonical LAN hostname resolution/reachability + browser certificate trust from the intended company Windows/network;
-7. prove real NLS-MT90/PDA HTTPS login/business/reconnection behavior including Wi-Fi/LAN reacquisition;
-8. keep `EMPLOYEE_PORTRAIT_REPLACE` closed until the Owner portrait semantic gate is resolved;
-9. later include the approved secure public subset in physical Internet-cut continuity evidence.
+- Worker route coverage commit `a2932d95fb8289ad78be7102d597d3b4a95561ce`;
+- clean baseline run `34832612667`: **SUCCESS**;
+- LAN reconciliation run `34833117039`: **SUCCESS**;
+- same-HEAD baseline `34833117051`: **SUCCESS**.
 
-Important boundaries:
+Next: complete real BETA network E2E, add/prove final reconciliation acknowledgement semantics, prove retry/restart/idempotency over real HTTP transport, verify downstream receipt no-duplicate behavior, retain explicit conflict handling, then add cursor/delta/rebase after transport is stable.
 
-- GitHub runner DPAPI output is not deployable as the laptop’s final protected PFX; DPAPI belongs to the target Windows user/machine context.
-- Do not use browser certificate-warning click-through or an ad-hoc trust root.
-- Do not create a public `lan-beta` A/CNAME merely to make DNS appear complete; canonical offline/company-LAN resolution is a separate V4 acceptance problem and must match the actual network model.
-- Do not assume the existing GitHub Cloudflare token has the least-privilege DNS Edit scope required for the host credential.
+## C — Physical LAN trust chain — PRIMARY PHYSICAL/PROVIDER GATE
 
-### B — Cloud/LAN reconciliation E2E — PARALLEL
+Source/CI foundations for HTTPS, DPAPI-protected TLS state, ACME DNS-01 manager and portable ordinary-user Windows host are already PASS.
 
-Already PASS at source foundation level:
+Next dependency chain: target ordinary-user Windows host -> least-privilege DNS access -> ACME staging -> protected PFX + HTTPS restart -> production public CA only after staging PASS -> canonical company-LAN reachability/browser trust -> real NLS-MT90/PDA HTTPS/reconnect -> >=60-minute Internet-cut acceptance -> restoration reconciliation.
 
-- durable LAN reconciliation queue;
-- immutable reconciliation envelope with actor/source evidence;
-- Cloud ingestion core;
-- event/idempotency/device/source collision handling;
-- completed integration receipt ingestion/deduplication foundation;
-- Worker packaging of the reconciliation module.
+Do not treat GitHub-runner certificate state as target-laptop acceptance. Do not bypass browser trust warnings or company policy.
 
-Evidence: workflows `34803221835` and `34803221873` at `591c4083973141155530357f5bddd4ee58efbdc7`: **SUCCESS**.
+## D — Account security — PARALLEL
 
-Next dependency chain:
+Current SOURCE/CI PASS: normal login, ROOT username-only bootstrap to `ROOT_EMAIL_OTP_REQUIRED`, normal change-password including `MUST_CHANGE_PASSWORD`. Evidence run `34830186926`, check `103931457439`: **SUCCESS**.
 
-1. define and prove the reviewed machine/service authentication boundary for reconciliation; payload actor evidence is not authentication;
-2. wire the ingestion core behind that authenticated Cloud route;
-3. keep the route isolated from unrelated public mutations;
-4. connect the LAN network sender;
-5. prove retry/restart/idempotency and stable result mapping end-to-end;
-6. prove existing Google/Drive receipts do not duplicate downstream output;
-7. retain explicit conflict evidence and ADMIN+ resolution boundary;
-8. add sync cursor/delta/rebase after the transport path is stable.
+Next: real email delivery integration, ROOT OTP request/verify route, V6 lifecycle tests, normal forgotten-password flow, session security behavior, leakage checks, and verified BETA migration state before live E2E claims.
 
-### C — Account security routes — PARALLEL / CURRENT ROUTE SLICE SOURCE-CI PASS
+## E — Web / Android / Gateway — PARALLEL
 
-Authority requires:
+Web: continue authenticated login/recovery, then employee/attendance Slice-1 and later ADMIN+ conflict-resolution surfaces. Preserve Online/LAN parity and Vietnamese-only current UI.
 
-- ROOT authentication through email OTP, no permanent ROOT password;
-- normal-user recovery/must-change state without bypassing authorization gates.
+Android: continue endpoint/session/scanner/retry/HTTPS/reconnect work independent of missing final Pick Pack visual evidence. Latest aggregate `android-apk` job at HEAD `4b202351...`: **SUCCESS**.
 
-Current source/CI PASS:
-
-- public Cloud Worker `POST /api/v1/auth/login` for normal permanent-password login;
-- ROOT login bootstrap reaches `ROOT_EMAIL_OTP_REQUIRED` using username only and never creates a permanent-password session;
-- public authenticated `POST /api/v1/auth/change-password` for normal accounts, including `MUST_CHANGE_PASSWORD` sessions;
-- bounded request JSON handling and route tests covering token handling, ROOT password exclusion and permanent-password establishment;
-- latest auth-route source/test commits `2bffb170319f9bf6d6d5f1953655ce960115d35e` and `1f2d328f21af90d09c5e3b260ad6452af05835c6`;
-- clean-baseline run `34830186926`, job/check `103931457439`, HEAD `3bb22252a53ce25d69901c3261efd2ee3c54f57d`: **SUCCESS**, including Worker syntax, auth crypto contract, Worker unit tests, clean D1 schema and schema/runtime contract.
-
-Continue:
-
-1. add a reviewed email-delivery adapter and secure destination provisioning boundary; do **not** fabricate delivery success and do not put readable destination/provider secrets in public source;
-2. expose ROOT email-OTP request/verify route using the existing V6 OTP state machine;
-3. prove expiry/cooldown/supersede/replay/attempt/failure audit behavior through the public route;
-4. add normal-user forgotten-password request/verify flow that ends in `MUST_CHANGE_PASSWORD` and a different new permanent password;
-5. invalidate/rebind sessions as required by credential generation/security semantics;
-6. prove no credential/OTP/destination leakage in logs/diagnostics;
-7. verify/apply migration `0010_auth_v6_email_otp.sql` to the exact intended provider environment through the controlled workflow before claiming live E2E PASS.
-
-No Owner decision is required for the V6 OTP lifecycle. The remaining blocker for full E2E is provider/destination integration and verified live migration state, not an unresolved ROOT policy decision.
-
-### D — Online Web + LAN Web — PARALLEL
-
-Current shared V7 shell and Web contract have PASS evidence. Continue actual authenticated login/recovery against current Service/LAN routes, then employee/attendance Slice-1 screens and later ADMIN+ conflict-resolution surfaces.
-
-Preserve:
-
-- Online/LAN parity;
-- local/offline-safe critical assets;
-- **Vietnamese-only** current UI;
-- HTTPS versus `HTTP_READ_ONLY` runtime distinction;
-- paired-device/session/readiness controls;
-- no fake login success.
-
-### E — Android/PDA App — PARALLEL WHERE NOT BLOCKED
-
-Continue non-visual current-contract work that does not depend on missing Pick Pack visual evidence:
-
-- Service/LAN endpoint abstraction;
-- certificate-validating HTTPS LAN access;
-- authenticated session handling;
-- scanner -> domain-command boundary;
-- durable retry mechanics;
-- network/sync state and reconnection behavior.
-
-Continue locating actual final Pick Pack 1291 UI source/artifacts; do not invent unavailable screen details.
-
-### F — Cloud/Gateway/Google — PARALLEL
-
-Continue provider-neutral business coverage and controlled Google projection/upload receipt, retry and readback behavior. Sheets/Drive remain downstream only. Keep provider mutations fail-closed on identity/config mismatch and live-verify exact provider state before deployment/mutation.
+Gateway/Google: continue projection/upload receipt, retry and readback behavior. Sheets/Drive remain downstream only.
 
 ## Owner decision gate — portrait only
 
-The portrait conflict remains unresolved: immediate deletion of the previous portrait versus offline staging while Drive is unavailable. Continue decision-independent media infrastructure, but do not choose offline portrait-replacement semantics without explicit Owner authority.
+Immediate deletion of the previous portrait conflicts with offline staging while Drive is unavailable. Keep actual offline portrait replacement fail-closed until Owner decides; independent media infrastructure may continue.
 
-## Physical BETA acceptance — later, when live trust path is ready
+## STABLE boundary
 
-Physical evidence remains required on the intended ordinary-user company Windows laptop/network and real NLS-MT90 devices: trusted HTTPS/reachability/discovery/reacquisition, PDA workflow/Wi-Fi recovery, **>=60-minute** Internet-cut Window 2, restoration reconciliation, host restart/update rollback, battery/background behavior, synthetic 10/25/50/100 load + soak, and Owner UAT.
-
-## STABLE
-
-STABLE may be prepared safely in isolation, but no production business activation/promotion occurs until mandatory BETA gates pass and the Owner explicitly approves. Promote the exact accepted BETA artifacts; do not copy BETA business/runtime data by default.
+STABLE activation/promotion remains blocked until mandatory BETA acceptance and explicit Owner approval.
 
 ## Current execution line
 
-`Overall: 55% displayed / 55.4% exact | Current: Phase 6 — LAN continuity/offline/reconcile | Primary physical gate: target Windows DNS credential + ACME staging -> production CA -> company Windows/PDA HTTPS acceptance | Parallel: ROOT OTP provider/public flow + Cloud reconciliation machine-auth/network E2E + V7 Web/App`
+`Overall: 55% displayed / 55.4% exact | Phase 6: 60% | Immediate: repair aggregate LAN smoke-test regression | Reconciliation signed transport: SOURCE/CI PASS, live/finality E2E pending | Physical: target Windows trust chain + real PDA + >=60-minute outage | Parallel: account security + V7 Web/App + Gateway/Google`
