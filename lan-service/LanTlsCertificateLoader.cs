@@ -1,0 +1,157 @@
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
+using System.Text;
+
+namespace Vhdchy.LanService;
+
+public sealed record LanTlsCertificateLoadResult(
+    X509Certificate2 Certificate,
+    string StorageMode,
+    DateTimeOffset NotAfterUtc);
+
+public static class LanTlsCertificateLoader
+{
+    public const string PlainPfxPathVariable = "VHDCHY_LAN_TLS_PFX_PATH";
+    public const string PlainPfxPasswordVariable = "VHDCHY_LAN_TLS_PFX_PASSWORD";
+    public const string ProtectedPfxPathVariable = "VHDCHY_LAN_TLS_PROTECTED_PFX_PATH";
+
+    private const string ServerAuthenticationOid = "1.3.6.1.5.5.7.3.1";
+
+    public static LanTlsCertificateLoadResult? LoadFromEnvironment(string environment, string canonicalHost)
+    {
+        var plainPath = Environment.GetEnvironmentVariable(PlainPfxPathVariable)?.Trim();
+        var protectedPath = Environment.GetEnvironmentVariable(ProtectedPfxPathVariable)?.Trim();
+
+        if (!string.IsNullOrWhiteSpace(plainPath) && !string.IsNullOrWhiteSpace(protectedPath))
+        {
+            throw new InvalidOperationException("Configure only one LAN TLS PFX source");
+        }
+
+        if (string.IsNullOrWhiteSpace(plainPath) && string.IsNullOrWhiteSpace(protectedPath))
+        {
+            return null;
+        }
+
+        X509Certificate2 certificate;
+        string storageMode;
+
+        if (!string.IsNullOrWhiteSpace(protectedPath))
+        {
+            if (!OperatingSystem.IsWindows())
+            {
+                throw new InvalidOperationException("DPAPI-protected LAN TLS PFX is supported only on Windows");
+            }
+
+            var fullPath = Path.GetFullPath(protectedPath);
+            if (!File.Exists(fullPath))
+            {
+                throw new InvalidOperationException("VHDCHY_LAN_TLS_PROTECTED_PFX_PATH does not exist");
+            }
+
+            var protectedBytes = File.ReadAllBytes(fullPath);
+            byte[]? pfxBytes = null;
+            try
+            {
+                pfxBytes = ProtectedData.Unprotect(
+                    protectedBytes,
+                    BuildEntropy(environment, canonicalHost),
+                    DataProtectionScope.CurrentUser);
+                certificate = X509CertificateLoader.LoadPkcs12(
+                    pfxBytes,
+                    password: null,
+                    X509KeyStorageFlags.EphemeralKeySet);
+            }
+            catch (CryptographicException exception)
+            {
+                throw new InvalidOperationException("LAN TLS protected PFX could not be decrypted or loaded for the current Windows user", exception);
+            }
+            finally
+            {
+                if (pfxBytes is not null) CryptographicOperations.ZeroMemory(pfxBytes);
+                CryptographicOperations.ZeroMemory(protectedBytes);
+            }
+
+            storageMode = "WINDOWS_DPAPI_CURRENT_USER";
+        }
+        else
+        {
+            var fullPath = Path.GetFullPath(plainPath!);
+            if (!File.Exists(fullPath))
+            {
+                throw new InvalidOperationException("VHDCHY_LAN_TLS_PFX_PATH does not exist");
+            }
+
+            var password = Environment.GetEnvironmentVariable(PlainPfxPasswordVariable) ?? string.Empty;
+            certificate = X509CertificateLoader.LoadPkcs12FromFile(
+                fullPath,
+                password,
+                X509KeyStorageFlags.EphemeralKeySet);
+            storageMode = "PLAIN_PFX_COMPATIBILITY";
+        }
+
+        try
+        {
+            ValidateCertificate(certificate, canonicalHost, DateTimeOffset.UtcNow);
+            return new LanTlsCertificateLoadResult(
+                certificate,
+                storageMode,
+                new DateTimeOffset(certificate.NotAfter.ToUniversalTime(), TimeSpan.Zero));
+        }
+        catch
+        {
+            certificate.Dispose();
+            throw;
+        }
+    }
+
+    public static byte[] ProtectPfxForCurrentWindowsUser(
+        ReadOnlySpan<byte> pfxBytes,
+        string environment,
+        string canonicalHost)
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            throw new PlatformNotSupportedException("DPAPI PFX protection is supported only on Windows");
+        }
+
+        return ProtectedData.Protect(
+            pfxBytes.ToArray(),
+            BuildEntropy(environment, canonicalHost),
+            DataProtectionScope.CurrentUser);
+    }
+
+    public static void ValidateCertificate(
+        X509Certificate2 certificate,
+        string canonicalHost,
+        DateTimeOffset nowUtc)
+    {
+        if (!certificate.HasPrivateKey)
+        {
+            throw new InvalidOperationException("LAN TLS certificate must include its private key");
+        }
+
+        var notBeforeUtc = new DateTimeOffset(certificate.NotBefore.ToUniversalTime(), TimeSpan.Zero);
+        var notAfterUtc = new DateTimeOffset(certificate.NotAfter.ToUniversalTime(), TimeSpan.Zero);
+        if (nowUtc < notBeforeUtc || nowUtc >= notAfterUtc)
+        {
+            throw new InvalidOperationException("LAN TLS certificate is outside its validity window");
+        }
+
+        if (!certificate.MatchesHostname(canonicalHost, allowWildcards: false, allowCommonName: false))
+        {
+            throw new InvalidOperationException("LAN TLS certificate SAN does not match the canonical LAN hostname");
+        }
+
+        var ekuExtensions = certificate.Extensions.OfType<X509EnhancedKeyUsageExtension>().ToArray();
+        if (ekuExtensions.Length > 0 && !ekuExtensions.Any(extension =>
+                extension.EnhancedKeyUsages.Cast<Oid>().Any(oid =>
+                    string.Equals(oid.Value, ServerAuthenticationOid, StringComparison.Ordinal))))
+        {
+            throw new InvalidOperationException("LAN TLS certificate is not valid for TLS server authentication");
+        }
+    }
+
+    private static byte[] BuildEntropy(string environment, string canonicalHost) =>
+        SHA256.HashData(Encoding.UTF8.GetBytes(
+            $"VHDCHY|LAN_TLS|{environment.Trim().ToUpperInvariant()}|{canonicalHost.Trim().ToLowerInvariant()}|V1"));
+}
