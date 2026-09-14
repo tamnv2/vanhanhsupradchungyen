@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## 2026-09-15
+
+### LAN integration conflict/recovery hosted evidence
+- Closed the outstanding automated-evidence gap around LAN Google/Drive integration receipts, conflict visibility and restart recovery without promoting the result to live-provider or physical acceptance.
+- Added a production-runtime regression step to `.github/workflows/lan-cloud-sync-harness.yml` at commit `da216d54119280aeed57f19d79ccdde6091e6036`.
+- Dedicated run `34879543693` completed SUCCESS, including production startup recovery of an interrupted integration claim, `/health` recovery visibility, `/api/v1/sync/status` receipt/review counts, aggregate `conflictCount`, SQLite integrity and retained post-reconciliation rebase vectors.
+- Same-commit clean baseline `34879543810` completed SUCCESS.
+- Historical conflict/recovery runs `34853854932`, `34853938581` and recovery clean baseline `34853938669` remain supporting evidence.
+- Classified this sub-slice as SOURCE/HOSTED CI PASS only. Real Google Sheets/Drive provider I/O, live BETA LAN->Cloud credential/provider proof and company-network/PDA acceptance remain separate open gates.
+- Evidence closure does not change the weighted product baseline: Phase 6 remains 65%; overall remains 56.2% exact / 56% displayed.
+
 ## 2026-09-13
 
 ### Product architecture V2 — Web + APK + Cloud Service + LAN Service
