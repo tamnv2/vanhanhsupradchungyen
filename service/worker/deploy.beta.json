@@ -13,6 +13,7 @@
     "runtime-contract.js",
     "reconciliation.js",
     "reconciliation-finality.js",
+    "reconciliation-payload-integrity.js",
     "reconciliation-request-auth.js",
     "reconciliation-route.js"
   ],
