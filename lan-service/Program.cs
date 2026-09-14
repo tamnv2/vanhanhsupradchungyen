@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Security.Cryptography.X509Certificates;
 using Vhdchy.LanService;
 
 const string ServiceName = "VHDCHY_LAN_SERVICE";
@@ -18,6 +19,25 @@ var portText = Environment.GetEnvironmentVariable("VHDCHY_LAN_PORT");
 var port = int.TryParse(portText, out var configuredPort) && configuredPort is > 1024 and < 65536
     ? configuredPort
     : DefaultPort;
+
+var canonicalLanHost = environment == "BETA" ? "lan-beta.supra.cc.cd" : "lan.supra.cc.cd";
+var tlsPfxPath = Environment.GetEnvironmentVariable("VHDCHY_LAN_TLS_PFX_PATH")?.Trim();
+var tlsPfxPassword = Environment.GetEnvironmentVariable("VHDCHY_LAN_TLS_PFX_PASSWORD") ?? string.Empty;
+var secureHttpEnabled = !string.IsNullOrWhiteSpace(tlsPfxPath);
+X509Certificate2? tlsCertificate = null;
+if (secureHttpEnabled)
+{
+    var fullTlsPath = Path.GetFullPath(tlsPfxPath!);
+    if (!File.Exists(fullTlsPath)) throw new InvalidOperationException("VHDCHY_LAN_TLS_PFX_PATH does not exist");
+    tlsCertificate = new X509Certificate2(
+        fullTlsPath,
+        tlsPfxPassword,
+        X509KeyStorageFlags.EphemeralKeySet);
+    if (!tlsCertificate.HasPrivateKey) throw new InvalidOperationException("LAN TLS certificate must include its private key");
+    var now = DateTimeOffset.UtcNow;
+    if (now < tlsCertificate.NotBefore.ToUniversalTime() || now >= tlsCertificate.NotAfter.ToUniversalTime())
+        throw new InvalidOperationException("LAN TLS certificate is outside its validity window");
+}
 
 var rootOverride = Environment.GetEnvironmentVariable("VHDCHY_LAN_DATA_ROOT")?.Trim();
 var root = string.IsNullOrWhiteSpace(rootOverride)
@@ -50,6 +70,14 @@ if (!startupIntegrity.Ok)
     throw new InvalidOperationException("EDGE_STORE_INTEGRITY_FAILED");
 }
 
+var readinessEvaluator = new LanReadinessEvaluator(
+    edgeStore.DatabasePath,
+    environment,
+    clusterId,
+    DomainContractVersion,
+    new[] { Slice1BusinessAdapter.ModuleId },
+    securePublicRouteWiringEnabled: secureHttpEnabled);
+
 var webRoot = Path.Combine(AppContext.BaseDirectory, "wwwroot");
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 {
@@ -57,7 +85,13 @@ var builder = WebApplication.CreateBuilder(new WebApplicationOptions
     WebRootPath = webRoot
 });
 builder.Logging.ClearProviders();
-builder.WebHost.ConfigureKestrel(options => options.ListenAnyIP(port));
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.ListenAnyIP(port, listen =>
+    {
+        if (tlsCertificate is not null) listen.UseHttps(tlsCertificate);
+    });
+});
 var app = builder.Build();
 
 app.UseDefaultFiles();
@@ -66,6 +100,7 @@ app.UseStaticFiles();
 app.MapGet("/health", async (CancellationToken cancellationToken) =>
 {
     var state = await edgeStore.ReadStatusAsync(cancellationToken);
+    var publicReadiness = await readinessEvaluator.EvaluateAsync(cancellationToken);
     return Results.Json(new
     {
         ok = true,
@@ -76,12 +111,16 @@ app.MapGet("/health", async (CancellationToken cancellationToken) =>
         instanceId,
         edgeEpoch,
         port,
+        canonicalLanHost,
+        transport = secureHttpEnabled ? "HTTPS" : "HTTP_READ_ONLY",
+        secureMutationTransportEnabled = secureHttpEnabled,
         domainContractVersion = DomainContractVersion,
         edgeSchemaVersion = EdgeStore.SchemaVersion,
         edgeStoreReady = true,
         edgeStoreIntegrity = "PASS",
         readiness = state.Readiness,
-        businessMutationEnabled = false,
+        publicReadiness = publicReadiness.Readiness,
+        businessMutationEnabled = secureHttpEnabled && publicReadiness.Ready,
         recoveredInterruptedCloudSync,
         localDataRoot = root
     });
@@ -100,38 +139,49 @@ app.MapGet("/api/v1/meta", async (CancellationToken cancellationToken) =>
         version,
         instanceId,
         edgeEpoch,
+        canonicalLanHost,
+        transport = secureHttpEnabled ? "HTTPS" : "HTTP_READ_ONLY",
+        secureMutationTransportEnabled = secureHttpEnabled,
         domainContractVersion = DomainContractVersion,
         edgeSchemaVersion = EdgeStore.SchemaVersion,
         readiness = state.Readiness
     });
 });
 
-app.MapGet("/api/v1/capabilities", () => Results.Json(new
+app.MapGet("/api/v1/capabilities", async (CancellationToken cancellationToken) =>
 {
-    ok = true,
-    runtime = "LAN",
-    environment,
-    clusterId,
-    authorityModel = "LOCAL_EDGE_ACCEPTANCE_THEN_CLOUD_RECONCILIATION",
-    domainContractVersion = DomainContractVersion,
-    edgeSchemaVersion = EdgeStore.SchemaVersion,
-    businessMutationEnabled = false,
-    anonymousMutationAllowed = false,
-    supports = new[]
+    var publicReadiness = await readinessEvaluator.EvaluateAsync(cancellationToken);
+    return Results.Json(new
     {
-        "LOCAL_WEB_HOSTING",
-        "EDGE_STATE_LOCAL_DURABLE",
-        "CLOUD_SYNC_OUTBOX_STORAGE_LOCAL_DURABLE",
-        "CLOUD_SYNC_QUEUE_STATE_MACHINE_LOCAL_DURABLE",
-        "CLOUD_SYNC_INTERRUPTED_CLAIM_RECOVERY",
-        "GOOGLE_OUTBOX_RECEIPT_STORAGE_LOCAL_DURABLE",
-        "CONFLICT_STORAGE_LOCAL_DURABLE",
-        "AUTHORITY_SNAPSHOT_STORAGE_LOCAL_DURABLE",
-        "STAGED_MEDIA_LOCAL_DURABLE",
-        "CLOUD_RECONCILIATION_TRANSPORT_PLANNED",
-        "DIRECT_GOOGLE_SENDER_PLANNED"
-    }
-}));
+        ok = true,
+        runtime = "LAN",
+        environment,
+        clusterId,
+        authorityModel = "LOCAL_EDGE_ACCEPTANCE_THEN_CLOUD_RECONCILIATION",
+        domainContractVersion = DomainContractVersion,
+        edgeSchemaVersion = EdgeStore.SchemaVersion,
+        secureMutationTransportEnabled = secureHttpEnabled,
+        businessMutationEnabled = secureHttpEnabled && publicReadiness.Ready,
+        anonymousMutationAllowed = false,
+        supports = new[]
+        {
+            "LOCAL_WEB_HOSTING",
+            "EDGE_STATE_LOCAL_DURABLE",
+            "CLOUD_SYNC_OUTBOX_STORAGE_LOCAL_DURABLE",
+            "CLOUD_SYNC_QUEUE_STATE_MACHINE_LOCAL_DURABLE",
+            "CLOUD_SYNC_INTERRUPTED_CLAIM_RECOVERY",
+            "GOOGLE_OUTBOX_RECEIPT_STORAGE_LOCAL_DURABLE",
+            "CONFLICT_STORAGE_LOCAL_DURABLE",
+            "AUTHORITY_SNAPSHOT_STORAGE_LOCAL_DURABLE",
+            "STAGED_MEDIA_LOCAL_DURABLE",
+            "SIGNED_PAIRED_CLIENT_REQUESTS",
+            "TLS_GATED_PRIMARY_LOGIN",
+            "TLS_GATED_SLICE1_BUSINESS_ROUTE",
+            "CLOUD_RECONCILIATION_TRANSPORT_PLANNED",
+            "DIRECT_GOOGLE_SENDER_PLANNED"
+        }
+    });
+});
 
 app.MapGet("/api/v1/sync/status", async (CancellationToken cancellationToken) =>
 {
@@ -150,6 +200,16 @@ app.MapGet("/api/v1/sync/status", async (CancellationToken cancellationToken) =>
     });
 });
 
+if (secureHttpEnabled)
+{
+    await LanSecureHttpRoutes.MapAsync(
+        app,
+        edgeStore.DatabasePath,
+        environment,
+        clusterId,
+        DomainContractVersion);
+}
+
 app.MapMethods("/api/v1/{**path}", new[] { "POST", "PUT", "PATCH", "DELETE" }, (HttpRequest request) =>
     Results.Json(new
     {
@@ -158,14 +218,18 @@ app.MapMethods("/api/v1/{**path}", new[] { "POST", "PUT", "PATCH", "DELETE" }, (
         error = new
         {
             code = "RUNTIME_DEPENDENCY_UNAVAILABLE",
-            message = "LAN business mutations remain fail-closed until synchronized authority and shared domain adapters are active."
+            message = secureHttpEnabled
+                ? "Requested LAN mutation is not part of the reviewed secure public subset."
+                : "LAN business mutations remain fail-closed until a reviewed HTTPS transport is configured."
         },
         requestId = request.Headers["X-Request-Id"].FirstOrDefault() ?? Guid.NewGuid().ToString()
     }, statusCode: StatusCodes.Status503ServiceUnavailable));
 
 Console.WriteLine($"{ServiceName} {version} environment={environment} cluster={clusterId}");
-Console.WriteLine($"Listening on :{port}; data={root}; readiness=EDGE_EMPTY; webRoot={webRoot}; edgeSchema={EdgeStore.SchemaVersion}");
+Console.WriteLine($"Listening on {(secureHttpEnabled ? "https" : "http")}://0.0.0.0:{port}; canonicalHost={canonicalLanHost}; data={root}; webRoot={webRoot}; edgeSchema={EdgeStore.SchemaVersion}");
 Console.WriteLine($"Cloud sync queue recovery active; interruptedClaimsRecovered={recoveredInterruptedCloudSync}; transport remains PLANNED.");
-Console.WriteLine("Edge persistence is durable. Business mutation remains FAIL_CLOSED until synchronized authority and shared domain adapters are active.");
+Console.WriteLine(secureHttpEnabled
+    ? "Secure LAN login and reviewed Slice-1 business routes are TLS-gated; runtime readiness still fails closed on missing synchronized authority/operational/security prerequisites."
+    : "LAN runtime is HTTP read-only. All business mutation remains FAIL_CLOSED until a reviewed TLS certificate is configured.");
 
 await app.RunAsync();
