@@ -1,9 +1,9 @@
 # CHECKPOINT — VHDCHY
 
-checkpoint_version: 38
+checkpoint_version: 39
 protocol: AI_AUTHORITY_RESUME_V2
 status: EXECUTING_PRODUCT_V7_BETA
-reconciled_through_commit: bec379a49d5276c6b8deb6b3d3c04f960355e75f
+reconciled_through_commit: 3784ace856ff85c68e4f446311475ff27649366c
 action_mode: AUTONOMOUS_PARALLEL
 active_lanes: REPO_GOVERNANCE / SHARED_DOMAIN / CLOUD_SERVICE / LAN_FULL_SERVICE / AUTH / GOOGLE_SYNC / WEB_ONLINE_LAN / ANDROID_PDA / RECONCILIATION / STABLE_PREPARATION
 paused_lanes: PHYSICAL_CORPORATE_LAN_REGRESSION
@@ -27,7 +27,7 @@ context_index_ref: CONTEXT_INDEX.md
 - Evidence-weighted total: **55.4% exact / 55% displayed**.
 - Phase 6 LAN continuity/offline/reconcile: **60%**.
 - Phase 7 Online/LAN Web UI: **25%**.
-- No progress increase is taken from governance cleanup or newly written auth routes until accepted evidence justifies a progress-model delta.
+- No progress increase is taken from governance cleanup or the current validated auth route slice because no additional phase-level completion delta is yet justified.
 
 ## Full-audit reconciliation — 2026-09-14
 
@@ -40,27 +40,38 @@ Governance drift found during the audit was reconciled before this checkpoint:
 - `docs/OWNER_BUSINESS_RULES_V1.md` — V6 ROOT email OTP / optional TOTP / normal recovery semantics;
 - `docs/DATA_MODEL_GUIDE_V2.md` — V6 auth plus 0009/0010/0011 source-foundation vs live-provider distinction;
 - `docs/DELIVERY_PLAN_V5.md` — 55.4%, Phase 6 60%, Phase 7 25%, Vietnamese-only current acceptance;
-- `docs/LAN_SECURE_HTTP_V1.md` — certificate manager is already source/CI PASS; next gate is target-host live trust;
+- `docs/LAN_SECURE_HTTP_V1.md` — certificate manager already source/CI PASS; next gate is target-host live trust;
 - `docs/LAN_SOURCE_REVIEW_20260913.md` — current V3 Service contract and correct context-specific LAN/D1 authority model;
-- `CURRENT_STATE.md` and `NEXT_ACTIONS.md` — current ready queue and account-security continuation.
+- `CURRENT_STATE.md` and `NEXT_ACTIONS.md` — current ready queue and validated account-security route slice.
 
-The audit also confirmed that `Validate clean baseline` SUCCESS alone is not a semantic cross-document proof: current `validate.yml` enforces important file/invariant/freshness checks but does not compare all canonical statements for semantic equivalence.
+The audit also confirmed that `Validate clean baseline` is an important invariant/freshness/source validator but is not by itself a semantic cross-document equivalence checker. Full audit/reconciliation remains required when authority/current guides drift.
 
-## Account-security continuation
+## Account-security continuation — SOURCE/CI PASS for current route slice
 
-Existing source already had normal password/session primitives and the V6 email-OTP state machine. This continuation added the public Cloud Worker route layer that is safe without inventing a mail provider:
+Existing source already had normal password/session primitives and the V6 email-OTP state machine. This continuation added:
 
 - public normal `POST /api/v1/auth/login`;
-- ROOT username-only bootstrap returns `ROOT_EMAIL_OTP_REQUIRED` and never creates a permanent-password session;
+- ROOT username-only bootstrap returning `ROOT_EMAIL_OTP_REQUIRED` without creating a permanent-password session;
 - public authenticated normal-user `POST /api/v1/auth/change-password`, including `MUST_CHANGE_PASSWORD` sessions;
-- bounded JSON body handling;
+- bounded JSON request handling;
 - route tests for normal login/token persistence semantics, ROOT permanent-password exclusion and permanent-password establishment.
 
-Latest ROOT-bootstrap source/test commits: `2bffb170319f9bf6d6d5f1953655ce960115d35e` and `1f2d328f21af90d09c5e3b260ad6452af05835c6`.
+Latest ROOT-bootstrap source/test commits:
 
-Public ROOT email-OTP E2E remains incomplete by design: the current OTP primitive requires a real delivery callback and stores protected destination hash/hint rather than inventing a readable destination. Migration `0010_auth_v6_email_otp.sql` exists in source but is not claimed live-applied to BETA without provider verification.
+- `2bffb170319f9bf6d6d5f1953655ce960115d35e`;
+- `1f2d328f21af90d09c5e3b260ad6452af05835c6`.
 
-This checkpoint is intentionally created so the clean-baseline workflow can proceed beyond checkpoint freshness and execute Worker syntax/unit/schema validation. Treat the new auth route layer as source-IN_PROGRESS until that workflow completes successfully.
+Accepted validation evidence at checkpoint v38:
+
+- HEAD `3bb22252a53ce25d69901c3261efd2ee3c54f57d`;
+- workflow run `34830186926`;
+- job/check `103931457439`;
+- result: **SUCCESS**;
+- Worker syntax, auth crypto contract, Worker unit tests, clean D1 schema and schema/runtime contract all PASS.
+
+Therefore this route slice is **SOURCE/CI PASS**.
+
+Public ROOT email-OTP E2E remains incomplete by design: the current OTP primitive requires a real delivery callback and protected destination provisioning; no fake email delivery is permitted. Migration `0010_auth_v6_email_otp.sql` exists in source, but live BETA application must be verified rather than inferred.
 
 ## Existing LAN accepted evidence
 
