@@ -56,10 +56,12 @@ public static class LanTlsCertificateLoader
                     protectedBytes,
                     BuildEntropy(environment, canonicalHost),
                     DataProtectionScope.CurrentUser);
-                certificate = X509CertificateLoader.LoadPkcs12(
+#pragma warning disable SYSLIB0057
+                certificate = new X509Certificate2(
                     pfxBytes,
-                    password: null,
+                    (string?)null,
                     X509KeyStorageFlags.EphemeralKeySet);
+#pragma warning restore SYSLIB0057
             }
             catch (CryptographicException exception)
             {
@@ -82,10 +84,12 @@ public static class LanTlsCertificateLoader
             }
 
             var password = Environment.GetEnvironmentVariable(PlainPfxPasswordVariable) ?? string.Empty;
-            certificate = X509CertificateLoader.LoadPkcs12FromFile(
+#pragma warning disable SYSLIB0057
+            certificate = new X509Certificate2(
                 fullPath,
                 password,
                 X509KeyStorageFlags.EphemeralKeySet);
+#pragma warning restore SYSLIB0057
             storageMode = "PLAIN_PFX_COMPATIBILITY";
         }
 
@@ -114,10 +118,18 @@ public static class LanTlsCertificateLoader
             throw new PlatformNotSupportedException("DPAPI PFX protection is supported only on Windows");
         }
 
-        return ProtectedData.Protect(
-            pfxBytes.ToArray(),
-            BuildEntropy(environment, canonicalHost),
-            DataProtectionScope.CurrentUser);
+        var copy = pfxBytes.ToArray();
+        try
+        {
+            return ProtectedData.Protect(
+                copy,
+                BuildEntropy(environment, canonicalHost),
+                DataProtectionScope.CurrentUser);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(copy);
+        }
     }
 
     public static void ValidateCertificate(
