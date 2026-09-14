@@ -11,9 +11,9 @@ Active decisions: `DECISIONS.md` + `DECISIONS_V3.md` + `DECISIONS_V4.md` + `DECI
 
 `Overall: 55% | Exact weighted baseline: 55.4% | Primary current phase: Phase 6 — LAN continuity/offline/reconcile`
 
-Phase 6 remains **60%**. The newer Windows DPAPI TLS and ACME certificate-manager evidence materially improves implementation readiness, but no additional product-completion credit is taken yet because publicly trusted live issuance, canonical company-LAN reachability/trust and real PDA acceptance remain open.
+Phase 6 remains **60%**. The Windows DPAPI TLS, ACME certificate-manager and portable ordinary-user Windows-host package materially improve implementation readiness, but no additional product-completion credit is taken yet because publicly trusted live issuance, canonical company-LAN reachability/trust and real PDA acceptance remain open.
 
-Parallel active lanes: broader core business Service/API, Gateway/integrations, Online+LAN Web V7 UI, Android/PDA App and Cloud reconciliation transport.
+Parallel active lanes: broader core business Service/API, Gateway/integrations, Online+LAN Web V7 UI, Android/PDA App, account-security routes and Cloud reconciliation transport.
 
 ## Current product authority
 
@@ -26,7 +26,7 @@ Parallel active lanes: broader core business Service/API, Gateway/integrations, 
 - D1 remains central consolidated structured authority after synchronization; LAN edge state + immutable event journal is local operational authority for events accepted by LAN.
 - Ordinary-user/no-admin Windows operation remains a hard LAN-host constraint. Do not depend on company certificate-store installation, firewall/router/AP modification or unauthorized internal-DNS changes.
 
-## Reconciled LAN transport/certificate evidence through `e11c5730a3e9cd7e212d07ea0fbdfc07aff77655`
+## Reconciled LAN transport/certificate/package evidence through `e4731983fa681541c317d853276abc9bf206366e`
 
 ### Secure LAN HTTPS login/session -> public Slice-1 HTTP route — source/CI PASS
 
@@ -48,7 +48,7 @@ Detailed boundary: `docs/LAN_SECURE_HTTP_V1.md`.
 
 ### Windows user-space DPAPI TLS — source/CI PASS
 
-LAN TLS private material can now be stored on Windows as a DPAPI CurrentUser protected PFX. The raw PFX is decrypted only for loading and is not intentionally persisted.
+LAN TLS private material can be stored on Windows as a DPAPI CurrentUser protected PFX. The raw PFX is decrypted only for loading and is not intentionally persisted.
 
 Windows Schannel requires a usable current-user private-key container rather than `EphemeralKeySet`; therefore Windows imports the decrypted certificate with `UserKeySet` and without `PersistKeySet`. This does **not** install the certificate into the Windows certificate store and does not require administrator rights. Non-Windows compatibility/CI paths retain ephemeral loading.
 
@@ -62,7 +62,7 @@ Proven markers include DPAPI CurrentUser protection, real Kestrel/Schannel HTTPS
 
 ### LAN ACME/DNS-01 certificate manager — source/CI PASS
 
-A separate user-space certificate manager now exists at `lan-certificate-manager/`. It is intentionally separate from LAN Service so DNS-provider credentials do not enter the business-service runtime.
+A separate user-space certificate manager exists at `lan-certificate-manager/`. It is intentionally separate from LAN Service so DNS-provider credentials do not enter the business-service runtime.
 
 Implemented source behavior:
 
@@ -88,6 +88,32 @@ Dedicated certificate-manager workflow at commit `e11c5730a3e9cd7e212d07ea0fbdfc
 The workflow intentionally receives no GitHub `secrets.*` values. It proves local source/storage/renewal safety only; it does not issue the final laptop certificate.
 
 Detailed boundary: `docs/LAN_CERTIFICATE_MANAGER_V1.md`.
+
+### Portable ordinary-user Windows LAN-host package — source/CI PASS
+
+A self-contained BETA Windows package now combines the reviewed LAN Service runtime, certificate manager and ordinary-user launch scripts without requiring a machine-wide .NET installation or Windows service/certificate-store setup.
+
+Package behavior proven in CI:
+
+- self-contained `win-x64` LAN Service publish succeeds;
+- self-contained `win-x64` certificate-manager publish succeeds;
+- published certificate-manager self-test passes;
+- the host launcher stores its Cloudflare DNS token using Windows DPAPI CurrentUser and does not persist the plaintext probe;
+- published LAN Service starts from the package with no protected PFX and reports `HTTP_READ_ONLY`, `secureMutationTransportEnabled=false`, `businessMutationEnabled=false` and canonical host `lan-beta.supra.cc.cd`;
+- package scan rejects PFX/P12/JKS/key/PEM material and rejects any workflow `secrets.*` injection;
+- the package emits a deterministic ZIP SHA256 file and is uploaded as a GitHub Actions artifact.
+
+Evidence at commit `e4731983fa681541c317d853276abc9bf206366e`:
+
+- portable Windows-host workflow run `34821013175`, job/check `103902355956`: **SUCCESS**;
+- same-HEAD governance validator run `34821013167`, check `103902355766`: **SUCCESS**;
+- package build version: `0.2.2`;
+- package ZIP SHA256: `87a5d8d9ce14852204ba757a7b1cf7a716af79675c1bf78f36f9f44934286167`;
+- artifact ID `10338301582`, name `vhdchy-lan-host-beta-win-x64`, GitHub artifact digest `sha256:d43bf84c24ed661cb51670f1931d442369161b8210341107512ad9e16110ee09`.
+
+This is still source/CI evidence. The artifact has not yet been accepted on the intended company Windows user/machine, has not performed live DNS-01 issuance there and is not physical BETA acceptance.
+
+Runbook: `lan-host/README.md`.
 
 ### Cloudflare LAN trust prerequisites — read-only provider PASS
 
@@ -130,12 +156,12 @@ Operational snapshots/materialized Slice-1, immutable local event/outbox, idempo
 
 ## Current primary execution direction
 
-The source-level certificate lifecycle is now ready for live-host acceptance. The next dependency chain is:
+The source-level certificate lifecycle and portable Windows host package are ready for live-host acceptance. The next dependency chain is:
 
 1. on the intended ordinary-user Windows LAN host, use a dedicated least-privilege Cloudflare DNS credential or explicitly approved equivalent;
 2. live-verify exact account/zone identity and TXT create/read/delete capability only in the ACME challenge namespace;
 3. run ACME **staging** issuance first on that Windows user/machine context;
-4. verify DPAPI protected PFX, canonical SAN and LAN Service HTTPS startup;
+4. verify DPAPI protected PFX, canonical SAN and LAN Service HTTPS startup/restart using the portable package;
 5. only after staging PASS, run explicit production issuance;
 6. prove canonical hostname resolution/reachability and public certificate trust on the actual company network/browser;
 7. prove NLS-MT90/PDA HTTPS login/business/reconnection/Wi-Fi recovery;
@@ -148,11 +174,11 @@ A GitHub-hosted runner must **not** be used to create the final DPAPI PFX for th
 
 Independent safe work remains ready:
 
+- public ROOT email-OTP and normal-user password recovery/change routes;
 - Cloud reconciliation machine/service authentication and LAN -> Cloud network E2E;
 - Web authenticated login/recovery + employee/attendance Slice-1 screens;
 - Android endpoint/session/scanner/durable-retry/HTTPS work that does not depend on missing visual evidence;
-- broader Cloud/Gateway/Google projection receipt/retry/readback coverage;
-- public ROOT email-OTP and normal-user password recovery/change routes.
+- broader Cloud/Gateway/Google projection receipt/retry/readback coverage.
 
 ## Portrait semantic gate — OWNER_DECISION_REQUIRED only when implementation reaches it
 
