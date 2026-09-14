@@ -7,6 +7,7 @@ namespace Vhdchy.LanService;
 public sealed class LanAuthorizationEvaluator
 {
     public const string AuthoritySchemaVersion = "VHDCHY_AUTHORITY_SNAPSHOT_V1";
+    public const string AuthoritySchemaVersionV2 = "VHDCHY_AUTHORITY_SNAPSHOT_V2";
     public const string PermissionCatalogVersion = "VHDCHY_PERMISSION_CATALOG_V1";
 
     private readonly string _connectionString;
@@ -222,7 +223,8 @@ public sealed class LanAuthorizationEvaluator
             var root = document.RootElement;
             RequireObject(root, "AUTHORITY_SNAPSHOT_INVALID");
             var schemaVersion = RequiredString(root, "schemaVersion");
-            if (!string.Equals(schemaVersion, AuthoritySchemaVersion, StringComparison.Ordinal))
+            if (!string.Equals(schemaVersion, AuthoritySchemaVersion, StringComparison.Ordinal) &&
+                !string.Equals(schemaVersion, AuthoritySchemaVersionV2, StringComparison.Ordinal))
                 throw new LanAuthorityModelException("AUTHORITY_SCHEMA_INCOMPATIBLE", "Authority snapshot schema version is not supported.");
             var catalogVersion = RequiredString(root, "permissionCatalogVersion");
             if (!string.Equals(catalogVersion, PermissionCatalogVersion, StringComparison.Ordinal))
