@@ -55,5 +55,17 @@ jobs:
           VHDCHY_VERIFY_ONLY_BINDING: LAN_RECONCILIATION_SHARED_SECRET
         run: node .github/scripts/cloudflare-verify.mjs
 
+      - name: Verify reconciliation D1 tables
+        continue-on-error: true
+        env:
+          VHDCHY_VERIFY_D1_STAGE: tables
+        run: node .github/scripts/cloudflare-verify.mjs
+
+      - name: Verify reconciliation D1 columns
+        continue-on-error: true
+        env:
+          VHDCHY_VERIFY_D1_STAGE: columns
+        run: node .github/scripts/cloudflare-verify.mjs
+
       - name: Enforce full Cloudflare BETA identity, bindings and reconciliation D1 schema
         run: node .github/scripts/cloudflare-verify.mjs
