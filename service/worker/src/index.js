@@ -3,6 +3,12 @@ import { authenticateRequest } from './session.js';
 import { permissionSummary } from './permission-store.js';
 import { handleReconciliationIngestRoute } from './reconciliation-route.js';
 import { handleOperationalSnapshotRoute, OPERATIONAL_SNAPSHOT_PATH } from './operational-snapshot-route.js';
+import {
+  CloudSlice1Error,
+  executeCloudSlice1Command,
+  SLICE1_CLOUD_COMMAND_PATH,
+  SLICE1_LOGICAL_MODULE
+} from './slice1-business.js';
 
 const API_VERSION = "v1";
 const CORE_SCHEMA_VERSION = "business_core_v3";
@@ -133,7 +139,8 @@ function publicCapabilities() {
   return {
     ok: true,
     apiVersion: API_VERSION,
-    runtime: RUNTIME_STATE,
+    runtime: "CLOUD",
+    runtimeState: RUNTIME_STATE,
     authority: "D1",
     mutationModel: "IMMUTABLE_EVENT_IDEMPOTENT",
     correctionModel: "NEW_EVENT_NO_RAW_REWRITE",
@@ -141,7 +148,11 @@ function publicCapabilities() {
     projectionTransport: "D1_OUTBOX_BATCH",
     projectionAvailabilityModel: "ASYNC_NON_BLOCKING",
     protectedBusinessData: true,
-    anonymousMutationAllowed: false
+    anonymousMutationAllowed: false,
+    businessMutationEnabled: true,
+    businessMutationPath: SLICE1_CLOUD_COMMAND_PATH,
+    businessSlice: SLICE1_LOGICAL_MODULE,
+    blockedBusinessCommands: ["EMPLOYEE_PORTRAIT_REPLACE"]
   };
 }
 
@@ -235,6 +246,39 @@ async function handlePasswordChange(request, env, requestId) {
   }, 200, requestId);
 }
 
+async function handleSlice1Command(request, env, requestId) {
+  const auth = await requirePrincipal(request, env, requestId);
+  if (auth.response) return auth.response;
+  const gate = passwordChangeGate(auth.principal, requestId);
+  if (gate) return gate;
+  const body = await readJsonObject(request, requestId);
+  if (body.response) return body.response;
+  const logicalRequestId = typeof body.value.requestId === 'string' && body.value.requestId.trim()
+    ? body.value.requestId.trim()
+    : requestId;
+
+  try {
+    const result = await executeCloudSlice1Command({
+      db: env.DB,
+      principal: auth.principal,
+      envelope: body.value
+    });
+    return json(result, 200, null);
+  } catch (failure) {
+    if (failure instanceof CloudSlice1Error) {
+      return error(
+        failure.code,
+        failure.message,
+        failure.status,
+        logicalRequestId,
+        failure.details
+      );
+    }
+    console.error('SLICE1_COMMAND_UNEXPECTED', failure?.stack || failure);
+    return error('RUNTIME_DEPENDENCY_UNAVAILABLE', 'Business mutation could not be committed.', 503, logicalRequestId);
+  }
+}
+
 export async function handleRequest(request, env) {
   const url = new URL(request.url);
   const requestId = crypto.randomUUID();
@@ -322,6 +366,10 @@ export async function handleRequest(request, env) {
       },
       permissions
     }, 200, requestId);
+  }
+
+  if (url.pathname === SLICE1_CLOUD_COMMAND_PATH && request.method === "POST") {
+    return handleSlice1Command(request, env, requestId);
   }
 
   if (url.pathname === "/api/v1/reconciliation/events" && request.method === "POST") {
