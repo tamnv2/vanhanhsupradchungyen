@@ -138,7 +138,7 @@ Canonical continuity acceptance is minute-level: Window 2 must sustain approved 
 - DNSHE branding/proprietary assets must not be copied.
 - LAN-critical fonts/icons/scripts/styles/images must be locally available so the shell remains usable without Internet.
 - Network/sync/queue state must be visible where it affects behavior.
-- V5 language rule remains Vietnamese / English / Chinese, default English.
+- **Current product language is Vietnamese only.** Multilingual support is deferred to a later feature phase and must not consume current implementation scope.
 
 ## Android/PDA authority — V7
 
@@ -148,6 +148,7 @@ Canonical continuity acceptance is minute-level: Window 2 must sustain approved 
 - Exact visual details must be based on actual accessible reference source/artifacts, not invented.
 - Scanner/QR actions must invoke current domain commands rather than bypass Service rules.
 - Reviewed legacy transport mechanics such as discovery/cache/hysteresis, durable queue/device sequence, ACK deletion and reconnect/resync may be deliberately re-adopted after adaptation to current contracts.
+- Current App UI language is Vietnamese only; multilingual support is deferred with the Web product.
 
 ## Android signing
 
