@@ -82,6 +82,8 @@ This is credited as `IMPLEMENTED_AUTOMATED` progress for a material LAN sub-slic
 
 ### Earlier evidence retained in the baseline
 
+The historical measured baseline before the durable reconciliation + Web-shell increase was **53.3%**; the subsequent accepted evidence moved it to 54.6%, and the secure LAN HTTP evidence above moves the current exact baseline to 55.4%. This historical marker is retained for audit/validator continuity and is not the current percentage.
+
 **Phase 6 durable reconciliation foundation.**
 
 Current LAN source has a durable Cloud reconciliation queue state machine with claim/retry/reconcile/conflict transitions, restart recovery for interrupted claims, immutable edge-event envelope construction, completed Google/Drive receipt attachment and race-safe single-claim behavior. Dedicated workflow `34801533266` at commit `013d5b310ae0f068510c56cdbfe7cf4ea7ffec66` completed `SUCCESS`; earlier vector run `34801198095` also completed `SUCCESS`.
