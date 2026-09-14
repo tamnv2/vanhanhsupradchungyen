@@ -11,6 +11,7 @@ public sealed class LanReadinessEvaluator
     private readonly string _expectedDomainContractVersion;
     private readonly string[] _requiredModules;
     private readonly LanAuthorizationEvaluator _authorizationEvaluator;
+    private readonly Slice1BusinessAdapter _slice1Adapter;
 
     public LanReadinessEvaluator(
         string databasePath,
@@ -43,11 +44,18 @@ public sealed class LanReadinessEvaluator
         _expectedClusterId = expectedClusterId;
         _expectedDomainContractVersion = expectedDomainContractVersion;
         _authorizationEvaluator = new LanAuthorizationEvaluator(databasePath, expectedDomainContractVersion);
+        _slice1Adapter = new Slice1BusinessAdapter(
+            databasePath,
+            expectedEnvironment,
+            expectedClusterId,
+            expectedDomainContractVersion);
     }
 
     public async Task<LanReadinessReport> EvaluateAsync(CancellationToken cancellationToken = default)
     {
         var blockers = new List<LanReadinessBlocker>();
+        var supportedCommands = new SortedSet<string>(StringComparer.Ordinal);
+        var blockedCommands = new SortedSet<string>(StringComparer.Ordinal);
         string? authorityVersion = null;
         string? operationalVersion = null;
         string? operationalAuthorityVersion = null;
@@ -141,20 +149,49 @@ public sealed class LanReadinessEvaluator
 
         var snapshotPrerequisitesReady = blockers.Count == 0;
 
-        // This gate is deliberately not caller-overridable. A future reviewed Slice-1 business
-        // adapter must be linked here by code and CI evidence before EDGE_READY can ever be returned.
-        blockers.Add(new LanReadinessBlocker(
-            "SLICE_ADAPTER_REQUIRED",
-            "A reviewed Slice-1 business/domain adapter is not yet linked to the readiness gate."));
+        foreach (var requiredModule in _requiredModules)
+        {
+            if (string.Equals(requiredModule, Slice1BusinessAdapter.ModuleId, StringComparison.Ordinal))
+            {
+                var inspection = _slice1Adapter.Inspect();
+                foreach (var command in inspection.SupportedCommandCodes) supportedCommands.Add(command);
+                foreach (var command in inspection.BlockedCommandCodes) blockedCommands.Add(command);
+                if (!inspection.SupportedSubsetReady)
+                {
+                    blockers.Add(new LanReadinessBlocker(
+                        "SLICE_ADAPTER_REQUIRED",
+                        "No reviewed executable command subset is currently available for the Slice-1 module."));
+                }
+                continue;
+            }
 
+            blockers.Add(new LanReadinessBlocker(
+                "MODULE_ADAPTER_REQUIRED",
+                $"No reviewed local business adapter is linked for required module: {requiredModule}."));
+        }
+
+        // Snapshot + business-adapter readiness is no longer blocked by the unresolved portrait
+        // command. Portrait stays command-scoped fail-closed. Public mutations remain globally
+        // closed until authenticated client pairing/channel and security-epoch verification are
+        // implemented and linked to the HTTP mutation path.
+        if (snapshotPrerequisitesReady && supportedCommands.Count > 0)
+        {
+            blockers.Add(new LanReadinessBlocker(
+                "PUBLIC_CLIENT_SECURITY_REQUIRED",
+                "Reviewed client pairing/channel authentication and security-epoch verification are not yet linked to public LAN mutations."));
+        }
+
+        var ready = blockers.Count == 0;
         return new LanReadinessReport(
-            Ready: false,
-            Readiness: "EDGE_NOT_READY",
+            Ready: ready,
+            Readiness: ready ? "EDGE_READY" : "EDGE_NOT_READY",
             SnapshotPrerequisitesReady: snapshotPrerequisitesReady,
             AuthoritySnapshotVersion: authorityVersion,
             OperationalSnapshotVersion: operationalVersion,
             OperationalAuthoritySnapshotVersion: operationalAuthorityVersion,
             RequiredModules: _requiredModules,
+            SupportedCommandCodes: supportedCommands.ToArray(),
+            BlockedCommandCodes: blockedCommands.ToArray(),
             Blockers: blockers);
     }
 
@@ -284,6 +321,8 @@ public sealed record LanReadinessReport(
     string? OperationalSnapshotVersion,
     string? OperationalAuthoritySnapshotVersion,
     IReadOnlyList<string> RequiredModules,
+    IReadOnlyList<string> SupportedCommandCodes,
+    IReadOnlyList<string> BlockedCommandCodes,
     IReadOnlyList<LanReadinessBlocker> Blockers);
 
 public sealed record LanReadinessBlocker(string Code, string Message);
