@@ -13,13 +13,13 @@ var databasePath = Path.GetFullPath(args[0]);
 Directory.CreateDirectory(Path.GetDirectoryName(databasePath)!);
 if (!File.Exists(databasePath))
 {
-    var edge = new EdgeStore(databasePath);
-    await edge.InitializeAsync(
-        "BETA",
-        "PICK_PACK_1291",
-        "security-harness-edge",
-        "security-harness-edge-epoch",
-        "VHDCHY_DOMAIN_V1");
+    await using var bootstrap = new SqliteConnection(new SqliteConnectionStringBuilder
+    {
+        DataSource = databasePath,
+        Mode = SqliteOpenMode.ReadWriteCreate,
+        Pooling = false
+    }.ToString());
+    await bootstrap.OpenAsync();
 }
 
 static void Assert(bool condition, string code)
