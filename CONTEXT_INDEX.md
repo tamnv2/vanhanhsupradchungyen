@@ -13,11 +13,13 @@ For product/business decisions read in this order:
 3. `DECISIONS_V4.md` — no-admin LAN host, canonical LAN domains and BETA/STABLE preparation/promotion overrides;
 4. `DECISIONS_V5.md` — recovered effective Owner rules from reviewed approved specs;
 5. `DECISIONS_V6.md` — later authentication/account/offline/enterprise/camera and related Owner overrides;
-6. `DECISIONS_V7.md` — App UI uses Pick Pack 1291 UI/UX direction as reference; Online Web + LAN Web use the Owner-supplied DNSHE visual direction with VHDCHY identity and offline-safe shared design-system rules.
+6. `DECISIONS_V7.md` — current UI/execution authority: Pick Pack 1291 App UI/UX reference, DNSHE-inspired VHDCHY Web direction, Vietnamese-only current UI, evidence-only progress reporting and mandatory ready-queue parallel execution.
 
 Newest applicable override wins only where it conflicts. Unaffected older decisions remain active.
 
 **All active decision layers above are mandatory resume reads.** A stale or incomplete `CHECKPOINT.md` must never be used to omit a newer decision layer.
+
+`DECISIONS_V8.md` exists as a redundant record of the same 2026-09-14 Owner language/execution instruction but is not a separate required authority layer; the effective rules are consolidated into active `DECISIONS_V7.md`.
 
 ## Current canonical execution guides
 
@@ -81,121 +83,66 @@ Read/reconcile all root authority/governance files, all active decision layers, 
 
 ### REPO / GOVERNANCE
 
-Read:
+Read bootstrap/governance files, all active decisions, `PROJECT_SCOPE.md`, `CURRENT_STATE.md`, `NEXT_ACTIONS.md`, Delivery Plan V5, progress model and relevant validation evidence.
 
-- bootstrap/governance files;
-- all active `DECISIONS*`;
-- `PROJECT_SCOPE.md`;
-- `CURRENT_STATE.md`;
-- `NEXT_ACTIONS.md`;
-- `docs/DELIVERY_PLAN_V5.md`;
-- `docs/PROGRESS_TRACKING_V1.md`;
-- relevant validation workflows/evidence.
+Execution rule: maintain a live ready queue. Independent ready work runs in parallel where tools permit; blocked nodes do not hold unrelated lanes. Before a long tool/session interruption, report only evidence-backed PASS/FAIL/IN_PROGRESS/BLOCKED state plus the current weighted percentage and justified delta.
 
 ### PRODUCT / SHARED DOMAIN
 
-Read:
-
-- all active decisions;
-- Owner business rules;
-- V3 target architecture;
-- V3 Service contract;
-- data-model guide;
-- non-functional baseline;
-- current BETA acceptance matrix;
-- Delivery Plan V5;
-- relevant migrations/source.
+Read all active decisions, Owner business rules, V3 target architecture, V3 Service contract, data-model guide, non-functional baseline, BETA acceptance matrix, Delivery Plan V5 and relevant migrations/source.
 
 Do not let stale `docs/SERVICE_API_CONTRACT.md`, `docs/CANONICAL_MUTATION_PLAN.md`, `docs/LAN_EDGE_STATE_V1.md` or older delivery text override the current files.
 
 ### CLOUDFLARE / D1 / WORKER
 
-Read:
-
-- `SERVICE_AUTHORITY.md`;
-- all active decisions plus current state/next actions;
-- current Service/data guides;
-- `service/worker/src/` and migrations;
-- Cloudflare workflows/scripts/dispatch;
-- latest directly relevant provider/deploy evidence.
+Read `SERVICE_AUTHORITY.md`, all active decisions plus current state/next actions, current Service/data guides, `service/worker/src/`, migrations, Cloudflare workflows/scripts/dispatch and latest directly relevant provider/deploy evidence.
 
 Never migrate/replace/recreate D1/Worker from name alone. Verify exact identity/state first.
 
 ### GOOGLE GAS / DRIVE / SHEETS
 
-Read:
-
-- `PROJECT_SCOPE.md`;
-- `SERVICE_AUTHORITY.md`;
-- all active decisions;
-- Owner business rules and Service contract;
-- projection config/current gateway source;
-- current Drive/Sheets/provider evidence.
+Read `PROJECT_SCOPE.md`, `SERVICE_AUTHORITY.md`, all active decisions, Owner business rules and Service contract, projection config/current gateway source and current Drive/Sheets/provider evidence.
 
 Sheets/Drive are downstream outputs/storage and never business authority.
 
 ### LAN SERVICE
 
-Read:
-
-- all active decisions;
-- target architecture;
-- V3 Service contract;
-- LAN edge state;
-- LAN host/domain guide;
-- non-functional baseline;
-- Delivery Plan V5 / progress model;
-- active LAN source/evidence, including current Slice-1/materialization/media tests and latest physical evidence.
+Read all active decisions, target architecture, V3 Service contract, LAN edge state, LAN host/domain guide, non-functional baseline, Delivery Plan V5/progress model and active LAN source/evidence.
 
 Hard constraints: full local Service, portable/no-admin host, no corporate-policy bypass, canonical LAN domains, current offline authority model, controlled Google output when reachable, event/outbox reconciliation to Cloud, explicit conflicts and fail-closed mutation readiness.
 
-CI/source evidence and physical company-network/PDA evidence remain distinct.
+Current durable local Cloud-sync queue mechanics are source/CI PASS; Cloud network ingestion/transport and physical company-network/PDA acceptance are not yet PASS.
 
 ### WEBSITE
 
-Read:
+Read all active decisions especially V7, Owner business rules, V3 Service contract, non-functional baseline, Delivery Plan V5 and current Web source/build evidence.
 
-- all active decisions, especially V5/V6/V7;
-- Owner business rules;
-- V3 Service contract;
-- non-functional baseline;
-- Delivery Plan V5;
-- current Web source/build evidence.
-
-V7 rules: Online/LAN Web are one shared design system/product; DNSHE screenshots provide visual direction only; VHDCHY identity/assets must be used; LAN-critical UI assets must remain local/offline-capable.
+Current rules:
+- Online/LAN Web are one shared design system/product;
+- DNSHE screenshots provide visual direction only; VHDCHY identity/assets are required;
+- LAN-critical UI assets must remain local/offline-capable;
+- current UI is **Vietnamese only**; multilingual implementation is deferred.
 
 ### ANDROID APK / PDA
 
-Read:
+Read all active decisions especially V7, Owner business rules, V3 Service contract, non-functional baseline, Delivery Plan V5, current Android source/build evidence and Pick Pack 1291 UI source/artifacts only as authorized reference.
 
-- all active decisions, especially V5/V6/V7;
-- Owner business rules;
-- V3 Service contract;
-- non-functional baseline;
-- Delivery Plan V5;
-- current Android source/build evidence;
-- Pick Pack 1291 UI source/artifacts only as an authorized reference, never business/runtime authority.
-
-The earlier transport-only Android prototype and legacy LAN repository are NON_AUTHORITY except for deliberately reviewed/re-adopted low-level mechanics.
+Current rules:
+- current UI is **Vietnamese only**; multilingual implementation is deferred;
+- do not invent final Pick Pack 1291 screen details until actual source/artifact evidence is surfaced;
+- earlier transport-only Android/LAN prototypes are NON_AUTHORITY except deliberately reviewed/re-adopted mechanics.
 
 ### BETA / STABLE / RELEASE PROMOTION
 
-Read:
-
-- all active decisions;
-- `docs/RELEASE_PROMOTION_V1.md`;
-- Delivery Plan V5;
-- progress model;
-- `SERVICE_AUTHORITY.md`;
-- exact accepted release/provider evidence.
+Read all active decisions, `docs/RELEASE_PROMOTION_V1.md`, Delivery Plan V5, progress model, `SERVICE_AUTHORITY.md` and exact accepted release/provider evidence.
 
 Prepare isolated STABLE during development, keep business traffic fail-closed until explicit Owner promotion approval, promote the exact accepted BETA release, and never copy BETA runtime/business data by default.
 
 ## Current progress authority
 
-The current baseline is defined by `docs/PROGRESS_TRACKING_V1.md`: **53.3% exact / 53% displayed** as of 2026-09-14. `CURRENT_STATE.md` and `docs/DELIVERY_PLAN_V5.md` must be reconciled whenever this percentage changes.
+The current baseline is defined by `docs/PROGRESS_TRACKING_V1.md`: **54.6% exact / 55% displayed** as of 2026-09-14.
 
-Do not raise progress from plans, chat discussion, mockups, or legacy evidence alone. Runtime/test/physical/provider evidence must match the acceptance level required by the relevant phase.
+The increase from 53.3% is supported by automated current-source evidence for the durable LAN Cloud-sync queue/restart mechanics and the shared Vietnamese-only V7 Web shell. Do not raise progress from plans, chat discussion, mockups, governance-only edits, tool-call volume or legacy evidence alone.
 
 ## Current Owner decision gate
 
