@@ -196,7 +196,7 @@ Compilation alone is never business/runtime PASS. Legacy/prototype evidence is r
 | V7 shared design | Online/LAN use the same VHDCHY design system/navigation hierarchy in the approved DNSHE-inspired direction |
 | branding | no DNSHE brand/proprietary asset copying |
 | LAN critical assets | login/shell/business continuity UI does not require Internet-only font/icon/script/style/image assets |
-| language | Vietnamese / English / Chinese available; default English |
+| language | current UI is Vietnamese only; multilingual acceptance is deferred to a later feature phase |
 | responsive target | supported desktop/smaller-screen layouts remain readable/operable |
 
 ## N — Android/PDA App E2E / V7 UI
@@ -210,7 +210,7 @@ Compilation alone is never business/runtime PASS. Legacy/prototype evidence is r
 | app restart | permitted local pending work survives deterministically |
 | sync/Google state | user can distinguish pending/confirmed/conflict states where relevant |
 | V7 visual/interaction direction | uses actual Pick Pack 1291 UI/UX reference where reviewed, adapted to VHDCHY rather than copying legacy business logic |
-| languages | Vietnamese / English / Chinese available; default English |
+| language | current App UI is Vietnamese only; multilingual acceptance is deferred |
 | real PDA | NLS-MT90 layout/scanner/performance/background behavior accepted physically |
 
 ## O — Failure/recovery / canonical >=60-minute continuity
@@ -238,7 +238,7 @@ Before STABLE promotion can be proposed:
 
 - required business slices pass through Cloud and LAN;
 - Online Web/LAN Web/App E2E pass against both runtime paths;
-- V7 UI/language behavior passes Owner UAT;
+- V7 UI current Vietnamese-only behavior passes Owner UAT;
 - >=60-minute LAN continuity acceptance passes on current target environment;
 - LAN -> Cloud reconciliation and Google receipt deduplication pass;
 - conflict/admin-resolution acceptance passes;
