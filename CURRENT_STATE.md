@@ -11,7 +11,7 @@ Active decisions: `DECISIONS.md` + `DECISIONS_V3.md` + `DECISIONS_V4.md` + `DECI
 
 `Overall: 55% | Exact weighted baseline: 55.4% | Primary current phase: Phase 6 — LAN continuity/offline/reconcile`
 
-Phase 6 advances from 55% to 60% because the secure LAN credential transport plus public login/session -> reviewed Slice-1 HTTP business route now have real runtime E2E CI evidence. This is implementation/automation credit only; publicly trusted certificate/DNS/real company-device acceptance remains open.
+Phase 6 remains **60%**. The newer Windows DPAPI TLS and ACME certificate-manager evidence materially improves implementation readiness, but no additional product-completion credit is taken yet because publicly trusted live issuance, canonical company-LAN reachability/trust and real PDA acceptance remain open.
 
 Parallel active lanes: broader core business Service/API, Gateway/integrations, Online+LAN Web V7 UI, Android/PDA App and Cloud reconciliation transport.
 
@@ -24,130 +24,144 @@ Parallel active lanes: broader core business Service/API, Gateway/integrations, 
 - DNSHE screenshots are visual-direction reference only; do not copy DNSHE branding/proprietary assets.
 - Sheets/Drive remain downstream projection/storage, never canonical business authority.
 - D1 remains central consolidated structured authority after synchronization; LAN edge state + immutable event journal is local operational authority for events accepted by LAN.
+- Ordinary-user/no-admin Windows operation remains a hard LAN-host constraint. Do not depend on company certificate-store installation, firewall/router/AP modification or unauthorized internal-DNS changes.
 
-## Reconciled source/evidence through HEAD `63ceeb6a8db865ced1870209c7cb74d4f65baea1`
+## Reconciled LAN transport/certificate evidence through `e11c5730a3e9cd7e212d07ea0fbdfc07aff77655`
 
 ### Secure LAN HTTPS login/session -> public Slice-1 HTTP route — source/CI PASS
 
-The reviewed transport is direct Kestrel HTTPS using a user-space PFX. Reusable passwords are never intentionally sent through the plaintext LAN mutation path merely because the paired client signs requests. Request signing remains defense-in-depth for device/request authenticity and integrity; TLS supplies credential confidentiality.
+The reviewed credential transport remains direct Kestrel HTTPS. Paired P-256 signatures authenticate/bind requests but do not replace TLS confidentiality.
 
-Runtime behavior:
+Runtime behavior remains fail-closed:
 
-- without `VHDCHY_LAN_TLS_PFX_PATH`, LAN remains `HTTP_READ_ONLY`, login/business routes are not registered and mutation catch-all remains 503;
-- with a valid PFX, Kestrel serves HTTPS and exposes only the reviewed secure login/business routes plus existing read surfaces;
-- the PFX is loaded with ephemeral user-space key handling; the design does not require company Windows certificate-store changes;
-- secure-route readiness remains dependent on synchronized authority/operational snapshots, paired-client security and primary credential authority;
-- `POST /api/v1/auth/login` verifies the paired signed request before normal-user credential verification and issues a durable device/security-epoch/authority-bound LAN session;
-- `POST /api/v1/data/commands` requires HTTPS + Bearer session + exact signed raw body and delegates to the already-proven `LanBusinessRouteCoordinator`;
-- ROOT semantics are unchanged: current password route returns `ROOT_EMAIL_OTP_REQUIRED`; no permanent ROOT password was introduced;
-- `mustChangePassword` remains session evidence and ordinary business mutation stays blocked until a reviewed password-change path is implemented;
-- portrait replacement remains fail-closed at the unresolved media semantic gate.
+- no TLS source => `HTTP_READ_ONLY`; secure login/business mutation routes are unavailable;
+- valid TLS source => reviewed HTTPS routes may be exposed only when the complete LAN readiness chain is also satisfied;
+- `POST /api/v1/auth/login` verifies the paired signed request before normal-user credential verification and issues a durable LAN session;
+- `POST /api/v1/data/commands` requires HTTPS + Bearer LAN session + exact signed request body and delegates through the reviewed coordinator/domain gates;
+- ROOT remains email-OTP authority; no permanent ROOT password exists;
+- `mustChangePassword` remains fail-closed until reviewed change/recovery routes exist;
+- `EMPLOYEE_PORTRAIT_REPLACE` remains fail-closed at the unresolved portrait lifecycle gate.
 
-Dedicated secure HTTP workflow `34811861697`, job/check `103874646267`, at commit `63ceeb6a8db865ced1870209c7cb74d4f65baea1`: **SUCCESS**.
-
-Covered runtime vectors:
-
-- actual LAN Service process bootstrap in HTTP read-only mode;
-- actual LAN Service process restart in HTTPS mode;
-- plaintext HTTP does not successfully reach the credential route on the TLS listener;
-- paired signed login;
-- wrong password rejection;
-- signed body tamper rejection;
-- login replay rejection;
-- durable session issuance;
-- signed authorized `EMPLOYEE_CREATE` through the public business adapter;
-- business replay rejection;
-- valid session reuse after LAN Service restart;
-- password absent from captured service diagnostics;
-- SQLite foreign-key/quick integrity checks.
-
-Baseline workflow `34811861613` on the same HEAD: **SUCCESS**.
+Secure HTTP evidence remains workflow `34811861697`, job/check `103874646267`, commit `63ceeb6a8db865ced1870209c7cb74d4f65baea1`: **SUCCESS**. Same-HEAD clean baseline `34811861613`: **SUCCESS**.
 
 Detailed boundary: `docs/LAN_SECURE_HTTP_V1.md`.
 
-This is **not yet physical/provider acceptance**. CI uses a self-signed certificate with explicit thumbprint pinning only to prove TLS/runtime behavior. Production BETA still requires a publicly trusted certificate for `lan-beta.supra.cc.cd`, canonical DNS/reachability, ordinary-user company Windows browser trust and real PDA/NLS-MT90 HTTPS/reconnect evidence without unauthorized company-admin changes.
+### Windows user-space DPAPI TLS — source/CI PASS
 
-### Cloud reconciliation ingestion — source/CI PASS foundation
+LAN TLS private material can now be stored on Windows as a DPAPI CurrentUser protected PFX. The raw PFX is decrypted only for loading and is not intentionally persisted.
 
-The Cloud Worker source includes the reviewed LAN reconciliation ingestion module and packaging. Tests cover preservation of LAN event/actor evidence, event/idempotency/device/source collision behavior, and completed integration receipt handling without duplicate downstream output at the ingestion-core level.
+Windows Schannel requires a usable current-user private-key container rather than `EphemeralKeySet`; therefore Windows imports the decrypted certificate with `UserKeySet` and without `PersistKeySet`. This does **not** install the certificate into the Windows certificate store and does not require administrator rights. Non-Windows compatibility/CI paths retain ephemeral loading.
 
-Evidence:
+Dedicated Windows evidence at commit `376cb0976f481acf68e8e21654d3d6593e98a81b`:
 
-- commit `19c3463a633389b0cd85ddcede6a4525ccaa522a`: Cloud LAN reconciliation ingestion core;
-- commit `591c4083973141155530357f5bddd4ee58efbdc7`: package reconciliation ingestion module;
-- workflow `34803221835` (`Validate clean baseline`) at `591c408...`: **SUCCESS**;
-- workflow `34803221873` (`Build product foundations`) at `591c408...`: **SUCCESS**.
+- DPAPI TLS workflow `34817069447`, check `103889883955`: **SUCCESS**;
+- secure HTTP regression `34817069438`: **SUCCESS**;
+- baseline `34817069440`: **SUCCESS**.
 
-This proves the source-level ingestion foundation. It does **not** yet prove the final authenticated network route from LAN -> Cloud, full LAN sender E2E retry/restart behavior, production provider deployment, complete conflict-resolution UX or physical continuity.
+Proven markers include DPAPI CurrentUser protection, real Kestrel/Schannel HTTPS startup, canonical SAN acceptance, wrong-host rejection, corrupt-blob rejection and no raw PFX disk leak.
 
-### LAN durable queue / Slice-1 — PASS foundation
+### LAN ACME/DNS-01 certificate manager — source/CI PASS
 
-Current LAN source retains automated evidence for operational-state materialization, immutable local event/outbox behavior, idempotent replay, actor evidence, employee/MNV/attendance Slice-1, atomic active-code uniqueness, staged media, and the durable Cloud reconciliation queue state machine.
+A separate user-space certificate manager now exists at `lan-certificate-manager/`. It is intentionally separate from LAN Service so DNS-provider credentials do not enter the business-service runtime.
 
-Dedicated queue workflow `34801533266` at `013d5b310ae0f068510c56cdbfe7cf4ea7ffec66`: **SUCCESS**.
+Implemented source behavior:
 
-### LAN signed-client / session / primary credential — dedicated CI PASS
+- BETA/STABLE canonical host derivation;
+- exact Cloudflare account/zone verification before DNS mutation;
+- DNS-01 restricted to `_acme-challenge.<canonical-host>`;
+- exact challenge-record readback and record-ID cleanup in `finally`;
+- ECDSA P-256 certificate request;
+- SAN/validity verification before protected-PFX replacement;
+- DPAPI CurrentUser protected PFX + atomic replacement;
+- DPAPI-protected ACME account key;
+- 30-day renewal threshold;
+- Let’s Encrypt staging by default;
+- production issuance requires both `--production` and `VHDCHY_ACME_ALLOW_PRODUCTION=YES`;
+- sanitized provider failures; no intentional token/private-key/PFX logging.
 
-Source includes signed P-256 client pairing/request verification with replay/security-epoch fencing, durable LAN user-session binding, authority snapshot V2 primary password verifier, V1/V2 authorization compatibility and the primary credential -> authenticated evidence -> LAN session chain.
+Dedicated certificate-manager workflow at commit `e11c5730a3e9cd7e212d07ea0fbdfc07aff77655`:
 
-Dedicated primary-auth workflow `34805395079` at commit `583b3d0329166804b207332dadf6d449b07c0abf`: **SUCCESS**.
+- run `34819836554`, job/check `103898656531`: **SUCCESS**;
+- local markers: `LAN_CERTIFICATE_MANAGER_SELF_TEST_PASS`, DPAPI PFX atomic write PASS, DPAPI account-secret PASS, renewal metadata PASS, raw-PFX disk-leak PASS;
+- same-HEAD baseline run `34819836553`, check `103898626431`: **SUCCESS**.
 
-### Integrated LAN readiness + internal business coordinator — PASS
+The workflow intentionally receives no GitHub `secrets.*` values. It proves local source/storage/renewal safety only; it does not issue the final laptop certificate.
 
-Readiness and route-wiring foundations remain proven without weakening fail-closed safeguards.
+Detailed boundary: `docs/LAN_CERTIFICATE_MANAGER_V1.md`.
 
-Evidence:
+### Cloudflare LAN trust prerequisites — read-only provider PASS
 
-- readiness workflow `34808274815`: **SUCCESS**;
-- paired baseline `34808274819`: **SUCCESS**;
-- signed route-wiring workflow `34808936937` at `a469d29325ee83f8e19070234c1186ca23474a1c`: **SUCCESS**;
+Read-only inspection at commit `3588bbcc29b665be453e3988e8f5898ed35a9fa8`, run `34816004518`, job/check `103886701628`: **SUCCESS**.
+
+At that verification point:
+
+- the configured token verified successfully as an account token;
+- the expected project account matched;
+- zone `supra.cc.cd` matched and was `active`;
+- `lan-beta.supra.cc.cd` had zero DNS records;
+- `_acme-challenge.lan-beta.supra.cc.cd` had zero DNS records.
+
+This does **not** prove DNS Edit capability for the credential that will run on the intended Windows LAN host. No provider mutation is inferred from this read-only evidence.
+
+### Cloud reconciliation foundation — source/CI PASS; network authentication pending
+
+The Cloud LAN-reconciliation ingestion core remains source/CI PASS, including event/actor/source evidence preservation, collision handling, completed integration receipt ingestion/deduplication and Worker packaging.
+
+Evidence remains workflows `34803221835` and `34803221873` at `591c4083973141155530357f5bddd4ee58efbdc7`: **SUCCESS**.
+
+A reviewed machine/service authentication mechanism is still required before the LAN -> Cloud network route is exposed. Payload actor evidence is not authentication.
+
+### LAN durable local foundation — PASS
+
+Operational snapshots/materialized Slice-1, immutable local event/outbox, idempotent replay, actor evidence, employee/MNV/attendance, atomic active-code uniqueness, staged media and durable Cloud-sync queue remain PASS foundations. Dedicated durable queue workflow `34801533266` at `013d5b310ae0f068510c56cdbfe7cf4ea7ffec66`: **SUCCESS**.
+
+### Earlier LAN security/readiness foundations — PASS
+
+- primary credential/session workflow `34805395079`: **SUCCESS**;
+- integrated readiness workflow `34808274815`: **SUCCESS**;
+- paired readiness baseline `34808274819`: **SUCCESS**;
+- signed route-wiring workflow `34808936937`: **SUCCESS**;
 - route-wiring baseline `34808937077`: **SUCCESS**.
 
-The coordinator binds signed paired-device request -> device-bound session -> current authority -> authorization/domain/command gate -> Slice-1 adapter. Authenticated actor evidence is server-derived and the coordinator consumes the exact signed raw body.
+### Web / Android foundations
 
-### Cloud reconciliation network boundary — still pending
+- Shared V7 Online/LAN Web shell remains PASS in product-foundation workflow `34801611019`.
+- Android foundation continues to build; exact final Pick Pack screen/layout evidence remains insufficiently surfaced, so exact visual details must not be invented.
 
-The Cloud ingestion core is service-to-service. Payload actor evidence must not be treated as authentication. Before exposing the LAN -> Cloud reconciliation route, a reviewed machine/service authentication boundary is required; then LAN sender -> Cloud E2E retry/restart/idempotency/result mapping can be proven.
+## Current primary execution direction
 
-### Web V7 shell — PASS foundation
+The source-level certificate lifecycle is now ready for live-host acceptance. The next dependency chain is:
 
-Product-foundation workflow `34801611019` at `41565f3b2ffdca473f756e33bd71769e16d8af13`: **SUCCESS** for the current shared Web shell plus Cloud/LAN/App foundations. Remaining Web work includes actual authenticated login/recovery, business modules, ADMIN+ conflict surfaces and Cloud/LAN E2E.
+1. on the intended ordinary-user Windows LAN host, use a dedicated least-privilege Cloudflare DNS credential or explicitly approved equivalent;
+2. live-verify exact account/zone identity and TXT create/read/delete capability only in the ACME challenge namespace;
+3. run ACME **staging** issuance first on that Windows user/machine context;
+4. verify DPAPI protected PFX, canonical SAN and LAN Service HTTPS startup;
+5. only after staging PASS, run explicit production issuance;
+6. prove canonical hostname resolution/reachability and public certificate trust on the actual company network/browser;
+7. prove NLS-MT90/PDA HTTPS login/business/reconnection/Wi-Fi recovery;
+8. complete remaining account-security routes: ROOT email OTP and normal-user must-change/password change/recovery;
+9. later include the approved secure public subset in physical continuity acceptance.
 
-### Android/PDA — build foundation only
+A GitHub-hosted runner must **not** be used to create the final DPAPI PFX for the laptop because DPAPI CurrentUser protection belongs to the target Windows user/machine context.
 
-Current Android source builds and visible foundation text is Vietnamese-only. Exact final Pick Pack 1291 screen/layout artifacts are still not sufficiently surfaced in current accessible reference evidence, so exact visual details must not be invented. Real NLS-MT90, scanner, background/battery and signed release acceptance remain pending.
+## Parallel execution lanes
+
+Independent safe work remains ready:
+
+- Cloud reconciliation machine/service authentication and LAN -> Cloud network E2E;
+- Web authenticated login/recovery + employee/attendance Slice-1 screens;
+- Android endpoint/session/scanner/durable-retry/HTTPS work that does not depend on missing visual evidence;
+- broader Cloud/Gateway/Google projection receipt/retry/readback coverage;
+- public ROOT email-OTP and normal-user password recovery/change routes.
 
 ## Portrait semantic gate — OWNER_DECISION_REQUIRED only when implementation reaches it
 
-The existing rule conflict remains unresolved:
-
-- one rule requires immediate deletion of the previous portrait;
-- LAN/offline media semantics permit staging when Drive is unavailable.
-
-Decision-independent media work may continue. Portrait replacement while Drive is unavailable remains fail-closed until explicit Owner authority resolves the conflict.
-
-## Immediate execution direction
-
-Primary LAN chain now moves from source/CI transport implementation to real trust/acceptance:
-
-1. provision/automate a publicly trusted BETA certificate for `lan-beta.supra.cc.cd` without relying on company-admin certificate-store changes;
-2. prove canonical DNS/reachability and HTTPS trust on the intended ordinary-user company Windows environment;
-3. prove real PDA/NLS-MT90 HTTPS/reconnect behavior;
-4. implement/prove the remaining public account-security surfaces required for actual use, especially ROOT email OTP and normal-user must-change/password recovery/change flows;
-5. keep portrait replacement closed until the Owner semantic decision exists;
-6. then include the approved secure public subset in the physical continuity window.
-
-Parallel reconciliation chain:
-
-- define/prove the reviewed machine/service authentication boundary for Cloud reconciliation;
-- wire the already-tested Cloud ingestion core behind that boundary;
-- connect LAN sender -> Cloud ingestion;
-- prove retry/restart/idempotency/receipt/conflict E2E semantics.
-
-Other independent lanes continue: Web authenticated/business surfaces, Android non-visual current-contract work, broader Cloud/Gateway/Google receipt paths, and business adapter coverage.
+The current portrait rule conflict remains unresolved: immediate deletion of the previous remote portrait versus LAN/offline staging while Drive is unavailable. Decision-independent media infrastructure may continue. Actual offline portrait replacement remains fail-closed until explicit Owner authority resolves the conflict.
 
 ## Physical / STABLE boundary
 
-Final company ordinary-user Windows + company network + real NLS-MT90 regression remains physical-only. Canonical offline continuity acceptance still requires **Window 2 >=60 minutes** after Internet cut while valid LAN remains.
+Publicly trusted BETA certificate issuance, canonical company-LAN DNS/reachability/trust, ordinary-user Windows acceptance and real NLS-MT90/PDA evidence are **not yet PASS**.
+
+Canonical offline continuity acceptance still requires **Window 2 >=60 minutes** after Internet cut while valid LAN remains.
 
 STABLE business activation/promotion remains blocked until mandatory BETA acceptance and explicit Owner approval.
