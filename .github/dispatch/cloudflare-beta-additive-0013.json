@@ -1,6 +1,6 @@
 {
-  "enabled": true,
+  "enabled": false,
   "target": "beta",
   "operation": "migrate_edge_reconciliation_backfill_v2_0013",
-  "request_id": "reconciliation-backfill-v2-apply-20260914"
+  "request_id": "reconciliation-backfill-v2-pass-20260914"
 }
