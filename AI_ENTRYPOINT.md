@@ -37,21 +37,28 @@ AI memory, remembered chat content, prior-chat summaries and remembered provider
 
 An explicit instruction from Owner in the current conversation controls intent and approval. Persistent project facts, IDs, decisions and state must be verified from GitHub `main` and/or current provider evidence, then persisted back to GitHub when changed.
 
+`AI_TERMINATION_GUARD.md` is the mandatory execution/finalization authority extension. Where older wording in `AI_OPERATING_CONTRACT.md` conflicts with that guard about voluntary stopping or finalization, the guard controls that question; all unrelated contract rules remain active.
+
+Hard finalization invariant: **while approved `READY` work remains, a final response that ends execution is forbidden.**
+
 ## Bootstrap
 
 Always perform these steps in the current chat:
 1. fetch `AI_OPERATING_CONTRACT.md` from GitHub `main`;
-2. fetch `CHECKPOINT.md` from GitHub `main`;
-3. fetch `CONTEXT_INDEX.md` from GitHub `main`;
-4. obtain the current GitHub `main` HEAD SHA;
-5. compare HEAD against `CHECKPOINT.md.reconciled_through_commit`;
-6. if HEAD differs, inspect the changed paths/commits before continuing and read every changed authority/current-state/canonical-guide file relevant to the active lanes;
-7. read every active decision layer listed by `CONTEXT_INDEX.md`, even if an older checkpoint forgot to name one;
-8. only then continue the task-specific source/evidence selected by `CONTEXT_INDEX.md`.
+2. fetch `AI_TERMINATION_GUARD.md` from GitHub `main`;
+3. fetch `CHECKPOINT.md` from GitHub `main`;
+4. fetch `CONTEXT_INDEX.md` from GitHub `main`;
+5. obtain the current GitHub `main` HEAD SHA;
+6. compare HEAD against `CHECKPOINT.md.reconciled_through_commit`;
+7. if HEAD differs, inspect the changed paths/commits before continuing and read every changed authority/current-state/canonical-guide file relevant to the active lanes;
+8. read every active decision layer listed by `CONTEXT_INDEX.md`, even if an older checkpoint forgot to name one;
+9. only then continue the task-specific source/evidence selected by `CONTEXT_INDEX.md`.
 
 A stale checkpoint is a locator, not current truth. It must never override a newer active decision layer or newer canonical guide on `main`.
 
 Before a state-changing action, confirm the current plan/approval scope, dependency gate, resource identity and last evidence. Never repeat a mutation merely because its prior outcome is uncertain; verify first.
+
+Before any final response that would end approved execution, run the mandatory `PRE_FINAL_TERMINATION_GUARD` defined in `AI_TERMINATION_GUARD.md`. A checkpoint, progress update, useful intermediate result, incomplete evidence or elapsed time is not by itself permission to stop.
 
 ## Context modes
 
