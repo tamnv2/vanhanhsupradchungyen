@@ -1,9 +1,22 @@
+using System.Text.Json;
+
 namespace Vhdchy.LanService;
 
 public sealed class LanBusinessRouteCoordinator
 {
     public const string BusinessCommandRouteTarget = "/api/v1/data/commands";
     public const string BusinessCommandMethod = "POST";
+
+    private static readonly HashSet<string> AllowedTopLevelFields = new(StringComparer.Ordinal)
+    {
+        "requestId",
+        "idempotencyKey",
+        "commandCode",
+        "entityId",
+        "expectedEntityVersion",
+        "payload",
+        "deviceSeq"
+    };
 
     private readonly LanClientSecurityStore _clientSecurity;
     private readonly LanUserSessionStore _sessions;
@@ -49,6 +62,8 @@ public sealed class LanBusinessRouteCoordinator
                 "Signed request body digest does not match the received request body.");
         }
 
+        var parsed = ParseSignedBody(request.RawRequestBody);
+
         var channel = await _clientSecurity.VerifySignedRequestAsync(proof, now, cancellationToken);
         if (!channel.Authorized)
             throw new LanBusinessRouteException(channel.Code, "Paired-device request authentication failed.");
@@ -71,14 +86,14 @@ public sealed class LanBusinessRouteCoordinator
             return await _business.ExecuteAsync(
                 new Slice1BusinessCommandRequest(
                     AuthenticatedUserId: session.Principal.UserId,
-                    RequestId: request.RequestId,
-                    IdempotencyKey: request.IdempotencyKey,
-                    CommandCode: request.CommandCode,
-                    EntityId: request.EntityId,
-                    ExpectedEntityVersion: request.ExpectedEntityVersion,
-                    PayloadJson: request.PayloadJson,
+                    RequestId: parsed.RequestId,
+                    IdempotencyKey: parsed.IdempotencyKey,
+                    CommandCode: parsed.CommandCode,
+                    EntityId: parsed.EntityId,
+                    ExpectedEntityVersion: parsed.ExpectedEntityVersion,
+                    PayloadJson: parsed.PayloadJson,
                     DeviceId: proof.DeviceId,
-                    DeviceSeq: request.DeviceSeq),
+                    DeviceSeq: parsed.DeviceSeq),
                 cancellationToken);
         }
         catch (Slice1BusinessException error)
@@ -87,38 +102,102 @@ public sealed class LanBusinessRouteCoordinator
         }
     }
 
+    private static ParsedBusinessCommand ParseSignedBody(string rawBody)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(rawBody);
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object)
+                throw InvalidBody("Business command body must be a JSON object.");
+
+            foreach (var property in root.EnumerateObject())
+            {
+                if (!AllowedTopLevelFields.Contains(property.Name))
+                    throw InvalidBody($"Unsupported business command field: {property.Name}.");
+            }
+
+            var requestId = RequiredString(root, "requestId");
+            var idempotencyKey = RequiredString(root, "idempotencyKey");
+            var commandCode = RequiredString(root, "commandCode");
+            var entityId = RequiredString(root, "entityId");
+            var expectedVersion = OptionalPositiveInt64(root, "expectedEntityVersion");
+            var deviceSeq = OptionalNonNegativeInt64(root, "deviceSeq");
+            if (!root.TryGetProperty("payload", out var payload) || payload.ValueKind != JsonValueKind.Object)
+                throw InvalidBody("Business command payload must be a JSON object.");
+
+            return new ParsedBusinessCommand(
+                requestId,
+                idempotencyKey,
+                commandCode,
+                entityId,
+                expectedVersion,
+                payload.GetRawText(),
+                deviceSeq);
+        }
+        catch (LanBusinessRouteException)
+        {
+            throw;
+        }
+        catch (JsonException error)
+        {
+            throw new LanBusinessRouteException("INVALID_INPUT", "Business command body is invalid JSON.", error);
+        }
+    }
+
+    private static string RequiredString(JsonElement root, string propertyName)
+    {
+        if (!root.TryGetProperty(propertyName, out var value) ||
+            value.ValueKind != JsonValueKind.String ||
+            string.IsNullOrWhiteSpace(value.GetString()))
+        {
+            throw InvalidBody($"Required business command field is missing or invalid: {propertyName}.");
+        }
+        return value.GetString()!.Trim();
+    }
+
+    private static long? OptionalPositiveInt64(JsonElement root, string propertyName)
+    {
+        if (!root.TryGetProperty(propertyName, out var value) || value.ValueKind == JsonValueKind.Null) return null;
+        if (value.ValueKind != JsonValueKind.Number || !value.TryGetInt64(out var parsed) || parsed < 1)
+            throw InvalidBody($"Business command field must be a positive integer when supplied: {propertyName}.");
+        return parsed;
+    }
+
+    private static long? OptionalNonNegativeInt64(JsonElement root, string propertyName)
+    {
+        if (!root.TryGetProperty(propertyName, out var value) || value.ValueKind == JsonValueKind.Null) return null;
+        if (value.ValueKind != JsonValueKind.Number || !value.TryGetInt64(out var parsed) || parsed < 0)
+            throw InvalidBody($"Business command field must be a non-negative integer when supplied: {propertyName}.");
+        return parsed;
+    }
+
+    private static LanBusinessRouteException InvalidBody(string message) => new("INVALID_INPUT", message);
+
     private static void ValidateRequest(LanBusinessRouteRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(request.SignedProof);
-        Require(request.SessionToken, nameof(request.SessionToken));
-        Require(request.RawRequestBody, nameof(request.RawRequestBody), allowEmpty: true);
-        Require(request.RequestId, nameof(request.RequestId));
-        Require(request.IdempotencyKey, nameof(request.IdempotencyKey));
-        Require(request.CommandCode, nameof(request.CommandCode));
-        Require(request.EntityId, nameof(request.EntityId));
-        Require(request.PayloadJson, nameof(request.PayloadJson), allowEmpty: true);
-        if (request.DeviceSeq is < 0) throw new ArgumentOutOfRangeException(nameof(request.DeviceSeq));
+        if (string.IsNullOrWhiteSpace(request.SessionToken))
+            throw new ArgumentException("Session token is required", nameof(request));
+        if (string.IsNullOrWhiteSpace(request.RawRequestBody))
+            throw new ArgumentException("Raw request body is required", nameof(request));
     }
 
-    private static void Require(string? value, string name, bool allowEmpty = false)
-    {
-        if (value is null || (!allowEmpty && string.IsNullOrWhiteSpace(value)))
-            throw new ArgumentException($"{name} is required", name);
-    }
+    private sealed record ParsedBusinessCommand(
+        string RequestId,
+        string IdempotencyKey,
+        string CommandCode,
+        string EntityId,
+        long? ExpectedEntityVersion,
+        string PayloadJson,
+        long? DeviceSeq);
 }
 
 public sealed record LanBusinessRouteRequest(
     string SessionToken,
     LanClientSignedRequestProof SignedProof,
-    string RawRequestBody,
-    string RequestId,
-    string IdempotencyKey,
-    string CommandCode,
-    string EntityId,
-    long? ExpectedEntityVersion,
-    string PayloadJson,
-    long? DeviceSeq = null);
+    string RawRequestBody);
 
 public sealed class LanBusinessRouteException : InvalidOperationException
 {
