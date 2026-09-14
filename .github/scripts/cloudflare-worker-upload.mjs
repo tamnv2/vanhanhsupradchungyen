@@ -52,9 +52,31 @@ async function main() {
     return { type: 'plain_text', name: safeName, text: value };
   });
 
+  const secretEnvBindings = (Array.isArray(spec.secret_env_bindings) ? spec.secret_env_bindings : []).map((entry, index) => {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+      throw new Error(`Invalid secret_env_bindings entry at index ${index}`);
+    }
+    const name = bindingName(entry.name, `secret_env_bindings[${index}].name`);
+    const envName = bindingName(entry.env, `secret_env_bindings[${index}].env`);
+    const minLength = Number.isSafeInteger(entry.min_length) && entry.min_length > 0 ? entry.min_length : 1;
+    const value = requiredEnv(envName);
+    if (value.length < minLength) {
+      throw new Error(`Worker secret binding ${name} from ${envName} is shorter than required minimum ${minLength}`);
+    }
+    return { type: 'secret_text', name, text: value, envName };
+  });
+
   const inheritBindings = [...new Set(Array.isArray(spec.inherit_bindings) ? spec.inherit_bindings : [])]
     .map(name => bindingName(name, 'inherit_bindings'));
-  const explicitNames = new Set([spec.d1_binding.name, 'BUILD_SHA', ...plainTextBindings.map(item => item.name)]);
+  const explicitNames = new Set([
+    spec.d1_binding.name,
+    'BUILD_SHA',
+    ...plainTextBindings.map(item => item.name),
+    ...secretEnvBindings.map(item => item.name)
+  ]);
+  if (explicitNames.size !== 2 + plainTextBindings.length + secretEnvBindings.length) {
+    throw new Error('Duplicate explicit Worker binding name in deployment spec');
+  }
   for (const name of inheritBindings) {
     if (explicitNames.has(name)) throw new Error(`Inherited binding ${name} collides with an explicit deployment binding`);
   }
@@ -66,6 +88,7 @@ async function main() {
       { type: 'd1', name: spec.d1_binding.name, database_id: spec.d1_binding.database_id },
       ...plainTextBindings,
       { type: 'plain_text', name: 'BUILD_SHA', text: process.env.GITHUB_SHA || 'local' },
+      ...secretEnvBindings.map(({ type, name, text }) => ({ type, name, text })),
       ...inheritBindings.map(name => ({ type: 'inherit', name }))
     ]
   };
@@ -96,6 +119,7 @@ async function main() {
 
   console.log(`WORKER_MULTI_MODULE_UPLOAD_PASS worker=${spec.target_worker} modules=${modules.length}`);
   for (const moduleName of modules) console.log(`WORKER_MODULE=${moduleName}`);
+  for (const item of secretEnvBindings) console.log(`WORKER_SECRET_BINDING_PROVISIONED=${item.name}`);
   for (const name of inheritBindings) console.log(`WORKER_INHERITED_BINDING=${name}`);
 }
 
