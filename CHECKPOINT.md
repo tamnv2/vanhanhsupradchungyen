@@ -1,9 +1,9 @@
 # CHECKPOINT — VHDCHY
 
-checkpoint_version: 26
+checkpoint_version: 27
 protocol: AI_AUTHORITY_RESUME_V2
 status: EXECUTING_PRODUCT_V6_BETA
-reconciled_through_commit: 58ddcd71f8152ab50138151fa13908d563dc2f02
+reconciled_through_commit: 583ca88170faa4d0b37c48af5339068740988950
 action_mode: AUTONOMOUS_PARALLEL
 active_lanes: REPO_GOVERNANCE / SHARED_DOMAIN / CLOUD_SERVICE / LAN_FULL_SERVICE / AUTH / GOOGLE_SYNC / WEB / ANDROID_APK / RECONCILIATION / STABLE_PREPARATION
 paused_lanes: PHYSICAL_CORPORATE_LAN_REGRESSION
@@ -21,58 +21,53 @@ context_index_ref: CONTEXT_INDEX.md
 ## Authority
 
 - Fresh resume must live-read `AI_ENTRYPOINT.md`, compare `main` HEAD with this reconciliation point, then read every active decision layer listed by `CONTEXT_INDEX.md`.
-- Active decisions remain `DECISIONS.md` + V3 + V4 + V5 + V6; V6 supersedes the stale V5 ROOT-factor/lifetime gate.
-- Active LAN/shared contracts: `docs/TARGET_PRODUCT_ARCHITECTURE_V3.md`, `docs/SERVICE_API_CONTRACT_V3.md`, `docs/LAN_EDGE_STATE_V2.md`, `docs/NON_FUNCTIONAL_BASELINE_V1.md`, `docs/LAN_HOST_DOMAIN_V1.md`, `contracts/commands.slice1.v1.json`, `contracts/acceptance.v1.json`.
+- Effective decisions remain `DECISIONS.md` + V3 + V4 + V5 + V6. No newer authority layer exists through this reconciliation point.
+- LAN remains a full local Service runtime; Cloud/LAN share one command/event/business meaning; actor identity comes only from authenticated context; DENY precedence applies; raw events remain immutable; silent last-write-wins is forbidden.
+- Employee/MNV authority: two ACTIVE people may not share one MNV; reuse is allowed only after the prior holder is inactive/left.
+- Attendance authority: multiple IN/OUT events are allowed on one business date while only one current presence state exists; OUT without valid preceding IN is rejected; exact retry is idempotent.
 
-## Completed / proven
+## Proven foundations
 
-### Cloud / auth foundation
-- Multi-module Worker packaging and protected session boundary are already deployed/proven on BETA; business/admin handlers remain intentionally fail-closed until adapters exist.
-- V6 email-OTP source foundation exists; additive D1 migration `0010` is NOT applied to BETA.
-- `changePermanentPassword(...)` source exists; public password/OTP route wiring is NOT claimed live because the prior high-level write was platform action-safety blocked.
-- Email/SMS provider remains unconfigured; no fabricated delivery and no unreviewed Google mail scope.
+### Cloud / auth
+- Multi-module Worker packaging/session boundary foundation remains proven and protected business/admin routes remain fail-closed where handlers are not reviewed.
+- V6 email-OTP source foundation exists; `0010` is NOT applied to BETA.
 - Permission catalog migration `0011` is source-only and NOT applied to BETA.
+- Email/SMS provider remains unconfigured. No delivery is claimed live.
 
-### Shared domain
-- `VHDCHY_DOMAIN_V1` machine contracts are active for first identity/employee/attendance slice.
-- Common commit states include `CLOUD_COMMITTED`, `LAN_ACCEPTED_PENDING_SYNC`, `LAN_RECONCILED_CLOUD_COMMITTED`, `QUEUED_CLIENT_LOCAL`, `SYNC_CONFLICT`.
-- Shared acceptance vectors enforce idempotency payload conflict, entity-version conflict, permission denial and dependency-unavailable parity.
+### Shared domain / product build
+- `VHDCHY_DOMAIN_V1`, `contracts/commands.slice1.v1.json`, `contracts/acceptance.v1.json` remain active machine contracts.
+- Four-lane product build run `34791932021`: SUCCESS for Web, Cloud Service, LAN Service and Android APK.
 
-### LAN L1/L2 durable foundation
-- Portable/no-admin .NET 8 LAN runtime and durable SQLite `VHDCHY_EDGE_V2` storage are proven.
-- Edge events are immutable; reconciliation state/outboxes/conflicts are separate durable groups.
-- Product-foundation run `34785599214`: SUCCESS, including Windows self-contained package.
+### LAN durable storage / synchronized state
+- `EdgeStore`, authority snapshot, operational snapshot, immutable edge event/outbox and `LocalCommandStore` atomic acceptance foundations are proven.
+- Local command transaction SQL-evidence run `34789053619`: SUCCESS.
+- Operational snapshot run `34789244223`: SUCCESS.
+- Authorization evaluator with DENY precedence run `34789650267`: SUCCESS.
+- Dedicated fail-closed readiness run `34789875048`: SUCCESS.
+- Trusted 8-command Slice-1 command-gate run `34791998929`: SUCCESS.
 
-### LAN synchronized authority snapshot — PASS
-- `lan-service/AuthoritySnapshotStore.cs` atomically stages/verifies/activates authority generations and preserves replaced generations.
-- Environment/cluster/domain compatibility is checked; same-version/same-evidence replay is idempotent; same-version/different evidence conflicts; invalid/incompatible import preserves the previous ACTIVE generation.
-- Exactly one ACTIVE authority generation is enforced.
-- Original authority harness run `34785834984`: SUCCESS.
+### Operational snapshot materialization — PASS
+- `Slice1OperationalStateMaterializer` materializes employees, employee codes and attendance/presence into `module_current_state` inside operational activation.
+- Snapshot replacement is blocked by unreconciled local Cloud outbox work so synchronized refresh cannot overwrite locally accepted pending state.
+- Invalid materialization rolls the activation transaction back and preserves prior active state.
+- Dedicated materialization run `34793329286`: SUCCESS, including seed, rollback, pending-local guard and public mutation still 503.
 
-### LAN atomic local-command storage primitive — PASS
-- `lan-service/LocalCommandStore.cs` implements the internal durable acceptance primitive without exposing a public mutation route.
-- One SQLite transaction performs guarded `module_current_state` transition + exactly one immutable `edge_event` + `edge_reconciliation_state` + `cloud_sync_outbox` + optional Google/Drive outbox work.
-- It requires an ACTIVE compatible authority snapshot and records the authority generation on every accepted edge event.
-- Same idempotency key + same canonicalized command returns the original result without duplicate state/event/outbox work.
-- Same idempotency + different payload => `IDEMPOTENCY_PAYLOAD_CONFLICT`.
-- Reused device sequence for a different accepted command => `DEVICE_SEQUENCE_CONFLICT`.
-- Wrong/missing base version for an existing entity => `ENTITY_VERSION_CONFLICT`.
-- Downstream outbox constraint failure rolls back current state, event and Cloud outbox together.
-- Harness/SQL-evidence workflow run `34789053619`: SUCCESS.
-- Clean baseline for checkpoint/source state after the primitive, run `34788994794`: SUCCESS.
-- This is a storage primitive only; it does NOT replace permission/business-rule evaluation.
+### Actor evidence / replay boundary — SOURCE + COMPILE PASS
+- `LocalCommandReplayResolver` recognizes exact accepted logical replay before mutable business-state validation.
+- Compile defect in nullable replay fields was fixed at `023b4911ec82a2ff4dd6a7d0473e8db4602dcb71`; LAN and related checks passed afterward.
+- `EdgeActorEvidenceStore` stages authenticated actor context and captures immutable event actor evidence via SQLite trigger in the same local acceptance transaction. Actor does not contaminate business payload/hash identity.
 
-### LAN operational snapshot foundation — PASS
-- `lan-service/OperationalSnapshotStore.cs` atomically stages/verifies/activates operational generations on the existing EdgeStore.
-- Activation requires an ACTIVE authority generation compatible with `VHDCHY_DOMAIN_V1`.
-- Snapshot envelope enforces environment, cluster, compatibility, required-module scope, canonicalized scope/state evidence and conflict-safe same-version semantics.
-- Invalid JSON, missing required module, wrong environment and incompatible versions do not replace the previous ACTIVE operational generation.
-- Exactly one ACTIVE operational generation is enforced; replaced generations are retained.
-- Operational snapshot metadata records the authority generation under which activation occurred.
-- Import deliberately does NOT set `EDGE_READY`; a later readiness gate must also prove the reviewed domain/authz adapter.
-- Harness + independent SQLite postflight + restart/fail-closed run `34789244223`: SUCCESS.
-- Clean baseline same HEAD, run `34789244221`: SUCCESS.
-- LAN restart sees `AUTH-TEST-2` + `OP-TEST-2` while readiness remains `EDGE_EMPTY` and mutation POST remains 503 `RUNTIME_DEPENDENCY_UNAVAILABLE`.
+### LAN Slice-1 business adapter — SEQUENTIAL BUSINESS VECTORS PASS, NOT READY
+- `Slice1BusinessAdapter` derives permission/event/entity/state authority server-side from trusted command contract; client authority fields are rejected.
+- Exact replay is accepted only when immutable authenticated-actor evidence matches.
+- Proven sequential behaviors include permission DENY precedence, employee create/update/status, actor evidence, exact replay, MNV active-holder guard/reuse after prior holder inactive, attendance IN, repeated IN, OUT guard, correction, and portrait fail-closed.
+- Initial business harness run `34796238740` correctly FAILED on active-holder MNV reassignment (`INVALID_INPUT_NOT_REJECTED`).
+- Source was corrected at `583ca88170faa4d0b37c48af5339068740988950` for prior-holder status and repeated-IN semantics.
+- Business harness run `34796432170`: SUCCESS.
+- Adapter remains `Ready=false` with blockers:
+  - `PORTRAIT_MEDIA_LIFECYCLE_REQUIRED`;
+  - `EMPLOYEE_CODE_ATOMIC_UNIQUENESS_REQUIRED`.
+- Sequential pre-checks are not sufficient proof against concurrent MNV assignment races; atomic uniqueness must be enforced inside the SQLite mutation transaction before readiness can open.
 
 ## Current provider / runtime facts
 
@@ -80,18 +75,19 @@ context_index_ref: CONTEXT_INDEX.md
 - BETA Worker: `vhdchy-beta`; public origin `https://beta.supra.cc.cd`.
 - BETA D1: `vhdchy-data-beta`, ID `37eb7d59-05c0-4ba2-8162-cb6a9fe5d492`, marker `business_core_v3`.
 - Google Gateway remains projection-oriented/fail-closed; projection is not declared LIVE.
-- `0010` and `0011` are not applied to BETA provider.
+- `0010` and `0011` are NOT applied to BETA provider.
 - LAN public `POST/PUT/PATCH/DELETE /api/v1/**` remains fail-closed; `businessMutationEnabled=false`.
-- STABLE remains isolated/dormant for business traffic until BETA PASS + explicit Owner promotion approval.
+- Readiness remains fail-closed; source/business harness PASS is not permission to expose public mutation routes.
+- STABLE remains isolated/dormant until full BETA PASS + explicit Owner promotion approval.
 
 ## Immediate execution
 
-1. Build a fail-closed LAN readiness evaluator that can explain missing prerequisites and cannot become READY from snapshots alone.
-2. Build the first reviewed Slice-1 authorization/domain adapter against the shared command contract and synchronized authority evidence; DENY precedence and cluster/module scope must match Cloud semantics.
-3. Adapter must validate permission/resource/action and approved command/event vocabulary before delegating to `LocalCommandStore`.
-4. Add harness vectors for permission allow/deny precedence, wrong scope, disabled subject, unsupported command, stale/missing readiness dependency and successful authorized storage delegation.
-5. Only after readiness + authz/domain adapter acceptance is proven may a reviewed LAN mutation route be considered. Do not open it merely because snapshot/storage layers pass.
-6. Continue independent Cloud/Auth/permission/provider lanes only through allowed high-level actions; never bypass platform action-safety.
+1. Implement atomic employee-code uniqueness in the same SQLite transaction as `module_current_state` + event + outbox so concurrent MNV assignment cannot race past sequential validation.
+2. Add deterministic harness evidence for active MNV claim and one-active-code-per-employee claim; prove conflict rolls back state/event/outbox and leaves the winning claim intact.
+3. Keep the business adapter/readiness blocked until atomic MNV uniqueness is proven.
+4. Then implement/prove employee portrait staged-media + durable readback + prior-file deletion lifecycle required by authority.
+5. Only after every Slice-1 blocker is closed may `LanReadinessEvaluator` link the adapter and consider `EDGE_READY`; public mutations remain closed until that reviewed gate passes.
+6. Continue independent Cloud/Auth/provider lanes only through allowed high-level actions; never bypass platform action-safety.
 
 do_not_repeat:
-Do not treat memory as authority. Do not replay provider migrations. Do not claim `0010`/`0011` applied. Do not claim email/SMS delivery live. Do not bypass action-safety. Do not open LAN mutation routes before readiness/authz/domain acceptance. Do not mutate raw edge events. Do not make Google business authority. Do not silently last-write-wins conflicts. Do not treat CI as physical company-LAN proof. Do not promote STABLE without explicit Owner approval.
+Do not treat memory as authority. Do not replay provider migrations. Do not claim `0010`/`0011` applied. Do not claim email/SMS delivery live. Do not bypass action-safety. Do not open LAN mutation routes before readiness/authz/domain acceptance. Do not mutate raw edge events. Do not make Google business authority. Do not silently last-write-wins conflicts. Do not treat CI as physical company-LAN proof. Do not promote STABLE without explicit Owner approval. Do not call the Slice-1 adapter READY while portrait lifecycle or atomic MNV uniqueness remains unproven.
