@@ -1,6 +1,6 @@
 {
-  "enabled": false,
+  "enabled": true,
   "target": "beta",
   "operation": "deploy_worker_multimodule_business_core_v3",
-  "reason": "C2 protected route boundary verified on BETA; return dispatcher to safe idle state"
+  "reason": "Provision reconciliation machine credential after D1 V2 schema PASS; keep finality disabled"
 }
