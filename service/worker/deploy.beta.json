@@ -15,7 +15,8 @@
     "reconciliation-finality.js",
     "reconciliation-payload-integrity.js",
     "reconciliation-request-auth.js",
-    "reconciliation-route.js"
+    "reconciliation-route.js",
+    "operational-snapshot-route.js"
   ],
   "compatibility_date": "2026-09-13",
   "public_origin": "https://beta.supra.cc.cd",
