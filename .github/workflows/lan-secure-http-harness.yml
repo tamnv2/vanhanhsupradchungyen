@@ -1,0 +1,64 @@
+name: Validate LAN secure HTTP login and business route
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'lan-service/**'
+      - 'lan-secure-http-harness/**'
+      - '.github/workflows/lan-secure-http-harness.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lan-secure-http-harness
+  cancel-in-progress: true
+
+jobs:
+  secure-http:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Build LAN runtime and secure HTTP harness
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet build lan-service/Vhdchy.LanService.csproj -c Release
+          dotnet build lan-secure-http-harness/Vhdchy.LanSecureHttp.Harness.csproj -c Release
+
+      - name: Prove TLS-only login, session and public Slice-1 route
+        shell: bash
+        run: |
+          set -euo pipefail
+          data_root="$RUNNER_TEMP/vhdchy-secure-http"
+          rm -rf "$data_root"
+          mkdir -p "$data_root"
+          dotnet run --project lan-secure-http-harness/Vhdchy.LanSecureHttp.Harness.csproj \
+            -c Release --no-build -- \
+            "lan-service/bin/Release/net8.0/VHDCHY.LanService.dll" \
+            "$data_root" \
+            17913 2>&1 | tee "$RUNNER_TEMP/secure-http.log"
+          grep -Fq 'LAN_SECURE_HTTP_HARNESS_PASS' "$RUNNER_TEMP/secure-http.log"
+          grep -Fq 'tlsOnly=PASS' "$RUNNER_TEMP/secure-http.log"
+          grep -Fq 'pairedLogin=PASS' "$RUNNER_TEMP/secure-http.log"
+          grep -Fq 'signedBody=PASS' "$RUNNER_TEMP/secure-http.log"
+          grep -Fq 'loginReplay=PASS' "$RUNNER_TEMP/secure-http.log"
+          grep -Fq 'businessExecute=PASS' "$RUNNER_TEMP/secure-http.log"
+          grep -Fq 'restartSession=PASS' "$RUNNER_TEMP/secure-http.log"
+          grep -Fq 'passwordDiagnostics=PASS' "$RUNNER_TEMP/secure-http.log"
+          test "$(sqlite3 "$data_root/edge.db" "PRAGMA foreign_key_check;")" = ""
+          test "$(sqlite3 "$data_root/edge.db" "PRAGMA quick_check;")" = "ok"
+
+      - name: Upload secure HTTP diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lan-secure-http-diagnostics
+          if-no-files-found: ignore
+          path: ${{ runner.temp }}/secure-http.log
