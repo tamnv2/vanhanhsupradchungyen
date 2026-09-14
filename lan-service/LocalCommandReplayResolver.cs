@@ -63,12 +63,12 @@ public sealed class LocalCommandReplayResolver
         var eventId = reader.GetString(0);
         var requestId = reader.GetString(1);
         var deviceId = reader.IsDBNull(2) ? null : reader.GetString(2);
-        var deviceSeq = reader.IsDBNull(3) ? null : reader.GetInt64(3);
+        long? deviceSeq = reader.IsDBNull(3) ? null : reader.GetInt64(3);
         var commandCode = reader.GetString(4);
         var eventCode = reader.GetString(5);
         var entityType = reader.GetString(6);
         var entityId = reader.GetString(7);
-        var baseVersion = reader.IsDBNull(8) ? null : reader.GetInt64(8);
+        long? baseVersion = reader.IsDBNull(8) ? null : reader.GetInt64(8);
         var resultingVersion = reader.GetInt64(9);
         var existingPayloadHash = reader.GetString(10);
         var authorityVersion = reader.GetString(11);
