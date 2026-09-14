@@ -23,8 +23,11 @@ var adapter = new Slice1BusinessAdapter(
     TestAuthority.Compatibility);
 
 var inspection = adapter.Inspect();
-HarnessAssert.That(!inspection.Ready, "ADAPTER_PREMATURELY_READY");
+HarnessAssert.That(!inspection.Ready, "FULL_ADAPTER_PREMATURELY_READY");
+HarnessAssert.That(inspection.SupportedSubsetReady, "SUPPORTED_SUBSET_NOT_READY");
 HarnessAssert.That(inspection.CatalogCommandCount == 8, "ADAPTER_CATALOG_COUNT_WRONG");
+HarnessAssert.That(inspection.SupportedCommandCodes.Count == 7, "SUPPORTED_COMMAND_COUNT_WRONG");
+HarnessAssert.That(inspection.BlockedCommandCodes.SequenceEqual(new[] { Slice1BusinessAdapter.PortraitCommandCode }), "PORTRAIT_COMMAND_BLOCK_NOT_EXPLICIT");
 HarnessAssert.That(
     inspection.Blockers.Any(value => value.Code == "PORTRAIT_MEDIA_LIFECYCLE_REQUIRED"),
     "PORTRAIT_BLOCKER_MISSING");
@@ -52,5 +55,5 @@ HarnessAssert.That(await CountAsync(connection, "SELECT COUNT(*) FROM cloud_sync
 HarnessAssert.That(await CountAsync(connection, "SELECT COUNT(*) FROM edge_event_actor_evidence") == 15, "BUSINESS_ACTOR_EVIDENCE_COUNT_WRONG");
 HarnessAssert.That(await CountAsync(connection, "SELECT COUNT(*) FROM edge_actor_context") == 0, "BUSINESS_ACTOR_CONTEXT_NOT_CLEANED");
 
-Console.WriteLine("LAN_SLICE1_BUSINESS_HARNESS_PASS authz=PASS create=PASS replay=PASS actorEvidence=PASS update=PASS status=PASS mnvReuse=PASS repeatedIn=PASS outGuard=PASS correction=PASS portraitFailClosed=PASS atomicMnvClaims=PASS events=15");
+Console.WriteLine("LAN_SLICE1_BUSINESS_HARNESS_PASS authz=PASS supportedSubset=PASS portraitScopedBlock=PASS create=PASS replay=PASS actorEvidence=PASS update=PASS status=PASS mnvReuse=PASS repeatedIn=PASS outGuard=PASS correction=PASS portraitFailClosed=PASS atomicMnvClaims=PASS events=15");
 return 0;
