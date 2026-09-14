@@ -8,14 +8,69 @@ const commitLabels = Object.freeze({
   SYNC_CONFLICT: 'Có xung đột đồng bộ'
 });
 
+const viewTitles = Object.freeze({
+  dashboard: 'Tổng quan',
+  business: 'Nghiệp vụ',
+  people: 'Nhân sự',
+  attendance: 'Ra/Vào & Công nhật',
+  resources: 'Tài nguyên',
+  documents: 'Biên bản',
+  history: 'Lịch sử',
+  sync: 'Đồng bộ',
+  admin: 'Quản trị',
+  settings: 'Cài đặt'
+});
+
 async function getJson(path) {
   const response = await fetch(path, { cache: 'no-store', credentials: 'same-origin' });
   const text = await response.text();
   let payload;
   try { payload = JSON.parse(text); }
   catch { throw new Error(`${path}: phản hồi không phải JSON (${response.status})`); }
-  if (!response.ok) throw new Error(`${path}: HTTP ${response.status} ${payload?.error?.code || ''}`.trim());
+  if (!response.ok) {
+    const error = new Error(`${path}: HTTP ${response.status} ${payload?.error?.code || ''}`.trim());
+    error.status = response.status;
+    error.payload = payload;
+    throw error;
+  }
   return payload;
+}
+
+function setEnvironment(value, ok = true) {
+  const badge = byId('environmentBadge');
+  badge.textContent = value || 'UNKNOWN';
+  badge.className = `pill ${ok ? 'pill-ok' : 'pill-warn'}`;
+}
+
+function setView(view) {
+  document.querySelectorAll('[data-view]').forEach((button) => {
+    button.classList.toggle('active', button.dataset.view === view);
+  });
+  byId('pageTitle').textContent = viewTitles[view] || 'VHDCHY';
+  byId('message').textContent = view === 'dashboard'
+    ? 'Các màn hình nghiệp vụ vẫn fail-closed cho tới khi auth, permission và domain slice tương ứng PASS.'
+    : `${viewTitles[view] || 'Chức năng'}: shell giao diện đã sẵn sàng; route nghiệp vụ chỉ mở khi Service và permission tương ứng PASS.`;
+  byId('sidebar').classList.remove('open');
+}
+
+async function refreshPrincipal() {
+  try {
+    const result = await getJson('/api/v1/auth/me');
+    const principal = result.principal || {};
+    const name = principal.displayName || principal.username || 'Tài khoản';
+    byId('accountName').textContent = name;
+    byId('accountRole').textContent = principal.securityLevel || 'Đã xác thực';
+    byId('accountInitial').textContent = name.trim().slice(0, 1).toUpperCase() || '?';
+  } catch (error) {
+    if (error.status === 401) {
+      byId('accountName').textContent = 'Chưa đăng nhập';
+      byId('accountRole').textContent = 'Auth route đang fail-closed';
+      byId('accountInitial').textContent = '?';
+      return;
+    }
+    byId('accountName').textContent = 'Không xác định';
+    byId('accountRole').textContent = 'Không đọc được phiên';
+  }
 }
 
 async function refreshRuntime() {
@@ -28,45 +83,64 @@ async function refreshRuntime() {
   if (metaResult.status === 'fulfilled') {
     const meta = metaResult.value;
     const runtime = meta.runtime || (meta.service === 'VHDCHY_WORKER' ? 'CLOUD' : 'UNKNOWN');
-    byId('environmentBadge').textContent = meta.environment || 'UNKNOWN';
+    setEnvironment(meta.environment || 'UNKNOWN', meta.ok !== false);
     byId('runtimeStatus').textContent = `Runtime: ${runtime}`;
+    byId('runtimeDetail').textContent = runtime;
+    byId('serviceHeadline').textContent = meta.ok === false ? 'Suy giảm' : 'Sẵn sàng';
     byId('serviceSummary').textContent = `${meta.service || 'Service'} · ${meta.runtimeState || meta.readiness || 'ready'} · ${meta.build || meta.version || ''}`;
   } else {
-    byId('environmentBadge').textContent = 'DEGRADED';
+    setEnvironment('DEGRADED', false);
     byId('runtimeStatus').textContent = 'Runtime: không truy cập được';
+    byId('runtimeDetail').textContent = 'Không truy cập được';
+    byId('serviceHeadline').textContent = 'Mất kết nối';
     byId('serviceSummary').textContent = metaResult.reason.message;
   }
 
   if (capabilitiesResult.status === 'fulfilled') {
     const capabilities = capabilitiesResult.value;
     if (capabilities.businessMutationEnabled === false || capabilities.anonymousMutationAllowed === false) {
-      byId('message').textContent = 'Service đang bảo vệ nghiệp vụ theo contract. Chỉ các route đã xác thực/được kích hoạt mới được phép mutation.';
+      byId('message').textContent = 'Service đang bảo vệ nghiệp vụ. Chỉ route đã xác thực, đủ permission và readiness mới được phép mutation.';
     }
   }
 
   if (syncResult.status === 'fulfilled') {
     const sync = syncResult.value;
+    const pendingCloud = sync.pendingCloudSync ?? 0;
+    const pendingGoogle = sync.pendingGoogleWork ?? 0;
+    const conflicts = sync.conflictCount ?? 0;
+    byId('cloudSyncHeadline').textContent = pendingCloud ? `${pendingCloud} đang chờ` : 'Không tồn';
     byId('cloudSyncSummary').textContent = sync.lastCloudSyncAt
-      ? `Lần gần nhất: ${sync.lastCloudSyncAt}; đang chờ: ${sync.pendingCloudSync ?? 0}`
-      : `Chưa có checkpoint; đang chờ: ${sync.pendingCloudSync ?? 0}`;
-    byId('googleSummary').textContent = `Công việc Google đang chờ: ${sync.pendingGoogleWork ?? 0}`;
-    byId('conflictSummary').textContent = `Xung đột chưa xử lý: ${sync.conflictCount ?? 0}`;
+      ? `Lần gần nhất: ${sync.lastCloudSyncAt}`
+      : 'Chưa có checkpoint Cloud.';
+    byId('cloudSyncDetail').textContent = pendingCloud ? `${pendingCloud} công việc đang chờ` : 'Không có công việc chờ';
+    byId('googleHeadline').textContent = pendingGoogle ? `${pendingGoogle} đang chờ` : 'Không tồn';
+    byId('googleSummary').textContent = `Công việc Google đang chờ: ${pendingGoogle}`;
+    byId('googleDetail').textContent = pendingGoogle ? `${pendingGoogle} công việc đang chờ` : 'Không có công việc chờ';
+    byId('conflictHeadline').textContent = String(conflicts);
+    byId('conflictSummary').textContent = `Xung đột chưa xử lý: ${conflicts}`;
+    byId('conflictDetail').textContent = conflicts ? `${conflicts} cần xử lý` : 'Không có xung đột';
   } else {
-    byId('cloudSyncSummary').textContent = 'Cloud runtime hiện chưa công bố endpoint sync status.';
-    byId('googleSummary').textContent = 'Theo dõi qua Service/Gateway; không đọc Sheet làm authority.';
+    byId('cloudSyncHeadline').textContent = 'Chưa công bố';
+    byId('cloudSyncSummary').textContent = 'Runtime hiện chưa công bố endpoint sync status.';
+    byId('cloudSyncDetail').textContent = 'Endpoint chưa khả dụng';
+    byId('googleHeadline').textContent = 'Theo Service';
+    byId('googleSummary').textContent = 'Google là downstream; không đọc Sheet làm authority.';
+    byId('googleDetail').textContent = 'Theo Service/Gateway';
+    byId('conflictHeadline').textContent = '—';
     byId('conflictSummary').textContent = 'Chưa có conflict endpoint hoạt động.';
+    byId('conflictDetail').textContent = 'Endpoint chưa khả dụng';
   }
 }
 
-document.querySelectorAll('nav button').forEach((button) => {
-  button.addEventListener('click', () => {
-    document.querySelectorAll('nav button').forEach((item) => item.classList.remove('active'));
-    button.classList.add('active');
-    byId('message').textContent = `${button.textContent}: shell đã sẵn sàng; feature route sẽ mở theo permission/domain slice khi Service PASS.`;
-  });
+document.querySelectorAll('[data-view]').forEach((button) => {
+  button.addEventListener('click', () => setView(button.dataset.view));
 });
 
-window.VHDCHY = Object.freeze({ commitLabels });
-refreshRuntime().catch((error) => {
-  byId('serviceSummary').textContent = error.message;
+document.querySelectorAll('[data-view-jump]').forEach((button) => {
+  button.addEventListener('click', () => setView(button.dataset.viewJump));
 });
+
+byId('menuButton').addEventListener('click', () => byId('sidebar').classList.toggle('open'));
+
+window.VHDCHY = Object.freeze({ commitLabels });
+Promise.allSettled([refreshRuntime(), refreshPrincipal()]);
