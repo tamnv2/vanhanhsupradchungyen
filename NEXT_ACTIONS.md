@@ -8,115 +8,87 @@ Primary phase: **Phase 6 — LAN continuity/offline/reconcile**
 
 ## Execution rule
 
-Default is `CONTINUE` with a mandatory ready-queue scheduler.
+Default is `CONTINUE` with a mandatory ready-queue scheduler. Execute independent safe work in parallel where tools permit; serialize dependency-bound or same-resource writes. A failed node must not stall unrelated ready work.
 
-At every step:
-
-1. identify all safe nodes whose prerequisites are already satisfied;
-2. execute independent ready nodes in parallel where available tools permit;
-3. serialize only dependency-bound work or writes to the same file/ref/database/provider resource;
-4. when one dependency chain advances, immediately start its next ready node while unrelated lanes continue;
-5. isolate a blocked/failed node and continue all independent ready work;
-6. refill the ready queue rather than waiting for an unrelated lane to finish.
-
-Public business mutation paths remain fail-closed until the corresponding current readiness/security/domain acceptance gates are proven.
-
-Before a long tool/session block ends, report evidence-backed PASS/FAIL/IN_PROGRESS/BLOCKED state, direct evidence IDs, current exact/rounded percentage and any justified delta. Tool activity without proof is not progress.
+Public business mutation paths remain fail-closed until the corresponding current readiness/security/domain acceptance gates are proven. Evidence is required before PASS.
 
 ## Ready queue NOW
 
-### A — Cloud/LAN reconciliation chain — PRIMARY
+### A — LAN integrated security/readiness — PRIMARY
 
-Already PASS at the local queue layer:
+Already proven independently:
 
-- durable claim/retry/reconcile/conflict state machine;
-- restart recovery of interrupted claims;
-- immutable edge-event reconciliation envelope;
-- completed Google/Drive receipt attachment;
-- race-safe single claimant.
+- signed-client pairing/request verification, replay defense and security-epoch fencing;
+- durable user-session binding;
+- authority snapshot V2 primary credential verification;
+- primary credential -> authenticated evidence -> LAN session chain.
 
-Evidence: dedicated run `34801533266` at `013d5b310ae0f068510c56cdbfe7cf4ea7ffec66` — `SUCCESS`.
+Evidence: dedicated workflow `34805395079` at `583b3d0329166804b207332dadf6d449b07c0abf` — **SUCCESS**.
+
+Current integrated gate:
+
+- workflow `34805628566` at `609a77ee3ef48eca9b1df5d91f63d2e7d875508f` — **FAILED** at the step intended to prove readiness advances only to `LAN_USER_SESSION_ROUTE_WIRING_REQUIRED`.
 
 Next dependency chain:
 
-1. lock the current Cloud reconciliation transport/API path against `docs/SERVICE_API_CONTRACT_V3.md`;
-2. implement Cloud ingestion over the existing edge-reconciliation D1 schema without opening unrelated public mutations;
-3. validate event/idempotency/device/source identity collision behavior;
-4. accept completed LAN integration receipts without duplicate Google output;
-5. return stable reconcile/conflict/retry semantics to LAN;
-6. add source-level/CI acceptance vectors;
-7. only then connect the LAN network sender and prove end-to-end retry/restart/reconciliation.
+1. reproduce/diagnose the exact integrated readiness invariant using source-level diagnostics;
+2. fix the integration defect without relaxing fail-closed security/readiness conditions;
+3. prove the evaluator reaches exactly the reviewed route-wiring blocker with dedicated CI;
+4. implement authenticated login/session -> authorization/domain -> Slice-1 business route wiring;
+5. add negative vectors for invalid session, wrong device/epoch, stale authority, DENY/cluster/module scope and unsupported command;
+6. only after those gates PASS, expose the approved public LAN business subset.
 
-### B — LAN security/readiness — PARALLEL
+### B — Cloud/LAN reconciliation E2E — PARALLEL
 
-1. Preserve proven employee/MNV/attendance Slice-1 behavior, atomic uniqueness, staged media and Cloud-sync queue mechanics.
-2. Extend current LAN auth/pairing/security-epoch and permission enforcement; pilot identity hints are not sufficient security.
-3. Extend current business adapters and acceptance vectors beyond the existing Slice-1 subset according to `docs/DELIVERY_PLAN_V5.md`.
-4. Add sync cursor/delta refresh/rebase behavior and dependency-safe conflict handling.
-5. Keep current public LAN mutations fail-closed until readiness explicitly links the complete reviewed business/auth path.
-6. Do not claim physical PASS from CI/source evidence.
+Already PASS at source foundation level:
+
+- durable LAN reconciliation queue;
+- immutable reconciliation envelope with actor/source evidence;
+- Cloud ingestion core;
+- event/idempotency/device/source collision handling;
+- completed integration receipt ingestion/deduplication foundation;
+- Worker packaging of the reconciliation module.
+
+Evidence: workflows `34803221835` and `34803221873` at `591c4083973141155530357f5bddd4ee58efbdc7` — **SUCCESS**.
+
+Next dependency chain:
+
+1. wire the ingestion core behind the reviewed authenticated Cloud reconciliation network/API boundary;
+2. keep the route isolated from unrelated public mutations;
+3. connect the LAN network sender to that route;
+4. prove retry/restart/idempotency and stable result mapping end-to-end;
+5. prove existing Google/Drive receipts do not duplicate downstream output;
+6. retain explicit conflict evidence and ADMIN+ resolution boundary;
+7. add sync cursor/delta/rebase behavior after the transport path is stable.
 
 ### C — Online Web + LAN Web — PARALLEL
 
-Current shared V7 shell and Web contract are PASS inside product-foundation run `34801611019`.
+Current shared V7 shell and Web contract have PASS evidence in product-foundation workflow `34801611019`.
 
-Continue with:
-
-1. authenticated login/recovery flow only after current Service auth routes exist; do not fake login success;
-2. migrate employee/attendance Slice-1 screens onto the shared V7 shell;
-3. add ADMIN+ conflict-resolution surface when the reconciliation contract is stable;
-4. preserve Online/LAN parity and local/offline-safe critical assets;
-5. keep all current user-facing Web UI **Vietnamese only**;
-6. defer language selectors/catalogs/locale persistence until a later Owner decision.
+Continue with actual authenticated login/recovery against real Service routes, then employee/attendance Slice-1 screens and later ADMIN+ conflict-resolution surfaces. Preserve Online/LAN parity, local/offline-safe critical assets and **Vietnamese-only** current UI. Do not fake login success.
 
 ### D — Android/PDA App — PARALLEL WHERE NOT BLOCKED
 
-Current foundation APK builds and visible text is Vietnamese-only.
+Current APK foundation builds and visible text is Vietnamese-only.
 
-1. Continue locating the actual final Pick Pack 1291 App UI source/artifacts from the authorized backup/reference.
-2. Do not invent exact visual details while that artifact remains unavailable.
-3. Independently continue non-visual current-contract work that does not depend on the missing reference: Service/LAN endpoint abstraction, scanner-to-domain-command boundary, durable retry mechanics and current network-state model.
-4. Once actual UI evidence is surfaced, build the VHDCHY PDA shell using that recognizable direction, adapted to current workflows/permissions.
-5. Keep all current user-facing App UI **Vietnamese only**; multilingual work is deferred.
-6. Verify final signed APK/update/background/battery behavior on real target devices later.
+Continue non-visual current-contract work that does not depend on missing Pick Pack visual evidence: Service/LAN endpoint abstraction, scanner-to-domain-command boundary, durable retry mechanics, network/sync state and authenticated session handling. Continue locating the actual final Pick Pack 1291 UI source/artifacts; do not invent unavailable screen details.
 
-### E — Cloud/Gateway/provider — PARALLEL
+### E — Cloud/Gateway/Google — PARALLEL
 
-1. Continue current Service/API business coverage and provider-neutral adapters.
-2. Complete controlled Google Drive/Sheets projection/upload receipt, retry and readback behavior.
-3. Keep Sheets/Drive downstream only; never use them as canonical business authority.
-4. Complete current Gateway/provider failure/recovery and operator-visible diagnostics.
-5. Keep sensitive provider operations within allowed high-level action safety; never bypass provider/platform guards.
+Continue provider-neutral business coverage and controlled Google projection/upload receipt, retry and readback behavior. Sheets/Drive remain downstream only. Keep provider mutations fail-closed on identity/config mismatch and live-verify exact provider state before deployment/mutation.
 
 ## Owner decision gate — portrait only
 
-The existing portrait conflict remains genuinely unresolved:
+The existing portrait conflict remains unresolved: immediate deletion of the previous portrait versus offline staging while Drive is unavailable. Continue decision-independent media infrastructure, but do not choose offline portrait-replacement semantics without explicit Owner authority.
 
-- current business rule requires previous portrait deletion immediately;
-- offline/LAN media rules allow staging when Drive is unavailable.
+## Physical BETA acceptance — later, when source is ready
 
-Continue decision-independent media infrastructure, but do not silently choose offline portrait replacement semantics. When implementation reaches that exact mutation behavior, obtain explicit Owner authority, then implement and test the chosen lifecycle.
+Physical evidence remains required on the intended ordinary-user company Windows laptop/network and real NLS-MT90 devices: reachability/discovery/reacquisition, PDA workflow/Wi-Fi recovery, **>=60-minute** Internet-cut Window 2, restoration reconciliation, host restart/update rollback, battery/background behavior, synthetic 10/25/50/100 load + soak, and Owner UAT.
 
-## Physical BETA acceptance — when source is ready
+## STABLE
 
-Run against the intended company ordinary-user Windows laptop/network and real NLS-MT90 devices:
-
-1. LAN reachability/discovery/reacquisition under company network policy.
-2. Real PDA workflow latency/Wi-Fi behavior and queue recovery.
-3. >=60-minute Internet-cut continuity Window 2.
-4. Reconnect/reconciliation after restoration as a separate post-window test.
-5. Host restart/network-change and no-admin update/rollback.
-6. Background/battery behavior.
-7. Synthetic 10/25/50/100 load plus soak.
-8. Full Owner UAT across Online Web, LAN Web, App and Service/Gateway.
-
-## STABLE after BETA acceptance only
-
-- Prepare isolated STABLE infrastructure safely during development.
-- Do not activate production business traffic or promote until mandatory BETA gates pass and the Owner explicitly approves promotion.
-- Promote the exact accepted BETA release/artifacts.
-- Do not copy BETA runtime/business data into STABLE unless a separately approved migration requires it.
+STABLE may be prepared safely in isolation, but no production business activation/promotion occurs until mandatory BETA gates pass and the Owner explicitly approves. Promote the exact accepted BETA artifacts; do not copy BETA business/runtime data by default.
 
 ## Current execution line
 
-`Overall: 55% displayed / 54.6% exact | Current: Phase 6 — LAN continuity/offline/reconcile | Parallel: Phase 4/5 + V7 Web/App | Next gate: Cloud reconciliation ingestion/transport + LAN security/readiness -> physical regression later`
+`Overall: 55% displayed / 54.6% exact | Current: Phase 6 — LAN continuity/offline/reconcile | Primary next gate: integrated LAN readiness -> reviewed route wiring | Parallel: Cloud reconciliation network E2E + Phase 4/5 + V7 Web/App`
