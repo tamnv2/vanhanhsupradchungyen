@@ -44,23 +44,44 @@ Use `CONTEXT_INDEX.md` to choose `FAST`, `FOCUSED` or `FULL` reads.
 
 Do not read historical logs, full changelog or unrelated lanes merely for completeness. Escalate context only when correctness requires it.
 
-## 4. Owner approval protocol and non-stop execution rule
+## 4. Owner approval protocol and strict non-stop execution rule
 
 For a genuinely new material scope, analyze intent, risks, dependencies and parallelizable work, then use the Owner's current instruction as the approval boundary. Once the Owner has approved or directly instructed the scope, execute all available actions end-to-end without adding routine confirmation gates.
 
 The default state is `CONTINUE`, not `WAIT`.
 
-Do not stop overall project progress because of ordinary implementation errors, failed CI, transient provider errors, unavailable local tooling, incomplete evidence, a blocked single lane, or because another independent task is still running. Diagnose, repair, verify and continue automatically. If one lane is blocked, keep all independent safe lanes moving.
+After scope approval, the AI is **strictly prohibited from voluntarily stopping execution** unless at least one of these three conditions is actually reached:
 
-Overall progress may stop for Owner interaction only when one of these two conditions is true:
-1. `OWNER_PERMISSION_REQUIRED`: a missing permission, access grant, secret-store setup, interactive consent or equivalent Owner-controlled capability prevents AI from continuing the required action. Ask only for the exact minimum grant/action and continue every other independent lane meanwhile.
-2. `OWNER_DECISION_REQUIRED`: a material conflict, contradiction or unresolved business/authority choice has multiple materially different valid outcomes and cannot be resolved from current Owner instruction, verified provider state or GitHub authority. Present the conflict and request only the specific decision needed. Continue every other independent lane meanwhile.
+1. `OWNER_DECISION_REQUIRED`: a material conflict, contradiction or unresolved business/authority choice has multiple materially different valid outcomes and cannot be resolved from current Owner instruction, verified provider state or GitHub authority.
+2. `OWNER_PERMISSION_REQUIRED`: a missing permission, access grant, secret-store setup, interactive consent or equivalent Owner-controlled capability prevents the AI from continuing the required action.
+3. `TOOL_CAPABILITY_LIMIT`: a hard limitation of the currently available tools/runtime makes the required action technically impossible for the AI, and safe alternate connected tools, APIs, hosted CI bridges and indirect AI-executable paths have been exhausted or proven unavailable.
+
+Any other condition — including ordinary implementation errors, failed CI, transient provider errors, unavailable local tooling, incomplete evidence, uncertain prior outcome, a blocked single lane, long execution time, a completed checkpoint, or the fact that another task is still running — does **not** authorize stopping. Diagnose, repair, verify and continue automatically.
+
+If one lane is blocked, continue every independent safe lane. Reaching one of the three stop conditions pauses only the affected dependency path by default. A whole-project/session halt is permitted only when one of those three conditions applies **and no independent safe ready work remains**.
 
 Do not ask Owner to reconfirm a choice already resolved by current instruction, `DECISIONS.md`, provider evidence or task-specific authority.
 
-A technical failure is not an Owner blocker unless it reduces to one of the two conditions above. First attempt safe diagnosis, correction, alternate connected execution, GitHub-hosted CI, or read-only evidence collection.
+A technical failure is not an Owner blocker unless safe diagnosis/correction reduces it to `OWNER_DECISION_REQUIRED`, `OWNER_PERMISSION_REQUIRED` or a proven `TOOL_CAPABILITY_LIMIT`. First attempt safe diagnosis, correction, alternate connected execution, GitHub-hosted CI, or read-only evidence collection.
 
 Standing explicit Owner gates already recorded in authority, such as STABLE promotion, apply only to that gated lane. Reaching such a gate does not stop unrelated BETA/LAN/Android/documentation work that can still proceed safely.
+
+### Permission-blocker escalation protocol
+
+When a required action is blocked by missing permission or access, stop only the affected mutation and immediately switch to permission-enablement analysis. The objective is to make the capability AI-operable for future runs rather than repeatedly delegating the same manual step to Owner.
+
+Required order:
+1. identify the exact missing capability, resource, account/environment and least-privilege permission needed;
+2. determine whether Owner can grant that capability to an existing connected tool/plugin/API/GitHub App, provider service account, repository/environment permission, or other durable AI-accessible integration;
+3. if a grant is possible, give Owner the exact minimum UI/consent/setup steps, without asking for raw secrets in chat, then verify the new capability and resume autonomous execution;
+4. if direct AI permission cannot be granted, independently search for and design a safe indirect AI-executable path, preferring fixed fail-closed APIs or GitHub-hosted CI bridges with credentials kept in approved secret stores;
+5. only when no safe direct grant and no safe indirect AI-executable path exists may the task become `OWNER_MANUAL_LAST_RESORT`; explain precisely why automation is impossible and request only the minimum unavoidable manual action.
+
+A missing permission must therefore trigger an **automation-enablement attempt first**, not an immediate handoff of routine work to Owner.
+
+### Tool-limit escalation protocol
+
+Do not classify a task as `TOOL_CAPABILITY_LIMIT` merely because one preferred tool is unavailable or inconvenient. Before stopping the affected path, attempt or evaluate other connected tools, provider APIs, GitHub-hosted CI, reviewed fixed-operation workflows and other safe indirect paths. Record the exact hard limitation and the alternatives checked. If any safe AI-executable path remains, continue rather than stopping.
 
 ## 5. Autonomous execution and no-local-install default
 
@@ -70,11 +91,12 @@ Default execution order:
 1. use a directly connected tool/API when available;
 2. otherwise use a reviewed GitHub Actions/CI bridge running on hosted runners with provider credentials stored in GitHub Environments/Secrets;
 3. otherwise request only the minimum Owner UI/consent/permission step needed to establish that bridge or grant the missing permission;
-4. use Owner-local execution only when the task is inherently local/physical, the Owner explicitly requests it, or no safe remote/CI path exists after review.
+4. if direct capability cannot be granted, find a safe indirect AI-executable route;
+5. use Owner-local/manual execution only as `OWNER_MANUAL_LAST_RESORT`, when the task is inherently local/physical or when no safe remote/CI/indirect AI path exists after review.
 
 Do not ask Owner to install Wrangler, Git, Node, Python, SDKs or similar tooling merely because a provider action cannot be invoked directly from the current chat tool. Prefer GitHub-hosted CI.
 
-When a permission is missing, identify the exact least-privilege permission/resource/environment required and ask Owner to grant only that permission. After permission is granted, resume autonomous execution without delegating routine commands back to Owner.
+When a permission is missing, identify the exact least-privilege permission/resource/environment required and prioritize making that capability durable and AI-operable for future runs. After permission is granted, verify it and resume autonomous execution without delegating routine commands back to Owner.
 
 Provider secrets must remain in provider/GitHub secret stores. Do not ask Owner to paste raw secrets into chat or commit them to source.
 
@@ -95,7 +117,7 @@ At every checkpoint or newly completed gate, immediately re-evaluate which remai
 
 Execute independent nodes in parallel when tools and safety permit. Execute dependency-bound nodes in order. Serialize writes to the same file, branch/ref, database or provider resource.
 
-If one node fails, isolate the failure, preserve evidence, and continue all nodes that do not depend on it. A failed node becomes a global stop only if it creates `OWNER_PERMISSION_REQUIRED` or `OWNER_DECISION_REQUIRED` and no other actionable independent work remains.
+If one node fails, isolate the failure, preserve evidence, and continue all nodes that do not depend on it. A failed node becomes a global stop only if it creates `OWNER_PERMISSION_REQUIRED`, `OWNER_DECISION_REQUIRED` or a proven `TOOL_CAPABILITY_LIMIT` and no other actionable independent work remains.
 
 Do not block Service work merely because physical LAN testing is unavailable. Do not block projection design merely because auth runtime work is active. Do not block Web/API contract work merely because projection activation is pending when their shared dependencies are already stable. When Owner is at the company, independent LAN and Service work may proceed in parallel.
 
@@ -116,7 +138,7 @@ Because exact tool lifetime may not always be observable, milestone checkpoints 
 
 A checkpoint records at minimum: protocol version, active lanes, status/gate, approved scope or approval state, reconciled commit, completed items, in-progress/blocked items, parallel work still actionable, next actions, direct evidence references, and `do_not_repeat` safeguards.
 
-Do not convert checkpointing into a pause. After writing a checkpoint, continue automatically unless `OWNER_PERMISSION_REQUIRED` or `OWNER_DECISION_REQUIRED` applies and no independent work remains.
+Do not convert checkpointing into a pause. After writing a checkpoint, continue automatically unless `OWNER_PERMISSION_REQUIRED`, `OWNER_DECISION_REQUIRED` or a proven `TOOL_CAPABILITY_LIMIT` applies and no independent work remains.
 
 ## 8. Resume protocol
 
