@@ -12,6 +12,7 @@ on:
       - 'config/permissions.v1.json'
       - '.github/scripts/domain-parity-test.mjs'
       - '.github/scripts/auth-contract-test.mjs'
+      - '.github/scripts/web-v7-contract-test.mjs'
       - '.github/workflows/build-product-foundations.yml'
   workflow_dispatch:
 
@@ -47,6 +48,7 @@ jobs:
           jq -e '.["$id"] == "VHDCHY_MUTATION_RESULT_V1"' contracts/mutation-result.v1.schema.json >/dev/null
           jq -e '.schemaVersion == "VHDCHY_PERMISSION_CATALOG_V1"' config/permissions.v1.json >/dev/null
           node .github/scripts/domain-parity-test.mjs
+          node .github/scripts/web-v7-contract-test.mjs
           mkdir -p out/web
           cp -R web/. out/web/
           tar -C out/web -czf out/VHDCHY-WEB-foundation.tar.gz .
