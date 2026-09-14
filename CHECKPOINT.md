@@ -1,9 +1,9 @@
 # CHECKPOINT — VHDCHY
 
-checkpoint_version: 47
+checkpoint_version: 48
 protocol: AI_AUTHORITY_RESUME_V2
 status: EXECUTING_PRODUCT_V7_BETA
-reconciled_through_commit: 490f56e8aa80827fa5fe62c79f4aca3c40b933fc
+reconciled_through_commit: 3137f0f04eae87ffa4c183bca7123b3e3ed6525f
 action_mode: AUTONOMOUS_PARALLEL
 active_lanes: REPO_GOVERNANCE / SHARED_DOMAIN / CLOUD_SERVICE / LAN_FULL_SERVICE / AUTH / GOOGLE_SYNC / WEB_ONLINE_LAN / ANDROID_PDA / RECONCILIATION / STABLE_PREPARATION
 paused_lanes: PHYSICAL_CORPORATE_LAN_REGRESSION
@@ -22,7 +22,7 @@ context_index_ref: CONTEXT_INDEX.md
 
 - Evidence-weighted total: **56.2% exact / 56% displayed**.
 - Phase 6 LAN continuity/offline/reconcile: **65%**.
-- Delta from the previous checkpoint is accepted only for the automated operational refresh/rebase/readiness sub-slice; live provider and physical acceptance remain uncredited.
+- No additional progress is credited merely for the post-checkpoint source changes; acceptance remains evidence-gated.
 
 ## Accepted evidence at handoff
 
@@ -73,6 +73,16 @@ Migration dispatch is disabled. **Do not replay migration 0014.**
 
 Aggregate run `34844597407` had Cloud/LAN/Web PASS and Android APK build PASS. Android failed only during GitHub artifact finalization with `ECONNRESET`; classify this as artifact infrastructure failure, not an APK build regression.
 
+## Reconciled post-checkpoint source state — NOT YET ACCEPTED AS PASS
+
+Changes between the prior reconciled commit `490f56e8aa80827fa5fe62c79f4aca3c40b933fc` and `3137f0f04eae87ffa4c183bca7123b3e3ed6525f` were live-read and reconciled before this checkpoint update.
+
+The changed LAN/reconciliation source includes a durable Google Sheets/Drive integration-receipt store and lifecycle hardening for retry/readback/idempotency, conflict visibility and recovery, plus corresponding harness/test changes. Governance/authority files also changed in the same range.
+
+These changes are **not** credited as accepted evidence yet. The validation run at HEAD `3137f0f04eae87ffa4c183bca7123b3e3ed6525f` (`34867827875`) stopped at `Validate checkpoint authority freshness`, so downstream build/test evidence was skipped. The observed failure is checkpoint-governance freshness, not a demonstrated LAN source regression.
+
+This checkpoint deliberately reconciles only through the pre-update HEAD. The checkpoint-only commit that creates version 48 must then be validated; if it is green, accept only the behaviors actually covered by its CI receipts. If it is red, fix the concrete failing layer before changing progress/state claims.
+
 ## Current blockers / gates
 
 - Live BETA LAN/Worker machine credential provisioning and exact real endpoint proof: `OWNER_PERMISSION_REQUIRED`; do not request or infer raw credential material.
@@ -80,14 +90,14 @@ Aggregate run `34844597407` had Cloud/LAN/Web PASS and Android APK build PASS. A
 - ROOT OTP real delivery/recovery live E2E remains incomplete.
 - Web authenticated business surfaces remain incomplete.
 - Android/PDA final current-product workflows/UI and physical-device acceptance remain incomplete.
-- Google projection/upload receipt/readback and broader conflict-recovery coverage remain incomplete.
+- Google projection/upload receipt/readback and broader conflict-recovery source has advanced after checkpoint 47, but acceptance remains pending successful CI evidence and later live-provider proof where applicable.
 - Portrait replacement semantics remain an Owner decision gate.
 - STABLE activation/promotion still requires mandatory BETA acceptance plus explicit Owner approval.
 
 ## Exact next ready work
 
-1. Keep the live BETA credential/provider proof isolated as `OWNER_PERMISSION_REQUIRED`; when setup is available, require guarded provider preflight/postflight and real LAN -> Cloud -> refresh/rebase/readiness evidence.
-2. Continue the independent reconciliation/provider source lane: Google/Drive receipt deduplication, retry/readback and operator-visible conflict/recovery hardening.
+1. Validate this checkpoint-only reconciliation commit. If CI reaches and passes the LAN/Google receipt lifecycle harness and clean baseline, reconcile the proven delta into `CURRENT_STATE.md`, `NEXT_ACTIONS.md`, `docs/PROGRESS_TRACKING_V1.md` and authority/change records as warranted; otherwise fix the concrete failing layer first.
+2. Keep the live BETA credential/provider proof isolated as `OWNER_PERMISSION_REQUIRED`; when setup is available, require guarded provider preflight/postflight and real LAN -> Cloud -> refresh/rebase/readiness evidence.
 3. Continue independent account/Web/Android lanes where dependency-ready, without inventing missing Pick Pack visual evidence.
 4. Resume physical company-network/PDA/public-trust and >=60-minute outage acceptance only on the intended real environment.
 5. Do not touch STABLE activation without mandatory BETA acceptance and explicit Owner approval.
