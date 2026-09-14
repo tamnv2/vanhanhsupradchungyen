@@ -1,0 +1,140 @@
+name: Validate LAN staged media durability
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'lan-service/**'
+      - 'lan-staged-media-harness/**'
+      - '.github/workflows/lan-staged-media-harness.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lan-staged-media-harness
+  cancel-in-progress: true
+
+jobs:
+  staged-media:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Build LAN runtime and staged-media harness
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet build lan-service/Vhdchy.LanService.csproj -c Release
+          dotnet build lan-staged-media-harness/Vhdchy.LanStagedMedia.Harness.csproj -c Release
+
+      - name: Initialize real EdgeStore and staged-media schema
+        shell: bash
+        run: |
+          set -euo pipefail
+          data_root="$RUNNER_TEMP/vhdchy-staged-media"
+          rm -rf "$data_root"
+          mkdir -p "$data_root"
+          echo "DATA_ROOT=$data_root" >> "$GITHUB_ENV"
+
+          VHDCHY_ENV=BETA \
+          VHDCHY_CLUSTER_ID=PICK_PACK_1291 \
+          VHDCHY_LAN_PORT=17916 \
+          VHDCHY_LAN_DATA_ROOT="$data_root" \
+            dotnet lan-service/bin/Release/net8.0/VHDCHY.LanService.dll > "$RUNNER_TEMP/lan-init.log" 2>&1 &
+          pid=$!
+          trap 'kill $pid 2>/dev/null || true' EXIT
+
+          ok=false
+          for i in $(seq 1 30); do
+            if ! kill -0 "$pid" 2>/dev/null; then
+              cat "$RUNNER_TEMP/lan-init.log" || true
+              exit 1
+            fi
+            code=$(curl --noproxy '*' -sS -o "$RUNNER_TEMP/health-init.json" -w '%{http_code}' http://127.0.0.1:17916/health || true)
+            if [ "$code" = "200" ]; then ok=true; break; fi
+            sleep 0.5
+          done
+          test "$ok" = "true"
+          jq -e '.businessMutationEnabled == false' "$RUNNER_TEMP/health-init.json" >/dev/null
+          test "$(sqlite3 "$data_root/edge.db" "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='edge_staged_media';")" = "1"
+          kill "$pid"
+          wait "$pid" || true
+          trap - EXIT
+
+      - name: Stage durable media and prove identity semantics
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet run --project lan-staged-media-harness/Vhdchy.LanStagedMedia.Harness.csproj -c Release --no-build -- stage "$DATA_ROOT/edge.db" | tee "$RUNNER_TEMP/stage.log"
+          grep -Fq 'LAN_STAGED_MEDIA_STAGE_PASS' "$RUNNER_TEMP/stage.log"
+
+      - name: Restart LAN Service with staged files present
+        shell: bash
+        run: |
+          set -euo pipefail
+          VHDCHY_ENV=BETA \
+          VHDCHY_CLUSTER_ID=PICK_PACK_1291 \
+          VHDCHY_LAN_PORT=17916 \
+          VHDCHY_LAN_DATA_ROOT="$DATA_ROOT" \
+            dotnet lan-service/bin/Release/net8.0/VHDCHY.LanService.dll > "$RUNNER_TEMP/lan-restart.log" 2>&1 &
+          pid=$!
+          trap 'kill $pid 2>/dev/null || true' EXIT
+
+          ok=false
+          for i in $(seq 1 30); do
+            if ! kill -0 "$pid" 2>/dev/null; then
+              cat "$RUNNER_TEMP/lan-restart.log" || true
+              exit 1
+            fi
+            code=$(curl --noproxy '*' -sS -o "$RUNNER_TEMP/health-restart.json" -w '%{http_code}' http://127.0.0.1:17916/health || true)
+            if [ "$code" = "200" ]; then ok=true; break; fi
+            sleep 0.5
+          done
+          test "$ok" = "true"
+          kill "$pid"
+          wait "$pid" || true
+          trap - EXIT
+
+      - name: Verify restart durability and transactional Drive-work linkage
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet run --project lan-staged-media-harness/Vhdchy.LanStagedMedia.Harness.csproj -c Release --no-build -- link "$DATA_ROOT/edge.db" | tee "$RUNNER_TEMP/link.log"
+          grep -Fq 'LAN_STAGED_MEDIA_LINK_PASS' "$RUNNER_TEMP/link.log"
+          test "$(sqlite3 "$DATA_ROOT/edge.db" "PRAGMA foreign_key_check;")" = ""
+          test "$(sqlite3 "$DATA_ROOT/edge.db" "PRAGMA quick_check;")" = "ok"
+
+      - name: Prove public mutation remains fail-closed
+        shell: bash
+        run: |
+          set -euo pipefail
+          VHDCHY_ENV=BETA \
+          VHDCHY_CLUSTER_ID=PICK_PACK_1291 \
+          VHDCHY_LAN_PORT=17916 \
+          VHDCHY_LAN_DATA_ROOT="$DATA_ROOT" \
+            dotnet lan-service/bin/Release/net8.0/VHDCHY.LanService.dll > "$RUNNER_TEMP/lan-final.log" 2>&1 &
+          pid=$!
+          trap 'kill $pid 2>/dev/null || true' EXIT
+
+          ok=false
+          for i in $(seq 1 30); do
+            if ! kill -0 "$pid" 2>/dev/null; then
+              cat "$RUNNER_TEMP/lan-final.log" || true
+              exit 1
+            fi
+            code=$(curl --noproxy '*' -sS -o "$RUNNER_TEMP/health-final.json" -w '%{http_code}' http://127.0.0.1:17916/health || true)
+            if [ "$code" = "200" ]; then ok=true; break; fi
+            sleep 0.5
+          done
+          test "$ok" = "true"
+          code=$(curl --noproxy '*' -sS -o "$RUNNER_TEMP/mutation.json" -w '%{http_code}' -X POST http://127.0.0.1:17916/api/v1/data/test)
+          test "$code" = "503"
+          jq -e '.error.code == "RUNTIME_DEPENDENCY_UNAVAILABLE"' "$RUNNER_TEMP/mutation.json" >/dev/null
+          kill "$pid"
+          wait "$pid" || true
+          trap - EXIT
