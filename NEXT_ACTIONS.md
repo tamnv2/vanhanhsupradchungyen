@@ -14,29 +14,39 @@ Public business mutation paths remain fail-closed until the corresponding curren
 
 ## Ready queue NOW
 
-### A — LAN integrated security/readiness — PRIMARY
+### A — Secure LAN login transport + public HTTP adapter — PRIMARY
 
-Already proven independently:
+Already proven:
 
 - signed-client pairing/request verification, replay defense and security-epoch fencing;
 - durable user-session binding;
 - authority snapshot V2 primary credential verification;
-- primary credential -> authenticated evidence -> LAN session chain.
+- primary credential -> authenticated evidence -> LAN session chain;
+- integrated readiness through the reviewed route-wiring stage;
+- signed session -> authorization/domain -> Slice-1 business coordinator;
+- public HTTP mutation remains deliberately closed.
 
-Evidence: dedicated workflow `34805395079` at `583b3d0329166804b207332dadf6d449b07c0abf` — **SUCCESS**.
+Evidence:
 
-Current integrated gate:
+- primary auth workflow `34805395079` at `583b3d0329166804b207332dadf6d449b07c0abf` — **SUCCESS**;
+- integrated readiness workflow `34808274815` — **SUCCESS**;
+- baseline paired with readiness `34808274819` — **SUCCESS**;
+- signed route-wiring workflow `34808936937` at `a469d29325ee83f8e19070234c1186ca23474a1c` — **SUCCESS**;
+- baseline at same route-wiring commit `34808937077` — **SUCCESS**.
 
-- workflow `34805628566` at `609a77ee3ef48eca9b1df5d91f63d2e7d875508f` — **FAILED** at the step intended to prove readiness advances only to `LAN_USER_SESSION_ROUTE_WIRING_REQUIRED`.
+Route-wiring CI covers positive execution and replay, signed-body binding, wrong target, device/session mismatch, permission DENY, unsupported command, must-change-password, stale authority and portrait fail-closed vectors.
 
 Next dependency chain:
 
-1. reproduce/diagnose the exact integrated readiness invariant using source-level diagnostics;
-2. fix the integration defect without relaxing fail-closed security/readiness conditions;
-3. prove the evaluator reaches exactly the reviewed route-wiring blocker with dedicated CI;
-4. implement authenticated login/session -> authorization/domain -> Slice-1 business route wiring;
-5. add negative vectors for invalid session, wrong device/epoch, stale authority, DENY/cluster/module scope and unsupported command;
-6. only after those gates PASS, expose the approved public LAN business subset.
+1. define a secure credential transport for LAN login that does not expose reusable passwords over plaintext HTTP;
+2. ensure the design remains compatible with ordinary-user/no-admin host constraints and does not require changes to company certificate stores, firewall/router/AP/internal DNS or policy;
+3. implement the reviewed login/session HTTP adapter only after that secure transport is proven;
+4. wire public LAN business HTTP handling to `LanBusinessRouteCoordinator` so the exact signed raw body, device proof, session and current authority remain mandatory;
+5. add HTTP-level negative/E2E vectors and restart/re-auth behavior;
+6. keep `EMPLOYEE_PORTRAIT_REPLACE` closed until the Owner portrait semantic gate is resolved;
+7. only then consider opening the approved public LAN business subset.
+
+Do not mistake request signing for confidentiality: P-256 signatures authenticate/integrity-protect the request but do not encrypt the password.
 
 ### B — Cloud/LAN reconciliation E2E — PARALLEL
 
@@ -53,13 +63,14 @@ Evidence: workflows `34803221835` and `34803221873` at `591c4083973141155530357f
 
 Next dependency chain:
 
-1. wire the ingestion core behind the reviewed authenticated Cloud reconciliation network/API boundary;
-2. keep the route isolated from unrelated public mutations;
-3. connect the LAN network sender to that route;
-4. prove retry/restart/idempotency and stable result mapping end-to-end;
-5. prove existing Google/Drive receipts do not duplicate downstream output;
-6. retain explicit conflict evidence and ADMIN+ resolution boundary;
-7. add sync cursor/delta/rebase behavior after the transport path is stable.
+1. define and prove the reviewed machine/service authentication boundary for the reconciliation route; payload actor evidence is not authentication;
+2. wire the ingestion core behind that authenticated Cloud network/API boundary;
+3. keep the route isolated from unrelated public mutations;
+4. connect the LAN network sender to that route;
+5. prove retry/restart/idempotency and stable result mapping end-to-end;
+6. prove existing Google/Drive receipts do not duplicate downstream output;
+7. retain explicit conflict evidence and ADMIN+ resolution boundary;
+8. add sync cursor/delta/rebase behavior after the transport path is stable.
 
 ### C — Online Web + LAN Web — PARALLEL
 
@@ -91,4 +102,4 @@ STABLE may be prepared safely in isolation, but no production business activatio
 
 ## Current execution line
 
-`Overall: 55% displayed / 54.6% exact | Current: Phase 6 — LAN continuity/offline/reconcile | Primary next gate: integrated LAN readiness -> reviewed route wiring | Parallel: Cloud reconciliation network E2E + Phase 4/5 + V7 Web/App`
+`Overall: 55% displayed / 54.6% exact | Current: Phase 6 — LAN continuity/offline/reconcile | Primary next gate: secure LAN login transport -> HTTP adapter -> public LAN route E2E | Parallel: Cloud reconciliation machine-auth/network E2E + Phase 4/5 + V7 Web/App`
