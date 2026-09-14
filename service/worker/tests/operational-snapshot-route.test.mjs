@@ -64,12 +64,28 @@ function fakeD1(data = {}) {
     async batch(statements) {
       return statements.map(item => {
         const sql = item.sql.replace(/\s+/g, ' ');
+        if (sql.includes('FROM edge_event_ingest e')) {
+          if (data.assertCoverageInstanceScope) {
+            assert.match(sql, /INNER JOIN edge_sources s ON s\.edge_source_id=e\.edge_source_id/);
+            assert.match(sql, /s\.environment=\?/);
+            assert.match(sql, /s\.cluster_id=\?/);
+            assert.match(sql, /s\.edge_instance_id=\?/);
+            assert.doesNotMatch(sql, /s\.edge_epoch=\?/);
+            assert.deepEqual(item.args.slice(1, 6), [
+              'BETA',
+              'PICK_PACK_1291',
+              'edge-snapshot-instance-1',
+              'VHDCHY_DOMAIN_V1',
+              EDGE_SCHEMA_VERSION
+            ]);
+          }
+          return { success: true, results: data.coverage ?? [] };
+        }
         if (sql.includes('FROM edge_sources')) return { success: true, results: data.source ? [data.source] : [] };
         if (sql.includes('FROM clusters')) return { success: true, results: [data.cluster ?? { cluster_id: 'PICK_PACK_1291', status: 'ACTIVE' }] };
         if (sql.includes('FROM employees')) return { success: true, results: data.employees ?? [] };
         if (sql.includes('FROM employee_codes')) return { success: true, results: data.employeeCodes ?? [] };
         if (sql.includes('FROM presence_state')) return { success: true, results: data.presence ?? [] };
-        if (sql.includes('FROM edge_event_ingest e')) return { success: true, results: data.coverage ?? [] };
         throw new Error(`Unexpected SQL in fake D1: ${sql}`);
       });
     }
@@ -141,7 +157,7 @@ test('operational snapshot allows an authenticated empty initial baseline before
   assert.match(body.sourceCheckpoint, /^D1-SLICE1-SHA256:[0-9a-f]{64}$/);
 });
 
-test('operational snapshot returns real Slice-1 D1 state and explicit canonical coverage for the exact edge source', async () => {
+test('operational snapshot returns real Slice-1 D1 state and explicit canonical coverage for the exact current edge source', async () => {
   const db = fakeD1({
     source: source(),
     employees: [{
@@ -179,7 +195,7 @@ test('operational snapshot returns real Slice-1 D1 state and explicit canonical 
   assert.equal(state.presence[0].entityVersion, 4);
 });
 
-test('operational snapshot rejects mismatched persisted edge identity', async () => {
+test('operational snapshot rejects mismatched persisted current edge identity', async () => {
   const db = fakeD1({ source: source({ edge_instance_id: 'different-edge-instance' }) });
   const response = await post(snapshotRequest(), db, null, 'snapshot_identity_nonce_12345');
   assert.equal(response.status, 409);
@@ -205,12 +221,19 @@ test('operational snapshot fails closed when requested canonical coverage is not
   assert.deepEqual(body.error.details.missingCanonicalEventIds, ['cloud:edge-event-2']);
 });
 
-test('operational snapshot requires a registered exact edge source before returning canonical coverage', async () => {
-  const response = await post(snapshotRequest({ requestedCanonicalEventIds: ['cloud:edge-event-1'] }), fakeD1({
-    coverage: [{ canonical_event_id: 'cloud:edge-event-1', canonical_ingested_at: '2026-09-14T01:01:00Z' }]
-  }), null, 'snapshot_source_nonce_12345');
+test('operational snapshot can prove historical reconciled coverage for the same persistent edge instance after epoch restart', async () => {
+  const response = await post(snapshotRequest({
+    edgeEpoch: 'new-runtime-epoch-after-restart',
+    requestedCanonicalEventIds: ['cloud:old-epoch-edge-event-1']
+  }), fakeD1({
+    source: null,
+    assertCoverageInstanceScope: true,
+    coverage: [{ canonical_event_id: 'cloud:old-epoch-edge-event-1', canonical_ingested_at: '2026-09-14T01:01:00Z' }]
+  }), null, 'snapshot_restart_nonce_12345');
 
-  assert.equal(response.status, 409);
+  assert.equal(response.status, 200);
   const body = await response.json();
-  assert.equal(body.error.reason, 'EDGE_SOURCE_REQUIRED_FOR_COVERAGE');
+  assert.equal(body.edgeSourceRegistered, false);
+  assert.deepEqual(body.coveredCanonicalEventIds, ['cloud:old-epoch-edge-event-1']);
+  assert.equal(body.edgeEpoch, 'new-runtime-epoch-after-restart');
 });
