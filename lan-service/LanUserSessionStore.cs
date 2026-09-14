@@ -120,24 +120,36 @@ public sealed class LanUserSessionStore
         if (deviceError is not null) return Deny(deviceError);
 
         var tokenHash = Base64Url(SHA256.HashData(Encoding.UTF8.GetBytes(token)));
-        await using var command = connection.CreateCommand();
-        command.CommandText = """
-            SELECT auth_session_id,user_id,device_id,security_epoch,authority_snapshot_version,status,expires_at,must_change_password
-            FROM lan_auth_sessions WHERE token_hash=$hash LIMIT 1
-            """;
-        command.Parameters.AddWithValue("$hash", tokenHash);
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        if (!await reader.ReadAsync(cancellationToken)) return Deny("SESSION_NOT_FOUND");
-        if (reader.GetString(5) != "ACTIVE") return Deny("SESSION_NOT_ACTIVE");
-        if (!string.Equals(reader.GetString(2), deviceId, StringComparison.Ordinal)) return Deny("SESSION_DEVICE_MISMATCH");
-        if (!string.Equals(reader.GetString(3), securityEpoch, StringComparison.Ordinal)) return Deny("SECURITY_EPOCH_MISMATCH");
-        if (!DateTimeOffset.TryParse(reader.GetString(6), out var expiresAt) || expiresAt <= asOf) return Deny("SESSION_EXPIRED");
+        SessionRow? row;
+        await using (var command = connection.CreateCommand())
+        {
+            command.CommandText = """
+                SELECT auth_session_id,user_id,device_id,security_epoch,authority_snapshot_version,status,expires_at,must_change_password
+                FROM lan_auth_sessions WHERE token_hash=$hash LIMIT 1
+                """;
+            command.Parameters.AddWithValue("$hash", tokenHash);
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+            if (!await reader.ReadAsync(cancellationToken)) return Deny("SESSION_NOT_FOUND");
+            row = new SessionRow(
+                reader.GetString(0),
+                reader.GetString(1),
+                reader.GetString(2),
+                reader.GetString(3),
+                reader.GetString(4),
+                reader.GetString(5),
+                reader.GetString(6),
+                reader.GetInt64(7) == 1);
+        }
 
-        var authorityVersion = reader.GetString(4);
+        if (row.Status != "ACTIVE") return Deny("SESSION_NOT_ACTIVE");
+        if (!string.Equals(row.DeviceId, deviceId, StringComparison.Ordinal)) return Deny("SESSION_DEVICE_MISMATCH");
+        if (!string.Equals(row.SecurityEpoch, securityEpoch, StringComparison.Ordinal)) return Deny("SECURITY_EPOCH_MISMATCH");
+        if (!DateTimeOffset.TryParse(row.ExpiresAt, out var expiresAt) || expiresAt <= asOf) return Deny("SESSION_EXPIRED");
+
         var activeAuthority = await ReadActiveAuthorityVersionAsync(connection, cancellationToken);
-        if (!string.Equals(activeAuthority, authorityVersion, StringComparison.Ordinal)) return Deny("AUTHORITY_REFRESH_REAUTH_REQUIRED");
+        if (!string.Equals(activeAuthority, row.AuthoritySnapshotVersion, StringComparison.Ordinal)) return Deny("AUTHORITY_REFRESH_REAUTH_REQUIRED");
 
-        var userStatus = await ReadAuthorityUserStatusAsync(connection, authorityVersion, reader.GetString(1), cancellationToken);
+        var userStatus = await ReadAuthorityUserStatusAsync(connection, row.AuthoritySnapshotVersion, row.UserId, cancellationToken);
         if (userStatus is null) return Deny("ACCOUNT_NOT_FOUND");
         if (!string.Equals(userStatus, "ACTIVE", StringComparison.Ordinal)) return Deny("ACCOUNT_NOT_ACTIVE");
 
@@ -145,12 +157,12 @@ public sealed class LanUserSessionStore
             true,
             "SESSION_AUTHENTICATED",
             new LanUserSessionPrincipal(
-                reader.GetString(0),
-                reader.GetString(1),
+                row.SessionId,
+                row.UserId,
                 deviceId,
                 securityEpoch,
-                authorityVersion,
-                reader.GetInt64(7) == 1,
+                row.AuthoritySnapshotVersion,
+                row.MustChangePassword,
                 expiresAt));
     }
 
@@ -243,6 +255,16 @@ public sealed class LanUserSessionStore
     }
 
     private static LanUserSessionDecision Deny(string code) => new(false, code, null);
+
+    private sealed record SessionRow(
+        string SessionId,
+        string UserId,
+        string DeviceId,
+        string SecurityEpoch,
+        string AuthoritySnapshotVersion,
+        string Status,
+        string ExpiresAt,
+        bool MustChangePassword);
 
     private const string SchemaSql = """
 CREATE TABLE IF NOT EXISTS lan_auth_sessions (
