@@ -25,13 +25,17 @@
     "database_name": "vhdchy-data-beta",
     "database_id": "37eb7d59-05c0-4ba2-8162-cb6a9fe5d492"
   },
-  "inherit_bindings": [
-    "LAN_RECONCILIATION_KEY_ID",
-    "LAN_RECONCILIATION_SHARED_SECRET"
+  "secret_env_bindings": [
+    {
+      "name": "LAN_RECONCILIATION_SHARED_SECRET",
+      "env": "LAN_RECONCILIATION_SHARED_SECRET",
+      "min_length": 32
+    }
   ],
   "vars": {
     "APP_ENV": "BETA",
     "GAS_EXEC_URL": "https://script.google.com/macros/s/AKfycbzxRzxjeFyPpYQ39T3MJRL_sSKrhJhHXLY5LgGy16CnxuPEIFoJo8vr9XijrsxZttRtjQ/exec",
+    "LAN_RECONCILIATION_KEY_ID": "vhdchy-beta-lan-reconciliation-01",
     "LAN_RECONCILIATION_FINALITY_V1": "disabled"
   },
   "expected_runtime": {
