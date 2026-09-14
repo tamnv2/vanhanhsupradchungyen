@@ -1,9 +1,9 @@
 # CHECKPOINT — VHDCHY
 
-checkpoint_version: 27
+checkpoint_version: 28
 protocol: AI_AUTHORITY_RESUME_V2
 status: EXECUTING_PRODUCT_V6_BETA
-reconciled_through_commit: 583ca88170faa4d0b37c48af5339068740988950
+reconciled_through_commit: 307bb86c8f8821a79f71496588e36b4896f035b7
 action_mode: AUTONOMOUS_PARALLEL
 active_lanes: REPO_GOVERNANCE / SHARED_DOMAIN / CLOUD_SERVICE / LAN_FULL_SERVICE / AUTH / GOOGLE_SYNC / WEB / ANDROID_APK / RECONCILIATION / STABLE_PREPARATION
 paused_lanes: PHYSICAL_CORPORATE_LAN_REGRESSION
@@ -25,6 +25,7 @@ context_index_ref: CONTEXT_INDEX.md
 - LAN remains a full local Service runtime; Cloud/LAN share one command/event/business meaning; actor identity comes only from authenticated context; DENY precedence applies; raw events remain immutable; silent last-write-wins is forbidden.
 - Employee/MNV authority: two ACTIVE people may not share one MNV; reuse is allowed only after the prior holder is inactive/left.
 - Attendance authority: multiple IN/OUT events are allowed on one business date while only one current presence state exists; OUT without valid preceding IN is rejected; exact retry is idempotent.
+- Portrait authority currently has a material unresolved edge case: D-025 requires deleting the previous portrait image immediately, while D-047/V3 LAN contracts allow files/images to be staged when Google/Drive is unavailable and the Slice-1 command contract declares staged-media LAN semantics for `EMPLOYEE_PORTRAIT_REPLACE`. Do not silently redefine "immediately" or claim offline replacement semantics resolved until this conflict is explicitly settled.
 
 ## Proven foundations
 
@@ -52,22 +53,28 @@ context_index_ref: CONTEXT_INDEX.md
 - Invalid materialization rolls the activation transaction back and preserves prior active state.
 - Dedicated materialization run `34793329286`: SUCCESS, including seed, rollback, pending-local guard and public mutation still 503.
 
-### Actor evidence / replay boundary — SOURCE + COMPILE PASS
+### Actor evidence / replay boundary — PASS foundation
 - `LocalCommandReplayResolver` recognizes exact accepted logical replay before mutable business-state validation.
-- Compile defect in nullable replay fields was fixed at `023b4911ec82a2ff4dd6a7d0473e8db4602dcb71`; LAN and related checks passed afterward.
+- Compile defect in nullable replay fields was fixed at `023b4911ec82a2ff4dd6a7d0473e8db4602dcb71`.
 - `EdgeActorEvidenceStore` stages authenticated actor context and captures immutable event actor evidence via SQLite trigger in the same local acceptance transaction. Actor does not contaminate business payload/hash identity.
 
-### LAN Slice-1 business adapter — SEQUENTIAL BUSINESS VECTORS PASS, NOT READY
+### LAN Slice-1 employee/attendance business adapter — PASS except portrait
 - `Slice1BusinessAdapter` derives permission/event/entity/state authority server-side from trusted command contract; client authority fields are rejected.
 - Exact replay is accepted only when immutable authenticated-actor evidence matches.
-- Proven sequential behaviors include permission DENY precedence, employee create/update/status, actor evidence, exact replay, MNV active-holder guard/reuse after prior holder inactive, attendance IN, repeated IN, OUT guard, correction, and portrait fail-closed.
-- Initial business harness run `34796238740` correctly FAILED on active-holder MNV reassignment (`INVALID_INPUT_NOT_REJECTED`).
-- Source was corrected at `583ca88170faa4d0b37c48af5339068740988950` for prior-holder status and repeated-IN semantics.
-- Business harness run `34796432170`: SUCCESS.
-- Adapter remains `Ready=false` with blockers:
-  - `PORTRAIT_MEDIA_LIFECYCLE_REQUIRED`;
-  - `EMPLOYEE_CODE_ATOMIC_UNIQUENESS_REQUIRED`.
-- Sequential pre-checks are not sufficient proof against concurrent MNV assignment races; atomic uniqueness must be enforced inside the SQLite mutation transaction before readiness can open.
+- Proven behaviors include permission DENY precedence, employee create/update/status, actor evidence, exact replay, MNV active-holder guard/reuse after prior holder inactive, attendance IN, repeated IN, OUT guard, correction, and portrait fail-closed.
+- Initial business harness run `34796238740` correctly FAILED on active-holder MNV reassignment and drove the rule fix.
+- Sequential corrected business run `34796432170`: SUCCESS.
+
+### Atomic MNV / active-code uniqueness — PASS
+- `EmployeeCodeUniqueClaimStore` maintains two SQLite uniqueness namespaces inside the same state mutation transaction:
+  - active MNV value (`EMPLOYEE_CODE_VALUE`);
+  - one active code per employee (`EMPLOYEE_ACTIVE_CODE`).
+- Startup rebuilds claims from current `module_current_state` and fails closed if historical/current active state already violates uniqueness.
+- INSERT/UPDATE/DELETE triggers acquire/release claims transactionally; race losers cannot append state/event/outbox partial work.
+- Atomic claim harness run `34796669933`: SUCCESS, including both MNV-value and employee-active-code loser rollback while the winning claim remains intact.
+- Adapter maps atomic claim races to stable `RESOURCE_NOT_AVAILABLE` instead of leaking provider-level `LOCAL_COMMAND_COMMIT_FAILED`.
+- Full post-mapping gates at commit `307bb86c8f8821a79f71496588e36b4896f035b7`: SUCCESS for Slice-1 business (`34796797575`), authority snapshot, command gate, materialization, readiness regression, baseline/product lanes; no failure check was present.
+- `Slice1BusinessAdapter.Inspect()` remains `Ready=false` only because portrait lifecycle is unresolved/unimplemented.
 
 ## Current provider / runtime facts
 
@@ -82,12 +89,12 @@ context_index_ref: CONTEXT_INDEX.md
 
 ## Immediate execution
 
-1. Implement atomic employee-code uniqueness in the same SQLite transaction as `module_current_state` + event + outbox so concurrent MNV assignment cannot race past sequential validation.
-2. Add deterministic harness evidence for active MNV claim and one-active-code-per-employee claim; prove conflict rolls back state/event/outbox and leaves the winning claim intact.
-3. Keep the business adapter/readiness blocked until atomic MNV uniqueness is proven.
-4. Then implement/prove employee portrait staged-media + durable readback + prior-file deletion lifecycle required by authority.
-5. Only after every Slice-1 blocker is closed may `LanReadinessEvaluator` link the adapter and consider `EDGE_READY`; public mutations remain closed until that reviewed gate passes.
+1. Keep portrait mutation fail-closed while separating decision-independent media work from the unresolved immediate-delete/offline-staging semantic conflict.
+2. Implement/prove durable LAN staged-media primitive: logical file identity, local durable path, SHA-256, size/content type, restart persistence, duplicate/hash identity behavior, and Drive upload-outbox linkage without claiming provider upload success.
+3. Do not decide whether an existing remote prior portrait may be replaced while Drive is unavailable until the D-025 vs D-047/command-contract conflict is explicitly resolved by Owner authority.
+4. Once portrait semantics are resolved, implement the reviewed portrait state/event/staged/upload/delete lifecycle and its failure/idempotency/restart tests.
+5. Only after the portrait blocker closes may `LanReadinessEvaluator` link the complete Slice-1 adapter and consider `EDGE_READY`; public mutations remain closed until that reviewed gate passes.
 6. Continue independent Cloud/Auth/provider lanes only through allowed high-level actions; never bypass platform action-safety.
 
 do_not_repeat:
-Do not treat memory as authority. Do not replay provider migrations. Do not claim `0010`/`0011` applied. Do not claim email/SMS delivery live. Do not bypass action-safety. Do not open LAN mutation routes before readiness/authz/domain acceptance. Do not mutate raw edge events. Do not make Google business authority. Do not silently last-write-wins conflicts. Do not treat CI as physical company-LAN proof. Do not promote STABLE without explicit Owner approval. Do not call the Slice-1 adapter READY while portrait lifecycle or atomic MNV uniqueness remains unproven.
+Do not treat memory as authority. Do not replay provider migrations. Do not claim `0010`/`0011` applied. Do not claim email/SMS delivery live. Do not bypass action-safety. Do not open LAN mutation routes before readiness/authz/domain acceptance. Do not mutate raw edge events. Do not make Google business authority. Do not silently last-write-wins conflicts. Do not treat CI as physical company-LAN proof. Do not promote STABLE without explicit Owner approval. Do not call the Slice-1 adapter READY while portrait lifecycle remains unresolved/unproven. Do not silently weaken D-025 or D-047 to make offline portrait replacement appear resolved.
