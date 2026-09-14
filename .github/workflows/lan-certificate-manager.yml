@@ -50,13 +50,13 @@ jobs:
             if (-not $log.Contains($marker)) { throw "Missing marker: $marker" }
           }
 
-      - name: Assert workflow does not inject provider credentials
+      - name: Assert workflow does not inject secrets
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
           $workflow = Get-Content -Raw '.github/workflows/lan-certificate-manager.yml'
-          if ($workflow.Contains('CLOUDFLARE_API_TOKEN') -or $workflow.Contains('CLOUDFLARE_DNS_TOKEN:')) {
-            throw 'Certificate-manager CI must remain local-only and must not receive live DNS credentials.'
+          if ($workflow -match '\$\{\{\s*secrets\.') {
+            throw 'Certificate-manager CI must remain local-only and must not receive repository/environment secrets.'
           }
 
       - name: Upload diagnostics
