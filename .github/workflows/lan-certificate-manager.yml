@@ -1,0 +1,68 @@
+name: Validate LAN certificate manager
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'lan-certificate-manager/**'
+      - 'lan-service/LanTlsCertificateLoader.cs'
+      - 'lan-service/Vhdchy.LanService.csproj'
+      - '.github/workflows/lan-certificate-manager.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lan-certificate-manager
+  cancel-in-progress: true
+
+jobs:
+  certificate-manager:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Build manager and LAN TLS dependency
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          dotnet build lan-certificate-manager/Vhdchy.LanCertificateManager.csproj -c Release
+
+      - name: Run local-only DPAPI/renewal self-test
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          dotnet run --project lan-certificate-manager/Vhdchy.LanCertificateManager.csproj `
+            -c Release --no-build -- --self-test 2>&1 | Tee-Object -FilePath (Join-Path $env:RUNNER_TEMP 'lan-cert-manager.log')
+
+          $log = Get-Content -Raw (Join-Path $env:RUNNER_TEMP 'lan-cert-manager.log')
+          foreach ($marker in @(
+            'LAN_CERTIFICATE_MANAGER_SELF_TEST_PASS',
+            'dpapiPfxAtomicWrite=PASS',
+            'dpapiAccountSecret=PASS',
+            'renewalMetadata=PASS',
+            'rawPfxDiskLeak=PASS'
+          )) {
+            if (-not $log.Contains($marker)) { throw "Missing marker: $marker" }
+          }
+
+      - name: Assert workflow does not inject provider credentials
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $workflow = Get-Content -Raw '.github/workflows/lan-certificate-manager.yml'
+          if ($workflow.Contains('CLOUDFLARE_API_TOKEN') -or $workflow.Contains('CLOUDFLARE_DNS_TOKEN:')) {
+            throw 'Certificate-manager CI must remain local-only and must not receive live DNS credentials.'
+          }
+
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lan-certificate-manager-diagnostics
+          if-no-files-found: ignore
+          path: ${{ runner.temp }}/lan-cert-manager.log
