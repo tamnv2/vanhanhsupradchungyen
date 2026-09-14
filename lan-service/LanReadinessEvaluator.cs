@@ -10,6 +10,7 @@ public sealed class LanReadinessEvaluator
     private readonly string _expectedClusterId;
     private readonly string _expectedDomainContractVersion;
     private readonly string[] _requiredModules;
+    private readonly bool _securePublicRouteWiringEnabled;
     private readonly LanAuthorizationEvaluator _authorizationEvaluator;
     private readonly Slice1BusinessAdapter _slice1Adapter;
     private readonly LanClientSecurityStore _clientSecurityStore;
@@ -20,7 +21,8 @@ public sealed class LanReadinessEvaluator
         string expectedEnvironment,
         string expectedClusterId,
         string expectedDomainContractVersion,
-        IEnumerable<string> requiredModules)
+        IEnumerable<string> requiredModules,
+        bool securePublicRouteWiringEnabled = false)
     {
         if (string.IsNullOrWhiteSpace(databasePath)) throw new ArgumentException("Database path is required", nameof(databasePath));
         if (string.IsNullOrWhiteSpace(expectedEnvironment)) throw new ArgumentException("Environment is required", nameof(expectedEnvironment));
@@ -45,6 +47,7 @@ public sealed class LanReadinessEvaluator
         _expectedEnvironment = expectedEnvironment;
         _expectedClusterId = expectedClusterId;
         _expectedDomainContractVersion = expectedDomainContractVersion;
+        _securePublicRouteWiringEnabled = securePublicRouteWiringEnabled;
         _authorizationEvaluator = new LanAuthorizationEvaluator(databasePath, expectedDomainContractVersion);
         _slice1Adapter = new Slice1BusinessAdapter(
             databasePath,
@@ -177,7 +180,7 @@ public sealed class LanReadinessEvaluator
         // Portrait replacement remains command-scoped fail-closed. Other reviewed Slice-1 commands
         // may advance through readiness independently. Public mutations stay globally fail-closed
         // until signed client, synchronized primary-login authority, authenticated LAN session,
-        // permission/domain gate, and reviewed route wiring are all linked.
+        // permission/domain gate, and reviewed secure route wiring are all linked.
         if (snapshotPrerequisitesReady && supportedCommands.Count > 0)
         {
             var security = await _clientSecurityStore.InspectAsync(cancellationToken);
@@ -196,11 +199,11 @@ public sealed class LanReadinessEvaluator
                         "LAN_PRIMARY_CREDENTIAL_AUTHORITY_REQUIRED",
                         $"Signed client channel is available, but synchronized LAN primary-login authority is not executable ({primaryCredentials.Code})."));
                 }
-                else
+                else if (!_securePublicRouteWiringEnabled)
                 {
                     blockers.Add(new LanReadinessBlocker(
                         "LAN_USER_SESSION_ROUTE_WIRING_REQUIRED",
-                        "Signed client and synchronized primary-login authority are executable, but reviewed public login/session-to-business route wiring is not yet enabled."));
+                        "Signed client and synchronized primary-login authority are executable, but reviewed secure public login/session-to-business route wiring is not enabled."));
                 }
             }
         }
