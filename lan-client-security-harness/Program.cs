@@ -109,6 +109,15 @@ var stale = Sign(
 var staleDecision = await store.VerifySignedRequestAsync(stale, now);
 Assert(!staleDecision.Authorized && staleDecision.Code == "REQUEST_TIMESTAMP_OUT_OF_WINDOW", "STALE_REQUEST_NOT_REJECTED");
 
+var invalidTimestamp = valid with
+{
+    Nonce = "nonce-security-invalid-time",
+    TimestampUnixMs = long.MaxValue,
+    SignatureBase64 = valid.SignatureBase64
+};
+var invalidTimestampDecision = await store.VerifySignedRequestAsync(invalidTimestamp, now);
+Assert(!invalidTimestampDecision.Authorized && invalidTimestampDecision.Code == "REQUEST_TIMESTAMP_INVALID", "INVALID_TIMESTAMP_NOT_REJECTED");
+
 var nextEpoch = await store.RotateSecurityEpochAsync(actor, "security-harness-rotation");
 Assert(nextEpoch != paired.SecurityEpoch, "SECURITY_EPOCH_NOT_ROTATED");
 var afterRotation = await store.InspectAsync();
@@ -169,5 +178,5 @@ Assert(await CountAsync(connection, "SELECT COUNT(*) FROM lan_security_audit") =
 Assert(await CountAsync(connection, "SELECT COUNT(*) FROM lan_request_nonces") == 2, "SECURITY_NONCE_COUNT_WRONG");
 Assert(await CountAsync(connection, "SELECT COUNT(*) FROM lan_security_audit WHERE event_type='SECURITY_EPOCH_ROTATED'") == 1, "SECURITY_ROTATION_AUDIT_MISSING");
 
-Console.WriteLine("LAN_CLIENT_SECURITY_HARNESS_PASS pairing=PASS signature=PASS tamper=PASS replay=PASS timestamp=PASS epochRotation=PASS repair=PASS revoke=PASS immutableAudit=PASS");
+Console.WriteLine("LAN_CLIENT_SECURITY_HARNESS_PASS pairing=PASS signature=PASS tamper=PASS replay=PASS timestamp=PASS invalidTimestamp=PASS epochRotation=PASS repair=PASS revoke=PASS immutableAudit=PASS");
 return 0;
