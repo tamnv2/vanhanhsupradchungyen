@@ -1,0 +1,37 @@
+name: Validate LAN operational refresh and rebase integration
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'lan-service/**'
+      - 'lan-operational-refresh-harness/**'
+      - '.github/workflows/lan-operational-refresh.yml'
+  pull_request:
+    paths:
+      - 'lan-service/**'
+      - 'lan-operational-refresh-harness/**'
+      - '.github/workflows/lan-operational-refresh.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  operational-refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Build LAN operational refresh harness
+        run: dotnet build lan-operational-refresh-harness/Vhdchy.LanOperationalRefresh.Harness.csproj -c Release --nologo
+
+      - name: Prove signed Cloud refresh, restart-safe coverage, atomic import and rebase recovery
+        run: dotnet run --project lan-operational-refresh-harness/Vhdchy.LanOperationalRefresh.Harness.csproj -c Release --no-build
