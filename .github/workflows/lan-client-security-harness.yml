@@ -1,0 +1,42 @@
+name: Validate LAN signed-client security foundation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'lan-service/**'
+      - 'lan-client-security-harness/**'
+      - '.github/workflows/lan-client-security-harness.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lan-client-security-harness
+  cancel-in-progress: true
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Build LAN runtime and security harness
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet build lan-service/Vhdchy.LanService.csproj -c Release
+          dotnet build lan-client-security-harness/Vhdchy.LanClientSecurity.Harness.csproj -c Release
+
+      - name: Run signed-client security vectors
+        shell: bash
+        run: |
+          set -euo pipefail
+          db="$RUNNER_TEMP/vhdchy-client-security/edge.db"
+          mkdir -p "$(dirname "$db")"
+          dotnet run --project lan-client-security-harness/Vhdchy.LanClientSecurity.Harness.csproj -c Release --no-build -- "$db" | tee "$RUNNER_TEMP/security-harness.log"
+          grep -Fq 'LAN_CLIENT_SECURITY_HARNESS_PASS' "$RUNNER_TEMP/security-harness.log"
