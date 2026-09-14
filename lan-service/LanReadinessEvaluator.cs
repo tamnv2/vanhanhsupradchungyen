@@ -13,6 +13,7 @@ public sealed class LanReadinessEvaluator
     private readonly LanAuthorizationEvaluator _authorizationEvaluator;
     private readonly Slice1BusinessAdapter _slice1Adapter;
     private readonly LanClientSecurityStore _clientSecurityStore;
+    private readonly LanPrimaryCredentialVerifier _primaryCredentialVerifier;
 
     public LanReadinessEvaluator(
         string databasePath,
@@ -51,6 +52,7 @@ public sealed class LanReadinessEvaluator
             expectedClusterId,
             expectedDomainContractVersion);
         _clientSecurityStore = new LanClientSecurityStore(databasePath);
+        _primaryCredentialVerifier = new LanPrimaryCredentialVerifier(databasePath, expectedDomainContractVersion);
     }
 
     public async Task<LanReadinessReport> EvaluateAsync(CancellationToken cancellationToken = default)
@@ -174,7 +176,8 @@ public sealed class LanReadinessEvaluator
 
         // Portrait replacement remains command-scoped fail-closed. Other reviewed Slice-1 commands
         // may advance through readiness independently. Public mutations stay globally fail-closed
-        // until both the signed client channel and an authenticated LAN user/session binding are linked.
+        // until signed client, synchronized primary-login authority, authenticated LAN session,
+        // permission/domain gate, and reviewed route wiring are all linked.
         if (snapshotPrerequisitesReady && supportedCommands.Count > 0)
         {
             var security = await _clientSecurityStore.InspectAsync(cancellationToken);
@@ -186,9 +189,19 @@ public sealed class LanReadinessEvaluator
             }
             else
             {
-                blockers.Add(new LanReadinessBlocker(
-                    "LAN_USER_SESSION_AUTH_REQUIRED",
-                    "Signed client channel is available, but authenticated LAN user/session binding is not yet linked to public business mutations."));
+                var primaryCredentials = await _primaryCredentialVerifier.InspectAsync(cancellationToken);
+                if (!primaryCredentials.Ready)
+                {
+                    blockers.Add(new LanReadinessBlocker(
+                        "LAN_PRIMARY_CREDENTIAL_AUTHORITY_REQUIRED",
+                        $"Signed client channel is available, but synchronized LAN primary-login authority is not executable ({primaryCredentials.Code})."));
+                }
+                else
+                {
+                    blockers.Add(new LanReadinessBlocker(
+                        "LAN_USER_SESSION_ROUTE_WIRING_REQUIRED",
+                        "Signed client and synchronized primary-login authority are executable, but reviewed public login/session-to-business route wiring is not yet enabled."));
+                }
             }
         }
 
