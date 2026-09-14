@@ -1,9 +1,9 @@
 # CHECKPOINT — VHDCHY
 
-checkpoint_version: 29
+checkpoint_version: 30
 protocol: AI_AUTHORITY_RESUME_V2
 status: EXECUTING_PRODUCT_V7_BETA
-reconciled_through_commit: e876075180fbc03f6a455ce181a36fa41a9418fd
+reconciled_through_commit: 9754550ad13a50a71ea5825f75173d3fb176a430
 action_mode: AUTONOMOUS_PARALLEL
 active_lanes: REPO_GOVERNANCE / SHARED_DOMAIN / CLOUD_SERVICE / LAN_FULL_SERVICE / AUTH / GOOGLE_SYNC / WEB_ONLINE_LAN / ANDROID_PDA / RECONCILIATION / STABLE_PREPARATION
 paused_lanes: PHYSICAL_CORPORATE_LAN_REGRESSION
@@ -121,6 +121,7 @@ Weighted total: **53.3%**.
 - `docs/LAN_EDGE_STATE_V2.md` — removed stale V5 factor/lifetime block and added V6/V7 continuity/Web boundary.
 - `PROJECT_SCOPE.md` — final deliverable/UI/60-minute scope reconciled.
 - `docs/BETA_ACCEPTANCE_MATRIX.md` — V6/V7, 60-minute continuity, V7 UI, portrait fail-closed and capacity/UAT gates reconciled.
+- `.github/workflows/validate.yml` — validator now requires V7, Delivery Plan V5 and Progress Tracking V1. The immediately prior baseline run failed because the validator still hard-coded V4/V6-era invariants; that validator drift is now corrected and must be rechecked by the next run.
 
 ## Immediate execution
 
