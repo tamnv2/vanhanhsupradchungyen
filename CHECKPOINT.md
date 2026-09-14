@@ -1,9 +1,9 @@
 # CHECKPOINT — VHDCHY
 
-checkpoint_version: 32
+checkpoint_version: 33
 protocol: AI_AUTHORITY_RESUME_V2
 status: EXECUTING_PRODUCT_V7_BETA
-reconciled_through_commit: 58587a15521f4025dd268b3536eebfdfbe370747
+reconciled_through_commit: 732b14e064143413dd99e81aed390a35825a5a46
 action_mode: AUTONOMOUS_PARALLEL
 active_lanes: REPO_GOVERNANCE / SHARED_DOMAIN / CLOUD_SERVICE / LAN_FULL_SERVICE / AUTH / GOOGLE_SYNC / WEB_ONLINE_LAN / ANDROID_PDA / RECONCILIATION / STABLE_PREPARATION
 paused_lanes: PHYSICAL_CORPORATE_LAN_REGRESSION
@@ -25,7 +25,7 @@ context_index_ref: CONTEXT_INDEX.md
 - Evidence-weighted total: **54.6% exact / 55% displayed**.
 - Primary active phase: **Phase 6 — LAN continuity, local state, offline operation and reconciliation**.
 - Parallel lanes: Phase 4 core business Service/API; Phase 5 Gateway/integrations; Phase 7 Online+LAN Web V7 UI; Phase 8 Android/PDA App.
-- No progress increase is claimed from the post-checkpoint commits because the integrated LAN readiness gate is currently FAILED and no new physical/E2E acceptance gate has closed.
+- No progress increase is claimed from the newly completed LAN readiness/route-wiring source work because public LAN HTTP mutation remains closed and no additional product/physical acceptance gate has closed.
 
 ## Authority / UI / execution state
 
@@ -35,11 +35,11 @@ context_index_ref: CONTEXT_INDEX.md
 - Ready-queue parallel execution remains mandatory. A blocked node must not stall independent safe work.
 - PASS requires reproducible evidence. CI/source PASS never substitutes for physical company-network/PDA PASS.
 
-## Reconciled evidence through `58587a15521f4025dd268b3536eebfdfbe370747`
+## Reconciled evidence through `732b14e064143413dd99e81aed390a35825a5a46`
 
 ### Cloud reconciliation ingestion — PASS foundation
 
-Post-checkpoint source added and packaged the reviewed Cloud LAN-reconciliation ingestion core. Evidence includes preservation of LAN actor/source/event identity, collision handling and completed integration-receipt ingestion/deduplication behavior at the source-test level.
+Cloud LAN-reconciliation ingestion core is source/CI PASS, including preservation of actor/source/event identity, collision handling and completed integration-receipt ingestion/deduplication behavior.
 
 Key evidence:
 
@@ -48,43 +48,78 @@ Key evidence:
 - workflow `34803221835` — `Validate clean baseline` **SUCCESS** at `591c408...`;
 - workflow `34803221873` — `Build product foundations` **SUCCESS** at `591c408...`.
 
-Remaining: reviewed authenticated network/API route, LAN sender -> Cloud E2E, retry/restart E2E, complete cursor/rebase/conflict UX and provider/physical acceptance.
+Remaining: reviewed machine/service authenticated network/API route, LAN sender -> Cloud E2E, retry/restart E2E, complete cursor/rebase/conflict UX and provider/physical acceptance.
 
 ### LAN durable local foundation — PASS
 
-Previously proven foundations remain valid: operational snapshots/materialized Slice-1, immutable local event/outbox, idempotent replay, actor evidence, employee/MNV/attendance, atomic active-code uniqueness, staged media and durable Cloud-sync queue.
+Operational snapshots/materialized Slice-1, immutable local event/outbox, idempotent replay, actor evidence, employee/MNV/attendance, atomic active-code uniqueness, staged media and durable Cloud-sync queue remain PASS foundations.
 
 Dedicated durable queue workflow `34801533266` at `013d5b310ae0f068510c56cdbfe7cf4ea7ffec66`: **SUCCESS**.
 
-### LAN client security / user session / primary credential — dedicated PASS
+### LAN client security / user session / primary credential — PASS
 
-Post-checkpoint source now includes:
-
-- P-256 paired-client signed request verification;
-- replay defense and security-epoch fencing;
-- durable LAN user-session binding;
-- authority snapshot V2 synchronized primary password verifier;
-- V1/V2 authorization compatibility;
-- primary credential -> authenticated evidence -> session chain.
+Source includes P-256 paired-client signed request verification, replay defense/security-epoch fencing, durable LAN user-session binding, authority snapshot V2 primary password verifier, V1/V2 authorization compatibility and primary credential -> authenticated evidence -> session chain.
 
 Dedicated workflow `34805395079` at `583b3d0329166804b207332dadf6d449b07c0abf`: **SUCCESS**.
 
-This isolated PASS does not authorize public mutation routes.
+### Integrated LAN readiness — PASS
 
-### Integrated LAN readiness — FAILED / fail-closed
+The earlier readiness failures were test-coupling defects, not production security defects:
 
-HEAD `609a77ee3ef48eca9b1df5d91f63d2e7d875508f` attempted to prove the evaluator advances through synchronized snapshots, client security and primary credential authority to the reviewed blocker `LAN_USER_SESSION_ROUTE_WIRING_REQUIRED`.
+- one harness reused a DB containing deliberately unreconciled local work, correctly triggering `OPERATIONAL_PENDING_LOCAL_WORK`;
+- after DB isolation, the readiness fixture still depended on authority/operational rows seeded by another harness.
 
-Workflow `34805628566` (`Validate LAN fail-closed readiness gate`) **FAILED** at `Prove readiness advances only to reviewed route-wiring gate`.
+The readiness harness was isolated and made self-seeding. Production fail-closed safeguards were preserved.
 
-Therefore:
+Evidence:
 
-- route-wiring readiness is not PASS;
-- public LAN business mutation remains fail-closed;
-- do not relax security/readiness assertions to make CI green;
-- next primary source node is diagnosis/fix of the integrated readiness invariant.
+- workflow `34808274815` — integrated LAN readiness **SUCCESS**;
+- workflow `34808274819` — baseline at the same readiness state **SUCCESS**.
 
-The same HEAD's baseline run `34805628608` failed only at checkpoint freshness. This checkpoint reconciles that governance gap through the current-state updates immediately preceding it.
+The chain now proves synchronized authority + operational state -> signed client security -> primary credential authority -> reviewed route-wiring boundary and restart fail-closed behavior.
+
+### Signed LAN session -> Slice-1 business coordinator — PASS
+
+`LanBusinessRouteCoordinator` is implemented and CI-proven for an already-issued LAN user session.
+
+Mandatory gates:
+
+- exact reviewed POST target `/api/v1/data/commands`;
+- P-256 signed paired-device request;
+- exact raw-body SHA-256 binding;
+- nonce/replay and security-epoch checks;
+- session bound to device + security epoch;
+- current authority snapshot/session freshness;
+- `MUST_CHANGE_PASSWORD` blocks ordinary mutation;
+- authorization/domain/command gate precedes business execution;
+- authenticated actor comes only from server-side session evidence;
+- coordinator parses the exact signed raw body itself;
+- portrait replacement remains fail-closed.
+
+Evidence:
+
+- workflow `34808936937` at `a469d29325ee83f8e19070234c1186ca23474a1c`: **SUCCESS**;
+- baseline workflow `34808937077` at the same commit: **SUCCESS**.
+
+Covered vectors include positive business execution plus replay, signed-body mismatch, wrong route target, device/session mismatch, permission DENY, unsupported command, must-change-password, stale authority and portrait-closed behavior.
+
+### Public LAN HTTP mutation — CLOSED / proven fail-closed
+
+The route-wiring workflow explicitly confirms the current public HTTP mutation endpoint still returns closed/503 behavior. Coordinator PASS does not authorize public mutation exposure.
+
+Primary blocker now: **secure LAN login transport + HTTP adapter**.
+
+Important security rule:
+
+- P-256 request signing provides authentication/integrity but **not confidentiality**;
+- do not transmit reusable user passwords over plaintext LAN HTTP;
+- do not silently require changes to company certificate stores, firewall, router/AP, internal DNS or corporate security policy because the LAN host must remain ordinary-user/no-admin.
+
+Next implementation must prove a secure credential transport compatible with those constraints before login/public business HTTP routes are enabled.
+
+### Cloud reconciliation network boundary — pending
+
+Cloud reconciliation ingestion is service-to-service. Actor fields carried in reconciliation payloads are evidence, not authentication. A reviewed machine/service authentication mechanism is required before LAN -> Cloud ingestion is exposed over a network route.
 
 ### Web / Android foundations
 
@@ -93,23 +128,24 @@ The same HEAD's baseline run `34805628608` failed only at checkpoint freshness. 
 
 ## Current dependency graph / ready queue
 
-### Primary — integrated LAN readiness
+### Primary — secure LAN login/public HTTP path
 
-1. add source-level diagnostic evidence around the failing readiness stage;
-2. identify the exact invariant mismatch;
-3. fix the integration defect without weakening fail-closed behavior;
-4. prove exact transition to `LAN_USER_SESSION_ROUTE_WIRING_REQUIRED` by dedicated CI;
-5. implement authenticated session -> authorization/domain -> supported Slice-1 route wiring;
-6. add negative authz/session/device/epoch/unsupported-command vectors;
-7. only after PASS, consider exposing the approved public LAN mutation subset.
+1. design/prove secure LAN credential transport without plaintext reusable passwords;
+2. preserve no-admin/company-policy constraints;
+3. implement reviewed login/session HTTP adapter;
+4. wire public LAN business HTTP route to the already-proven `LanBusinessRouteCoordinator`;
+5. prove HTTP-level positive/negative/restart/re-auth E2E vectors;
+6. keep portrait command closed;
+7. only after PASS, consider opening the reviewed public LAN business subset.
 
 ### Parallel — reconciliation network E2E
 
-1. wire the already-tested Cloud ingestion core behind the reviewed authenticated network/API boundary;
-2. connect LAN sender;
-3. prove idempotent retry/restart/result mapping;
-4. prove completed Google/Drive receipts do not duplicate output;
-5. add cursor/delta/rebase and conflict resolution after transport is stable.
+1. define/prove machine/service authentication for Cloud reconciliation;
+2. wire tested Cloud ingestion core behind that boundary;
+3. connect LAN sender;
+4. prove retry/restart/idempotency/result mapping E2E;
+5. prove Google/Drive receipts do not duplicate output;
+6. add cursor/delta/rebase/conflict-resolution behavior after transport stabilizes.
 
 ### Other independent lanes
 
@@ -129,4 +165,4 @@ The portrait rule conflict remains unresolved: immediate deletion of the previou
 - STABLE business activation/promotion remains blocked until mandatory BETA acceptance and explicit Owner approval.
 
 do_not_repeat:
-Do not treat memory as authority. Do not replay provider mutations from remembered state. Do not claim provider delivery/projection live without current evidence. Do not bypass action-safety. Do not open LAN mutation routes before readiness/authz/domain acceptance. Do not weaken a failing readiness assertion merely to make CI pass. Do not mutate raw edge events. Do not make Google business authority. Do not silently last-write-wins conflicts. Do not treat CI as physical company-LAN proof. Do not invent Pick Pack UI details without actual reference evidence. Do not copy DNSHE branding/assets. Do not reintroduce stale duration-only offline TTL. Do not silently resolve the portrait immediate-delete/offline-staging conflict. Do not build/expose multilingual UI in the current stage. Do not inflate progress from tool/commit activity without acceptance evidence. Do not promote STABLE without explicit Owner approval.
+Do not treat memory as authority. Do not replay provider mutations from remembered state. Do not claim provider delivery/projection live without current evidence. Do not bypass action-safety. Do not open LAN mutation routes before secure login/HTTP/readiness/authz/domain acceptance. Do not send reusable passwords over plaintext LAN HTTP. Do not weaken security/readiness assertions merely to make CI pass. Do not mutate raw edge events. Do not make Google business authority. Do not silently last-write-wins conflicts. Do not treat CI as physical company-LAN proof. Do not invent Pick Pack UI details without actual reference evidence. Do not copy DNSHE branding/assets. Do not reintroduce stale duration-only offline TTL. Do not silently resolve the portrait immediate-delete/offline-staging conflict. Do not build/expose multilingual UI in the current stage. Do not inflate progress from tool/commit activity without acceptance evidence. Do not promote STABLE without explicit Owner approval.
