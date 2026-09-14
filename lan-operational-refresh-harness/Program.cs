@@ -4,16 +4,13 @@ using System.Text;
 using System.Text.Json;
 using Vhdchy.LanService;
 
-if (args.Length != 5)
-{
-    Console.Error.WriteLine("Usage: VHDCHY.LanOperationalRefresh.Harness <edge.db> <edgeInstanceId> <oldEdgeEpoch> <currentEdgeEpoch> <edgeSchemaVersion>");
-    return 2;
-}
-
 const string environment = "BETA";
 const string clusterId = "PICK_PACK_1291";
 const string compatibility = "VHDCHY_DOMAIN_V1";
 const string moduleId = "IDENTITY_EMPLOYEE_ATTENDANCE";
+const string edgeInstanceId = "edge-operational-refresh-harness";
+const string oldEdgeEpoch = "old-epoch-before-restart";
+const string currentEdgeEpoch = "current-epoch-after-restart";
 const string keyId = "lan-beta-machine-harness";
 const string keyMaterial = "harness-only-machine-auth-key-material-2026-09-14";
 
@@ -22,177 +19,176 @@ static void Assert(bool condition, string code)
     if (!condition) throw new InvalidOperationException(code);
 }
 
-static string RequireArg(string value, string code)
+Assert(!string.Equals(oldEdgeEpoch, currentEdgeEpoch, StringComparison.Ordinal), "RESTART_EPOCH_VECTOR_INVALID");
+
+var tempRoot = Path.Combine(Path.GetTempPath(), $"vhdchy-operational-refresh-{Guid.NewGuid():N}");
+Directory.CreateDirectory(tempRoot);
+var databasePath = Path.Combine(tempRoot, "edge.db");
+
+try
 {
-    var normalized = value.Trim();
-    if (normalized.Length == 0) throw new InvalidOperationException(code);
-    return normalized;
-}
+    var edgeStore = new EdgeStore(databasePath);
+    await edgeStore.InitializeAsync(environment, clusterId, edgeInstanceId, oldEdgeEpoch, compatibility);
+    await EmployeeCodeUniqueClaimStore.EnsureAsync(databasePath);
 
-var databasePath = Path.GetFullPath(args[0]);
-if (!File.Exists(databasePath))
-{
-    Console.Error.WriteLine($"Edge database not found: {databasePath}");
-    return 2;
-}
-
-var edgeInstanceId = RequireArg(args[1], "EDGE_INSTANCE_ID_REQUIRED");
-var oldEdgeEpoch = RequireArg(args[2], "OLD_EDGE_EPOCH_REQUIRED");
-var currentEdgeEpoch = RequireArg(args[3], "CURRENT_EDGE_EPOCH_REQUIRED");
-var edgeSchemaVersion = RequireArg(args[4], "EDGE_SCHEMA_VERSION_REQUIRED");
-Assert(!string.Equals(oldEdgeEpoch, currentEdgeEpoch, StringComparison.Ordinal), "RUNTIME_RESTART_DID_NOT_ROTATE_EDGE_EPOCH");
-
-var authorityStore = new AuthoritySnapshotStore(databasePath);
-var authority = await authorityStore.ImportAsync(
-    new AuthoritySnapshotEnvelope(
-        "AUTH-OP-REFRESH-1",
+    var authorityStore = new AuthoritySnapshotStore(databasePath);
+    var authority = await authorityStore.ImportAsync(
+        new AuthoritySnapshotEnvelope(
+            "AUTH-OP-REFRESH-1",
+            environment,
+            clusterId,
+            "cloud-authority-operational-refresh-1",
+            compatibility,
+            "{\"modules\":[\"IDENTITY_EMPLOYEE_ATTENDANCE\"]}",
+            "{}"),
         environment,
         clusterId,
-        "cloud-authority-operational-refresh-1",
-        compatibility,
-        "{\"modules\":[\"IDENTITY_EMPLOYEE_ATTENDANCE\"]}",
-        "{}"),
-    environment,
-    clusterId,
-    compatibility);
-Assert(authority.Activated, "AUTHORITY_NOT_ACTIVE");
+        compatibility);
+    Assert(authority.Activated, "AUTHORITY_NOT_ACTIVE");
 
-var operationalStore = new OperationalSnapshotStore(databasePath);
-var oldSnapshot = await operationalStore.ImportAsync(
-    new OperationalSnapshotEnvelope(
-        "OP-OP-REFRESH-OLD",
+    var operationalStore = new OperationalSnapshotStore(databasePath);
+    var oldSnapshot = await operationalStore.ImportAsync(
+        new OperationalSnapshotEnvelope(
+            "OP-OP-REFRESH-OLD",
+            environment,
+            clusterId,
+            "cloud-operational-refresh-old",
+            compatibility,
+            "{\"modules\":[\"IDENTITY_EMPLOYEE_ATTENDANCE\"]}",
+            "{\"employees\":[],\"employeeCodes\":[],\"presence\":[]}"),
         environment,
         clusterId,
-        "cloud-operational-refresh-old",
         compatibility,
-        "{\"modules\":[\"IDENTITY_EMPLOYEE_ATTENDANCE\"]}",
-        "{\"employees\":[],\"employeeCodes\":[],\"presence\":[]}"),
-    environment,
-    clusterId,
-    compatibility,
-    new[] { moduleId });
-Assert(oldSnapshot.Activated, "OLD_OPERATIONAL_SNAPSHOT_NOT_ACTIVE");
+        new[] { moduleId });
+    Assert(oldSnapshot.Activated, "OLD_OPERATIONAL_SNAPSHOT_NOT_ACTIVE");
 
-var commandStore = new LocalCommandStore(databasePath, environment, clusterId, compatibility);
-var syncStore = new CloudSyncQueueStore(databasePath);
-var tracker = new PostReconciliationRebaseTracker(databasePath);
+    var commandStore = new LocalCommandStore(databasePath, environment, clusterId, compatibility);
+    var syncStore = new CloudSyncQueueStore(databasePath);
+    var tracker = new PostReconciliationRebaseTracker(databasePath);
 
-var local = await commandStore.ExecuteAsync(new LanLocalCommandEnvelope(
-    RequestId: "REQ-OP-REFRESH-1",
-    IdempotencyKey: "IDEM-OP-REFRESH-1",
-    ModuleId: moduleId,
-    CommandCode: "EMPLOYEE_CREATE",
-    EventCode: "EMPLOYEE_CREATED",
-    EntityType: "employee",
-    EntityId: "EMP-OP-REFRESH-1",
-    StateKey: "employee:EMP-OP-REFRESH-1",
-    ExpectedBaseVersion: null,
-    PayloadJson: "{\"employeeId\":\"EMP-OP-REFRESH-1\",\"status\":\"ACTIVE\",\"fullName\":\"Operational Refresh Employee\"}",
-    NextStateJson: "{\"employeeId\":\"EMP-OP-REFRESH-1\",\"status\":\"ACTIVE\",\"fullName\":\"Operational Refresh Employee\",\"entityVersion\":1}"));
+    var local = await commandStore.ExecuteAsync(new LanLocalCommandEnvelope(
+        RequestId: "REQ-OP-REFRESH-1",
+        IdempotencyKey: "IDEM-OP-REFRESH-1",
+        ModuleId: moduleId,
+        CommandCode: "EMPLOYEE_CREATE",
+        EventCode: "EMPLOYEE_CREATED",
+        EntityType: "employee",
+        EntityId: "EMP-OP-REFRESH-1",
+        StateKey: "employee:EMP-OP-REFRESH-1",
+        ExpectedBaseVersion: null,
+        PayloadJson: "{\"employeeId\":\"EMP-OP-REFRESH-1\",\"status\":\"ACTIVE\",\"fullName\":\"Operational Refresh Employee\"}",
+        NextStateJson: "{\"employeeId\":\"EMP-OP-REFRESH-1\",\"status\":\"ACTIVE\",\"fullName\":\"Operational Refresh Employee\",\"entityVersion\":1}"));
 
-var claims = await syncStore.ClaimDueAsync(10);
-Assert(claims.Count == 1 && claims[0].Envelope.EventId == local.EventId, "SYNC_CLAIM_WRONG");
-const string canonicalEventId = "CANONICAL-OP-REFRESH-1";
-await syncStore.MarkReconciledAsync(claims[0].OutboxId, canonicalEventId, DateTimeOffset.UtcNow);
+    var claims = await syncStore.ClaimDueAsync(10);
+    Assert(claims.Count == 1 && claims[0].Envelope.EventId == local.EventId, "SYNC_CLAIM_WRONG");
+    const string canonicalEventId = "CANONICAL-OP-REFRESH-1";
+    await syncStore.MarkReconciledAsync(claims[0].OutboxId, canonicalEventId, DateTimeOffset.UtcNow);
 
-var pendingBefore = await tracker.InspectAsync();
-Assert(pendingBefore.Required && pendingBefore.PendingCanonicalEventCount == 1, "REBASE_NOT_PENDING");
-Assert(pendingBefore.CanonicalEventIds.SequenceEqual(new[] { canonicalEventId }, StringComparer.Ordinal), "PENDING_CANONICAL_ID_WRONG");
+    var pendingBefore = await tracker.InspectAsync();
+    Assert(pendingBefore.Required && pendingBefore.PendingCanonicalEventCount == 1, "REBASE_NOT_PENDING");
+    Assert(pendingBefore.CanonicalEventIds.SequenceEqual(new[] { canonicalEventId }, StringComparer.Ordinal), "PENDING_CANONICAL_ID_WRONG");
 
-var readinessBefore = await new LanReadinessEvaluator(
-    databasePath,
-    environment,
-    clusterId,
-    compatibility,
-    new[] { moduleId }).EvaluateAsync();
-Assert(readinessBefore.Blockers.Any(blocker => blocker.Code == "POST_RECONCILIATION_REBASE_REQUIRED"), "READINESS_DID_NOT_FAIL_CLOSED");
-
-var endpoint = new Uri("https://beta.example/api/v1/reconciliation/operational-snapshot");
-
-var incompleteHandler = new SnapshotHandler(
-    environment,
-    clusterId,
-    edgeInstanceId,
-    currentEdgeEpoch,
-    keyId,
-    keyMaterial,
-    canonicalEventId,
-    includeCoverage: false);
-using (var incompleteHttp = new HttpClient(incompleteHandler) { Timeout = TimeSpan.FromSeconds(5) })
-{
-    var incompleteClient = new CloudOperationalSnapshotHttpClient(
-        incompleteHttp,
-        endpoint,
-        environment,
-        keyId,
-        keyMaterial);
-    var incompleteCoordinator = new CloudOperationalRefreshCoordinator(
+    var readinessBefore = await new LanReadinessEvaluator(
         databasePath,
-        incompleteClient,
+        environment,
+        clusterId,
+        compatibility,
+        new[] { moduleId }).EvaluateAsync();
+    Assert(readinessBefore.Blockers.Any(blocker => blocker.Code == "POST_RECONCILIATION_REBASE_REQUIRED"), "READINESS_DID_NOT_FAIL_CLOSED");
+
+    // Emulate a LAN process restart: persistent edgeInstanceId remains stable while edgeEpoch rotates.
+    await edgeStore.InitializeAsync(environment, clusterId, edgeInstanceId, currentEdgeEpoch, compatibility);
+
+    var endpoint = new Uri("https://beta.example/api/v1/reconciliation/operational-snapshot");
+
+    var incompleteHandler = new SnapshotHandler(
         environment,
         clusterId,
         edgeInstanceId,
         currentEdgeEpoch,
-        compatibility,
-        edgeSchemaVersion,
-        new[] { moduleId });
-    var incomplete = await incompleteCoordinator.RunOnceAsync();
-    Assert(incomplete.Outcome == CloudOperationalRefreshOutcome.Conflict, "INCOMPLETE_COVERAGE_NOT_REJECTED");
-    Assert((await tracker.InspectAsync()).Required, "INCOMPLETE_COVERAGE_CLEARED_REBASE");
-    Assert(await operationalStore.ReadActiveVersionAsync() == "OP-OP-REFRESH-OLD", "INCOMPLETE_COVERAGE_CHANGED_ACTIVE_SNAPSHOT");
-    Assert(incompleteHandler.RequestVerified, "INCOMPLETE_REQUEST_AUTH_NOT_VERIFIED");
-    Assert(incompleteHandler.SawCurrentRestartEpoch, "INCOMPLETE_REQUEST_EPOCH_WRONG");
-}
-
-var successHandler = new SnapshotHandler(
-    environment,
-    clusterId,
-    edgeInstanceId,
-    currentEdgeEpoch,
-    keyId,
-    keyMaterial,
-    canonicalEventId,
-    includeCoverage: true);
-using (var successHttp = new HttpClient(successHandler) { Timeout = TimeSpan.FromSeconds(5) })
-{
-    var successClient = new CloudOperationalSnapshotHttpClient(
-        successHttp,
-        endpoint,
-        environment,
         keyId,
-        keyMaterial);
-    var successCoordinator = new CloudOperationalRefreshCoordinator(
-        databasePath,
-        successClient,
+        keyMaterial,
+        canonicalEventId,
+        includeCoverage: false);
+    using (var incompleteHttp = new HttpClient(incompleteHandler) { Timeout = TimeSpan.FromSeconds(5) })
+    {
+        var incompleteClient = new CloudOperationalSnapshotHttpClient(
+            incompleteHttp,
+            endpoint,
+            environment,
+            keyId,
+            keyMaterial);
+        var incompleteCoordinator = new CloudOperationalRefreshCoordinator(
+            databasePath,
+            incompleteClient,
+            environment,
+            clusterId,
+            edgeInstanceId,
+            currentEdgeEpoch,
+            compatibility,
+            EdgeStore.SchemaVersion,
+            new[] { moduleId });
+        var incomplete = await incompleteCoordinator.RunOnceAsync();
+        Assert(incomplete.Outcome == CloudOperationalRefreshOutcome.Conflict, "INCOMPLETE_COVERAGE_NOT_REJECTED");
+        Assert((await tracker.InspectAsync()).Required, "INCOMPLETE_COVERAGE_CLEARED_REBASE");
+        Assert(await operationalStore.ReadActiveVersionAsync() == "OP-OP-REFRESH-OLD", "INCOMPLETE_COVERAGE_CHANGED_ACTIVE_SNAPSHOT");
+        Assert(incompleteHandler.RequestVerified, "INCOMPLETE_REQUEST_AUTH_NOT_VERIFIED");
+    }
+
+    var successHandler = new SnapshotHandler(
         environment,
         clusterId,
         edgeInstanceId,
         currentEdgeEpoch,
+        keyId,
+        keyMaterial,
+        canonicalEventId,
+        includeCoverage: true);
+    using (var successHttp = new HttpClient(successHandler) { Timeout = TimeSpan.FromSeconds(5) })
+    {
+        var successClient = new CloudOperationalSnapshotHttpClient(
+            successHttp,
+            endpoint,
+            environment,
+            keyId,
+            keyMaterial);
+        var successCoordinator = new CloudOperationalRefreshCoordinator(
+            databasePath,
+            successClient,
+            environment,
+            clusterId,
+            edgeInstanceId,
+            currentEdgeEpoch,
+            compatibility,
+            EdgeStore.SchemaVersion,
+            new[] { moduleId });
+        var success = await successCoordinator.RunOnceAsync();
+        Assert(success.Outcome == CloudOperationalRefreshOutcome.Success, "SUCCESS_REFRESH_FAILED");
+        Assert(success.RebaseCleared, "SUCCESS_REFRESH_DID_NOT_CLEAR_REBASE");
+        Assert(success.PendingCanonicalEventCount == 1, "SUCCESS_PENDING_COUNT_WRONG");
+        Assert(successHandler.RequestVerified, "SUCCESS_REQUEST_AUTH_NOT_VERIFIED");
+        Assert(successHandler.SawCurrentRestartEpoch, "SUCCESS_REQUEST_EPOCH_WRONG");
+    }
+
+    var activeVersion = await operationalStore.ReadActiveVersionAsync();
+    Assert(activeVersion == "OP-OP-REFRESH-FRESH", "FRESH_OPERATIONAL_SNAPSHOT_NOT_ACTIVE");
+    Assert(!(await tracker.InspectAsync()).Required, "REBASE_REMAINED_REQUIRED_AFTER_REFRESH");
+
+    var readinessAfter = await new LanReadinessEvaluator(
+        databasePath,
+        environment,
+        clusterId,
         compatibility,
-        edgeSchemaVersion,
-        new[] { moduleId });
-    var success = await successCoordinator.RunOnceAsync();
-    Assert(success.Outcome == CloudOperationalRefreshOutcome.Success, "SUCCESS_REFRESH_FAILED");
-    Assert(success.RebaseCleared, "SUCCESS_REFRESH_DID_NOT_CLEAR_REBASE");
-    Assert(success.PendingCanonicalEventCount == 1, "SUCCESS_PENDING_COUNT_WRONG");
-    Assert(successHandler.RequestVerified, "SUCCESS_REQUEST_AUTH_NOT_VERIFIED");
-    Assert(successHandler.SawCurrentRestartEpoch, "SUCCESS_REQUEST_EPOCH_WRONG");
+        new[] { moduleId }).EvaluateAsync();
+    Assert(!readinessAfter.Blockers.Any(blocker => blocker.Code == "POST_RECONCILIATION_REBASE_REQUIRED"), "REBASE_BLOCKER_REMAINED_AFTER_REFRESH");
+
+    Console.WriteLine("LAN_OPERATIONAL_REFRESH_PASS hmac=PASS exactRequest=PASS restartEpoch=PASS incompleteCoverage=PASS atomicImport=PASS rebaseClear=PASS readinessRecovery=PASS");
+    return 0;
 }
-
-var activeVersion = await operationalStore.ReadActiveVersionAsync();
-Assert(activeVersion == "OP-OP-REFRESH-FRESH", "FRESH_OPERATIONAL_SNAPSHOT_NOT_ACTIVE");
-Assert(!(await tracker.InspectAsync()).Required, "REBASE_REMAINED_REQUIRED_AFTER_REFRESH");
-
-var readinessAfter = await new LanReadinessEvaluator(
-    databasePath,
-    environment,
-    clusterId,
-    compatibility,
-    new[] { moduleId }).EvaluateAsync();
-Assert(!readinessAfter.Blockers.Any(blocker => blocker.Code == "POST_RECONCILIATION_REBASE_REQUIRED"), "REBASE_BLOCKER_REMAINED_AFTER_REFRESH");
-
-Console.WriteLine("LAN_OPERATIONAL_REFRESH_PASS hmac=PASS exactRequest=PASS restartEpoch=PASS incompleteCoverage=PASS atomicImport=PASS rebaseClear=PASS readinessRecovery=PASS");
-return 0;
+finally
+{
+    try { Directory.Delete(tempRoot, recursive: true); } catch { }
+}
 
 sealed class SnapshotHandler : HttpMessageHandler
 {
