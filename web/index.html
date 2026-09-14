@@ -3,49 +3,80 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
   <title>Vận hành DC Hưng Yên</title>
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <header class="topbar">
-    <div>
-      <strong>VẬN HÀNH DC HƯNG YÊN</strong>
-      <span id="environmentBadge" class="badge">Đang kiểm tra</span>
-    </div>
-    <div id="runtimeStatus" class="status">Runtime: chưa xác định</div>
-  </header>
+  <div class="shell">
+    <aside id="sidebar" class="sidebar">
+      <div class="brand"><span class="brand-mark">V</span><span><strong>VHDCHY</strong><small>Vận hành DC Hưng Yên</small></span></div>
+      <nav aria-label="Điều hướng chính">
+        <button data-view="dashboard" class="nav-item active"><span class="nav-icon">01</span>Tổng quan</button>
+        <button data-view="business" class="nav-item"><span class="nav-icon">02</span>Nghiệp vụ</button>
+        <button data-view="people" class="nav-item"><span class="nav-icon">03</span>Nhân sự</button>
+        <button data-view="attendance" class="nav-item"><span class="nav-icon">04</span>Ra/Vào & Công nhật</button>
+        <button data-view="resources" class="nav-item"><span class="nav-icon">05</span>Tài nguyên</button>
+        <button data-view="documents" class="nav-item"><span class="nav-icon">06</span>Biên bản</button>
+        <button data-view="history" class="nav-item"><span class="nav-icon">07</span>Lịch sử</button>
+        <button data-view="sync" class="nav-item"><span class="nav-icon">08</span>Đồng bộ</button>
+        <button data-view="admin" class="nav-item"><span class="nav-icon">09</span>Quản trị</button>
+        <button data-view="settings" class="nav-item"><span class="nav-icon">10</span>Cài đặt</button>
+      </nav>
+      <div class="sidebar-foot"><span class="tiny-label">Môi trường</span><span id="environmentBadge" class="pill pill-neutral">Đang kiểm tra</span></div>
+    </aside>
 
-  <div class="layout">
-    <nav aria-label="Điều hướng chính">
-      <button data-view="dashboard" class="active">Dashboard</button>
-      <button data-view="business">Nghiệp vụ</button>
-      <button data-view="people">Nhân sự</button>
-      <button data-view="attendance">Ra/Vào & Công nhật</button>
-      <button data-view="resources">Tài nguyên</button>
-      <button data-view="documents">Biên bản</button>
-      <button data-view="history">Lịch sử</button>
-      <button data-view="sync">Đồng bộ</button>
-      <button data-view="admin">Quản trị</button>
-      <button data-view="settings">Cài đặt</button>
-    </nav>
-
-    <main>
-      <section class="panel">
-        <h1>Website BETA foundation</h1>
-        <p>Giao diện này dùng chung contract với APK và có thể được phục vụ từ Cloud Service hoặc LAN Service.</p>
-        <div class="grid">
-          <article><h2>Service</h2><p id="serviceSummary">Đang kiểm tra…</p></article>
-          <article><h2>Đồng bộ Cloud</h2><p id="cloudSyncSummary">Chưa có dữ liệu.</p></article>
-          <article><h2>Google output</h2><p id="googleSummary">Chưa có dữ liệu.</p></article>
-          <article><h2>Xung đột</h2><p id="conflictSummary">Chưa có dữ liệu.</p></article>
+    <div class="app">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button id="menuButton" class="icon-button" type="button" aria-label="Mở điều hướng">☰</button>
+          <div><p class="eyebrow">Vận hành DC Hưng Yên</p><h1 id="pageTitle">Tổng quan</h1></div>
         </div>
-      </section>
-      <section id="message" class="panel muted" aria-live="polite">
-        Các màn hình nghiệp vụ vẫn fail-closed cho tới khi shared domain + auth + adapters tương ứng PASS.
-      </section>
-    </main>
-  </div>
+        <div class="topbar-actions">
+          <span id="runtimeStatus" class="runtime-status">Runtime: chưa xác định</span>
+          <div class="account-chip"><span class="account-avatar" id="accountInitial">?</span><span><strong id="accountName">Chưa đăng nhập</strong><small id="accountRole">Phiên xác thực chưa có</small></span></div>
+        </div>
+      </header>
 
+      <main>
+        <section class="hero-card">
+          <div><p class="eyebrow">BETA Console</p><h2>Trung tâm vận hành</h2><p>Online Web và LAN Web dùng chung giao diện, cùng contract nghiệp vụ và hiển thị rõ trạng thái Cloud/LAN.</p></div>
+          <div class="hero-actions"><button class="primary-button" type="button" data-view-jump="business">Mở nghiệp vụ</button><button class="secondary-button" type="button" data-view-jump="sync">Kiểm tra đồng bộ</button></div>
+        </section>
+
+        <section class="stat-grid" aria-label="Chỉ số hệ thống">
+          <article class="stat-card"><span class="stat-icon">SV</span><div><small>Service</small><strong id="serviceHeadline">Đang kiểm tra</strong><p id="serviceSummary">Đang kiểm tra…</p></div></article>
+          <article class="stat-card"><span class="stat-icon">CL</span><div><small>Cloud sync</small><strong id="cloudSyncHeadline">Chưa rõ</strong><p id="cloudSyncSummary">Chưa có dữ liệu.</p></div></article>
+          <article class="stat-card"><span class="stat-icon">GG</span><div><small>Google output</small><strong id="googleHeadline">Chưa rõ</strong><p id="googleSummary">Chưa có dữ liệu.</p></div></article>
+          <article class="stat-card"><span class="stat-icon">CF</span><div><small>Xung đột</small><strong id="conflictHeadline">0</strong><p id="conflictSummary">Chưa có dữ liệu.</p></div></article>
+        </section>
+
+        <section class="content-grid">
+          <article class="panel">
+            <div class="panel-heading"><div><p class="eyebrow">Truy cập nhanh</p><h3>Chức năng vận hành</h3></div></div>
+            <div class="quick-grid">
+              <button type="button" data-view-jump="people"><span>NS</span><strong>Nhân sự</strong><small>Thông tin, MNV và trạng thái</small></button>
+              <button type="button" data-view-jump="attendance"><span>RV</span><strong>Ra / Vào</strong><small>Điểm danh và hiện diện</small></button>
+              <button type="button" data-view-jump="resources"><span>TN</span><strong>Tài nguyên</strong><small>PDA, bàn Pack và user</small></button>
+              <button type="button" data-view-jump="documents"><span>BB</span><strong>Biên bản</strong><small>Ảnh và tài liệu nghiệp vụ</small></button>
+            </div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-heading"><div><p class="eyebrow">Phiên hiện tại</p><h3>Trạng thái kết nối</h3></div></div>
+            <dl class="status-list">
+              <div><dt>Runtime</dt><dd id="runtimeDetail">Chưa xác định</dd></div>
+              <div><dt>Đồng bộ Cloud</dt><dd id="cloudSyncDetail">Chưa có checkpoint</dd></div>
+              <div><dt>Google</dt><dd id="googleDetail">Chưa xác định</dd></div>
+              <div><dt>Xung đột</dt><dd id="conflictDetail">Chưa xác định</dd></div>
+            </dl>
+          </article>
+        </section>
+
+        <section id="message" class="notice" aria-live="polite">Các màn hình nghiệp vụ vẫn fail-closed cho tới khi auth, permission và domain slice tương ứng PASS.</section>
+      </main>
+    </div>
+  </div>
   <script type="module" src="/app.js"></script>
 </body>
 </html>
