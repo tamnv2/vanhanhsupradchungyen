@@ -14,7 +14,7 @@ Public business mutation paths remain fail-closed unless the corresponding curre
 
 ## Ready queue NOW
 
-### A — Live-host public CA + real-device acceptance — PRIMARY
+### A — Live-host public CA + real-device acceptance — PRIMARY PHYSICAL/PROVIDER CHAIN
 
 Already SOURCE/CI PASS:
 
@@ -29,38 +29,24 @@ Already SOURCE/CI PASS:
 - ACME challenge write/read/cleanup logic restricted to `_acme-challenge.<canonical-host>`;
 - staging-by-default ACME behavior and explicit production opt-in;
 - renewal threshold + protected ACME account-key handling;
-- certificate-manager CI receives no GitHub secrets.
+- portable self-contained Windows host package `0.2.2`;
+- certificate-manager/host CI receives no GitHub secrets.
 
-Evidence:
+Evidence includes secure HTTP workflow `34811861697`, Windows DPAPI TLS workflow `34817069447`, certificate-manager workflow `34819836554`, portable-host workflow `34821013175` and the corresponding successful baseline validators recorded in `CURRENT_STATE.md`.
 
-- secure HTTP workflow `34811861697`, check `103874646267`: **SUCCESS**;
-- Windows DPAPI TLS workflow `34817069447`, check `103889883955`: **SUCCESS**;
-- certificate-manager workflow `34819836554`, check `103898656531`, commit `e11c5730a3e9cd7e212d07ea0fbdfc07aff77655`: **SUCCESS**;
-- same-HEAD baseline validator `34819836553`, check `103898626431`: **SUCCESS**;
-- detailed boundaries: `docs/LAN_SECURE_HTTP_V1.md` and `docs/LAN_CERTIFICATE_MANAGER_V1.md`.
-
-Cloudflare read-only provider evidence:
-
-- inspection workflow `34816004518`, check `103886701628`, commit `3588bbcc29b665be453e3988e8f5898ed35a9fa8`: **SUCCESS**;
-- expected project account verified;
-- zone `supra.cc.cd` verified active;
-- at inspection time no `lan-beta.supra.cc.cd` or `_acme-challenge.lan-beta.supra.cc.cd` record existed.
-
-This read evidence does **not** prove DNS Edit permission for the credential that will execute on the real LAN host.
+Cloudflare read-only provider evidence verifies the intended project account and active `supra.cc.cd` zone, but does **not** prove DNS Edit permission for the credential that will execute on the real LAN host.
 
 Next dependency chain:
 
-1. prepare/use a **dedicated least-privilege DNS credential on the intended ordinary-user Windows LAN host**; do not move the final private key/PFX through GitHub;
+1. use a **dedicated least-privilege DNS credential on the intended ordinary-user Windows LAN host**; do not move the final private key/PFX through GitHub;
 2. live-verify exact account/zone and prove TXT create/read/delete only in `_acme-challenge.lan-beta.supra.cc.cd`;
 3. run Let’s Encrypt **staging** issuance on that target Windows user/machine context;
 4. verify the DPAPI protected PFX, canonical SAN and LAN Service HTTPS startup/restart;
 5. only after staging PASS, explicitly enable production issuance and obtain the publicly trusted BETA certificate;
 6. prove canonical LAN hostname resolution/reachability + browser certificate trust from the intended company Windows/network;
 7. prove real NLS-MT90/PDA HTTPS login/business/reconnection behavior including Wi-Fi/LAN reacquisition;
-8. add public ROOT email-OTP flow; do not introduce a permanent ROOT password;
-9. add reviewed normal-user must-change/password-change/recovery routes;
-10. keep `EMPLOYEE_PORTRAIT_REPLACE` closed until the Owner portrait semantic gate is resolved;
-11. later include the approved secure public subset in physical Internet-cut continuity evidence.
+8. keep `EMPLOYEE_PORTRAIT_REPLACE` closed until the Owner portrait semantic gate is resolved;
+9. later include the approved secure public subset in physical Internet-cut continuity evidence.
 
 Important boundaries:
 
@@ -93,21 +79,32 @@ Next dependency chain:
 7. retain explicit conflict evidence and ADMIN+ resolution boundary;
 8. add sync cursor/delta/rebase after the transport path is stable.
 
-### C — Account security routes — PARALLEL
+### C — Account security routes — PARALLEL / ACTIVE
 
-Authority already requires:
+Authority requires:
 
 - ROOT authentication through email OTP, no permanent ROOT password;
 - normal-user recovery/must-change state without bypassing authorization gates.
 
-Continue:
+Current source work completed in this continuation, pending final clean-baseline validation after checkpoint reconciliation:
 
-1. public ROOT email-OTP request/verify route against current authority semantics;
-2. OTP expiry/cooldown/replay/attempt-limit tests;
-3. normal-user password-change route for authenticated `mustChangePassword` sessions;
-4. normal-user forgotten-password recovery path that ends in mandatory password change;
-5. invalidate/rebind sessions as required by current credential generation/security semantics;
-6. prove no credential/OTP leakage in logs.
+- public Cloud Worker `POST /api/v1/auth/login` for normal permanent-password login;
+- ROOT login bootstrap reaches `ROOT_EMAIL_OTP_REQUIRED` using username only and never creates a permanent-password session;
+- public authenticated `POST /api/v1/auth/change-password` for normal accounts, including `MUST_CHANGE_PASSWORD` sessions;
+- request JSON body bounds/parsing and route tests covering token handling, ROOT password exclusion and permanent-password establishment;
+- latest auth-route source/test commits in this lane: `2bffb170319f9bf6d6d5f1953655ce960115d35e` and `1f2d328f21af90d09c5e3b260ad6452af05835c6`.
+
+Continue after validation:
+
+1. add a reviewed email-delivery adapter and secure destination provisioning boundary; do **not** fabricate delivery success and do not put readable destination/provider secrets in public source;
+2. expose ROOT email-OTP request/verify route using the existing V6 OTP state machine;
+3. prove expiry/cooldown/supersede/replay/attempt/failure audit behavior through the public route;
+4. add normal-user forgotten-password request/verify flow that ends in `MUST_CHANGE_PASSWORD` and a different new permanent password;
+5. invalidate/rebind sessions as required by credential generation/security semantics;
+6. prove no credential/OTP/destination leakage in logs/diagnostics;
+7. verify/apply migration `0010_auth_v6_email_otp.sql` to the exact intended provider environment through the controlled workflow before claiming live E2E PASS.
+
+No Owner decision is required for the V6 OTP lifecycle. The remaining blocker for full E2E is provider/destination integration and verified live migration state, not an unresolved ROOT policy decision.
 
 ### D — Online Web + LAN Web — PARALLEL
 
@@ -153,4 +150,4 @@ STABLE may be prepared safely in isolation, but no production business activatio
 
 ## Current execution line
 
-`Overall: 55% displayed / 55.4% exact | Current: Phase 6 — LAN continuity/offline/reconcile | Primary next gate: target-Windows DNS credential + ACME staging -> production CA -> company Windows/PDA HTTPS acceptance | Parallel: ROOT/must-change account-security routes + Cloud reconciliation machine-auth/network E2E + V7 Web/App`
+`Overall: 55% displayed / 55.4% exact | Current: Phase 6 — LAN continuity/offline/reconcile | Primary physical gate: target Windows DNS credential + ACME staging -> production CA -> company Windows/PDA HTTPS acceptance | Parallel: Cloud auth routes/ROOT OTP provider + reconciliation machine-auth/network E2E + V7 Web/App`
