@@ -240,7 +240,8 @@ jobs:
             (.supports | index("EDGE_STATE_LOCAL_DURABLE") != null) and
             (.supports | index("CLOUD_SYNC_QUEUE_STATE_MACHINE_LOCAL_DURABLE") != null) and
             (.supports | index("CLOUD_SYNC_INTERRUPTED_CLAIM_RECOVERY") != null) and
-            (.supports | index("CLOUD_RECONCILIATION_TRANSPORT_PLANNED") != null)
+            (.supports | index("CLOUD_RECONCILIATION_HMAC_V1") != null) and
+            (.supports | index("CLOUD_RECONCILIATION_NETWORK_SENDER_NOT_CONFIGURED") != null)
           ' >/dev/null
           curl --noproxy '*' -fsS http://127.0.0.1:17901/ | grep -Fq 'VẬN HÀNH DC HƯNG YÊN'
 
