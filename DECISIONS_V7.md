@@ -3,7 +3,7 @@
 Status: ACTIVE
 Decision date: 2026-09-14
 Authority: explicit Owner instruction in current session
-Supersedes: only conflicting UI-direction details in older decision/docs; all non-conflicting V2–V6 decisions remain active.
+Supersedes: conflicting UI-direction/language details in older decisions; all non-conflicting decisions remain active.
 
 ## 1. Android/PDA app UI direction
 
@@ -14,7 +14,7 @@ Rules:
 - Do not blindly copy old screens or business assumptions. Reuse recognizable interaction/layout patterns only where they fit the current product.
 - Current VHDCHY authority for workflow, security, API semantics, offline/LAN behavior and business rules always wins over the reference app.
 - Before a screen is treated as visually final, implementation work must inspect the corresponding authoritative Pick Pack 1291 UI source/evidence that is actually accessible; do not invent unavailable reference details.
-- Existing V5 language rule remains unchanged: Web and App expose Vietnamese / English / Chinese and default to English unless a later Owner decision overrides it.
+- Current implementation language is **Vietnamese only**. Multilingual UI is deferred until a later Owner decision explicitly starts that work.
 
 ## 2. Online Web + LAN Web UI direction
 
@@ -42,19 +42,59 @@ The screenshots define a visual direction, not a license to copy DNSHE branding 
 - Network state must be visible and unambiguous where it affects behavior (for example Online, LAN active, degraded/reconnecting, queued/local-only), but must not dominate normal workflow.
 - External embedded content may be unavailable during an internet outage; that does not invalidate the local shell or LAN continuity UI.
 
-## 3. UI acceptance boundary
+## 3. Current language boundary
+
+For the current delivery stage, Web and Android/PDA App are **Vietnamese only**.
+
+- Do not implement or expose Vietnamese / English / Chinese switching now.
+- Do not spend current implementation time on translation catalogs, language selectors, locale persistence or multilingual acceptance.
+- User-facing screens, labels, messages and operator help use Vietnamese.
+- Architecture should not make future internationalization unnecessarily difficult, but future multilingual support is deferred and must not block current BETA delivery.
+
+This supersedes the previous V5/V7 requirement that the current product expose three languages or default to English.
+
+## 4. UI acceptance boundary
 
 A UI implementation is not accepted merely because it resembles the reference. Acceptance requires all of the following:
 
 1. correct current VHDCHY business workflow and permission behavior;
 2. current API/LAN contracts respected;
-3. language behavior compliant with V5;
-4. Online/LAN parity compliant with this V7 decision;
+3. current Vietnamese-only language boundary respected;
+4. Online/LAN parity compliant with this decision;
 5. no dependency on DNSHE branding/assets;
 6. no import of obsolete Pick Pack 1291 business authority;
 7. responsive, readable and operable on the intended target devices;
 8. LAN-critical UI usable when the internet is unavailable.
 
-## 4. Implementation priority
+## 5. Mandatory execution/reporting rule
 
-This decision establishes design authority now. It does **not** mean the current repository UI already conforms. Web and App UI implementation/refinement must be planned and measured as explicit remaining delivery work.
+The Owner requires factual output from long tool execution, not activity-volume reporting.
+
+Before a tool/session budget interruption or when a long execution block must end, the AI must checkpoint where possible and report:
+- what actually reached PASS;
+- what FAILED / remains IN_PROGRESS / BLOCKED / not started;
+- direct evidence identifiers where available;
+- the current evidence-weighted project percentage and justified delta from the start of the block;
+- the exact next ready work items.
+
+Issued commands, planned work, source edits without verification and elapsed/tool time are not PASS. If no material product progress was proven, the percentage remains unchanged and that must be stated explicitly.
+
+## 6. Mandatory ready-queue parallel execution
+
+Dependency-aware parallel execution is required in practice, not only in planning.
+
+At each execution point:
+1. identify all ready nodes whose prerequisites are satisfied;
+2. execute every independent safe ready node in parallel where tools permit;
+3. serialize only dependency-bound work or writes to the same file/ref/database/provider resource;
+4. after one prerequisite finishes, immediately unlock the next dependent node while unrelated lanes continue;
+5. if one node fails/blocks, isolate it and continue all independent ready nodes;
+6. keep refilling the ready queue from unfinished work rather than waiting for an unrelated lane to finish.
+
+Example: for `A -> B -> C` plus independent `D`, `E`, `F`, execute `A + D + E + F`, then `B + remaining D/E/F`, then `C + remaining independent work`.
+
+Tool limitations may prevent literal simultaneous API calls, but scheduling must still follow this ready-queue behavior.
+
+## 7. Implementation priority
+
+This decision establishes design, language and execution authority now. It does **not** mean the current repository UI already conforms. Web/App implementation/refinement remains explicit delivery work and must advance in parallel with other independent ready lanes.
