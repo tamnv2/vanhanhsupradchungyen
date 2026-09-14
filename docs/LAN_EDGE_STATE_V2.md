@@ -1,10 +1,10 @@
 # LAN EDGE STATE V2 — FULL LOCAL SERVICE
 
 Status: ACTIVE DESIGN / IMPLEMENTATION CONTRACT
-Updated: 2026-09-13
-Authority: V3/V4/V5 decisions and `docs/SERVICE_API_CONTRACT_V3.md`.
+Updated: 2026-09-14
+Authority: V3/V4/V5/V6/V7 decisions and `docs/SERVICE_API_CONTRACT_V3.md`.
 
-This supersedes V1 wording where V1 treated Google output as deferred until after Cloud reconciliation or lacked synchronized local authority state.
+This supersedes V1 wording where V1 treated Google output as deferred until after Cloud reconciliation or lacked synchronized local authority state. Later Owner decisions override only conflicting details.
 
 ## 1. Purpose
 
@@ -63,6 +63,8 @@ Pending controlled Sheets projection work when Google output is required.
 ### `drive_upload_outbox` / staged media
 Pending Drive upload work, local logical-file identity, content hash, type/size, durable local path/state and eventual provider receipt.
 
+Current source contains a durable staged-media primitive and harness evidence. This does not by itself resolve business semantics for portrait replacement while Drive is unavailable.
+
 ### `integration_receipts`
 Completed downstream work:
 - stable event/logical-file key;
@@ -90,6 +92,8 @@ Logical readiness should distinguish at least:
 - `EDGE_INCOMPATIBLE` — schema/domain version cannot safely execute current commands.
 
 Offline duration by itself does not create an auth expiry state. Staleness must be described by source checkpoint/time/evidence, not silently turned into a login timeout.
+
+Public business mutation exposure remains fail-closed until current auth/permission/domain/readiness requirements are linked and accepted.
 
 ## 4. Snapshot and delta refresh
 
@@ -144,15 +148,17 @@ If Internet/Google is available while LAN is active, LAN may use the controlled 
 - completed receipts are durable locally.
 - later Cloud sync recognizes the same logical output and does not create a duplicate.
 
-If Google is unavailable, business acceptance remains valid locally and Google work stays queued/staged.
+If Google is unavailable, approved Google work stays queued/staged. Whether a specific business mutation is allowed to complete locally still depends on that mutation's current Owner rules; staging capability does not automatically legalize every media mutation.
 
-## 9. Offline auth consequence
+## 9. Offline authentication/authority consequence — V6 current
 
-LAN authenticates/authorizes from its latest verified synchronized authority snapshot. It cannot know remote revocation/password/permission changes during a true partition.
+LAN authenticates/authorizes from its latest verified synchronized authority snapshot under the current V6 direction. Offline duration alone does not invalidate that synchronized local authority.
 
-On reconnect, refreshed authority applies to subsequent operations. Previously accepted events keep the original authority generation evidence and reconcile explicitly.
+A true partition means LAN cannot know about remote revocation/password/permission changes made after its latest synchronized authority generation. On reconnect, refreshed authority applies to subsequent operations. Previously accepted events keep the original authority generation evidence and reconcile explicitly.
 
-ROOT factor-combination/OTP-lifetime details remain blocked by `DECISIONS_V5.md` and must not be invented in LAN implementation.
+Current V6 authentication/recovery rules supersede the former V5 unresolved factor/lifetime block. Do not reintroduce an arbitrary duration-only offline TTL from stale documents.
+
+Security remains fail-closed where capability is not implemented: pairing/channel authentication, security epoch, permission enforcement and privileged/recovery boundaries must be proven before affected public operations open.
 
 ## 10. Manual LAN activation
 
@@ -160,11 +166,15 @@ Only SUPERADMIN/ROOT may deliberately force LAN while Cloud is healthy. Record a
 
 Forced LAN does not disable Cloud synchronization when Cloud is reachable.
 
-## 11. Local Web
+## 11. Local Web — V7 current
 
 LAN Service serves/hosts a compatible reviewed Website build so browser operation can continue without public Internet.
 
-The local bundle must remain version-compatible with the LAN Service/domain contract and expose runtime/sync state clearly.
+Online Web and LAN Web use one V7 design system/artifact direction. Local LAN presentation must retain the same navigation language/hierarchy as Online Web while exposing network-dependent capability/state clearly.
+
+Core LAN-continuity UI assets (fonts/icons/scripts/styles/images required for operation) must be packaged/served locally; external Internet-only assets may not be required for the local shell to remain usable.
+
+The local bundle must remain version-compatible with the LAN Service/domain contract.
 
 ## 12. Host constraints
 
@@ -176,7 +186,7 @@ Never delete:
 - unreconciled edge events;
 - pending sync/output work required for accepted events;
 - unresolved conflict evidence;
-- staged media before durable target receipt/readback passes.
+- staged media before durable target receipt/readback passes, except where an explicit reviewed business lifecycle requires a different safe transition.
 
 Compaction of reconciled history is future measured policy and must preserve audit/recovery requirements.
 
@@ -193,4 +203,8 @@ Before a module is declared LAN-capable:
 - non-conflicting event reconciles once;
 - conflicting event becomes explicit conflict evidence;
 - post-reconciliation rebase completes;
-- diagnostics do not expose protected credential material.
+- diagnostics do not expose protected credential material;
+- required LAN Web assets remain usable without public Internet;
+- current auth/pairing/permission readiness for the affected module is proven.
+
+Final product-level continuity acceptance additionally requires the V6 **>=60-minute Window 2** physical Internet-cut drill on the intended company LAN/PDA environment. Source/CI success alone is not physical PASS.
