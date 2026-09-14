@@ -1,0 +1,36 @@
+name: Inspect Cloudflare LAN trust prerequisites
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/scripts/cloudflare-lan-trust-inspect.mjs'
+      - '.github/workflows/cloudflare-lan-trust-inspect.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudflare-lan-trust-inspect
+  cancel-in-progress: false
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    environment: beta
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+    steps:
+      - name: Require main branch
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main"
+
+      - name: Checkout source authority
+        uses: actions/checkout@v4
+
+      - name: Inspect zone and LAN DNS state read-only
+        run: node .github/scripts/cloudflare-lan-trust-inspect.mjs
