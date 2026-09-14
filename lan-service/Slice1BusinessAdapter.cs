@@ -7,6 +7,7 @@ namespace Vhdchy.LanService;
 public sealed class Slice1BusinessAdapter
 {
     public const string ModuleId = Slice1CommandGate.SliceId;
+    public const string PortraitCommandCode = "EMPLOYEE_PORTRAIT_REPLACE";
 
     private readonly string _clusterId;
     private readonly string _connectionString;
@@ -42,21 +43,25 @@ public sealed class Slice1BusinessAdapter
     public Slice1BusinessAdapterInspection Inspect()
     {
         var catalog = _gate.InspectCatalog();
+        var blocked = new[] { PortraitCommandCode };
         var supported = catalog.CommandCodes
-            .Where(code => !string.Equals(code, "EMPLOYEE_PORTRAIT_REPLACE", StringComparison.Ordinal))
+            .Where(code => !blocked.Contains(code, StringComparer.Ordinal))
             .OrderBy(code => code, StringComparer.Ordinal)
             .ToArray();
+        var blockers = new[]
+        {
+            new Slice1BusinessAdapterBlocker(
+                "PORTRAIT_MEDIA_LIFECYCLE_REQUIRED",
+                "Employee portrait replacement remains fail-closed until Owner authority resolves immediate prior-portrait deletion versus offline staging and that reviewed lifecycle is implemented.")
+        };
 
         return new Slice1BusinessAdapterInspection(
-            Ready: false,
+            Ready: blockers.Length == 0,
+            SupportedSubsetReady: supported.Length > 0,
             CatalogCommandCount: catalog.CommandCount,
             SupportedCommandCodes: supported,
-            Blockers: new[]
-            {
-                new Slice1BusinessAdapterBlocker(
-                    "PORTRAIT_MEDIA_LIFECYCLE_REQUIRED",
-                    "Employee portrait replacement remains fail-closed until staged media upload, durable readback, and prior-portrait deletion are linked atomically to the reviewed command flow.")
-            });
+            BlockedCommandCodes: blocked,
+            Blockers: blockers);
     }
 
     public async Task<LanLocalCommandResult> ExecuteAsync(
@@ -113,9 +118,9 @@ public sealed class Slice1BusinessAdapter
             "EMPLOYEE_UPDATE" => await PrepareEmployeeUpdateAsync(request, payload, cancellationToken),
             "EMPLOYEE_STATUS_CHANGE" => await PrepareEmployeeStatusChangeAsync(request, payload, cancellationToken),
             "EMPLOYEE_CODE_ASSIGN" => await PrepareEmployeeCodeAssignAsync(request, payload, cancellationToken),
-            "EMPLOYEE_PORTRAIT_REPLACE" => throw new Slice1BusinessException(
+            PortraitCommandCode => throw new Slice1BusinessException(
                 "RUNTIME_DEPENDENCY_UNAVAILABLE",
-                "Employee portrait replacement remains closed until the reviewed staged-media and prior-file deletion lifecycle is implemented."),
+                "Employee portrait replacement remains closed until the Owner-level immediate-delete/offline-staging semantic gate is resolved and implemented."),
             "ATTENDANCE_IN" => await PrepareAttendanceAsync(request, payload, "IN", cancellationToken),
             "ATTENDANCE_OUT" => await PrepareAttendanceAsync(request, payload, "OUT", cancellationToken),
             "ATTENDANCE_CORRECT" => await PrepareAttendanceCorrectionAsync(request, payload, cancellationToken),
@@ -400,20 +405,20 @@ public sealed class Slice1BusinessAdapter
         CancellationToken cancellationToken)
     {
         var current = await _commandStore.ReadCurrentStateAsync(stateKey, cancellationToken)
-            ?? throw new Slice1BusinessException("NOT_FOUND", $"Required current state is missing: {stateKey}.");
+            ?? throw new Slice1BusinessException("NOT_FOUND", $"Required local state not found: {stateKey}.");
         if (!string.Equals(current.ModuleId, ModuleId, StringComparison.Ordinal) ||
             !string.Equals(current.EntityType, expectedEntityType, StringComparison.Ordinal))
         {
-            throw new Slice1BusinessException("RUNTIME_DEPENDENCY_UNAVAILABLE", "Current state identity is incompatible with the Slice-1 adapter.");
+            throw new Slice1BusinessException(
+                "RUNTIME_DEPENDENCY_UNAVAILABLE",
+                $"Local state identity is incompatible with Slice-1: {stateKey}.");
         }
         return current;
     }
 
     private async Task<IReadOnlyList<ActiveEmployeeCode>> ReadActiveEmployeeCodesAsync(CancellationToken cancellationToken)
     {
-        var result = new List<ActiveEmployeeCode>();
-        await using var connection = new SqliteConnection(_connectionString);
-        await connection.OpenAsync(cancellationToken);
+        await using var connection = await OpenAsync(cancellationToken);
         await using var command = connection.CreateCommand();
         command.CommandText = """
             SELECT entity_id, state_json
@@ -421,6 +426,7 @@ public sealed class Slice1BusinessAdapter
             WHERE module_id=$module AND entity_type='employee_code'
             """;
         command.Parameters.AddWithValue("$module", ModuleId);
+        var result = new List<ActiveEmployeeCode>();
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         while (await reader.ReadAsync(cancellationToken))
         {
@@ -435,88 +441,66 @@ public sealed class Slice1BusinessAdapter
         return result;
     }
 
-    private static JsonObject BuildPresenceState(
-        JsonObject payload,
-        string employeeId,
-        string targetState,
-        string businessDate,
-        long version,
-        JsonObject? existing = null)
+    private async Task<SqliteConnection> OpenAsync(CancellationToken cancellationToken)
     {
-        var next = existing is null ? new JsonObject() : (JsonObject)existing.DeepClone();
-        next["employeeId"] = employeeId;
-        next["currentState"] = targetState;
-        next["businessDate"] = businessDate;
-        next["entityVersion"] = version;
-        if (payload.TryGetPropertyValue("occurredAt", out var occurredAt))
-            next["lastOccurredAt"] = occurredAt?.DeepClone();
-        return next;
+        var connection = new SqliteConnection(_connectionString);
+        await connection.OpenAsync(cancellationToken);
+        await using var pragma = connection.CreateCommand();
+        pragma.CommandText = "PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000;";
+        await pragma.ExecuteNonQueryAsync(cancellationToken);
+        return connection;
     }
 
     private static JsonObject ParsePayload(string json)
     {
-        ValidateNoDuplicateProperties(json, "INVALID_INPUT");
         try
         {
             var node = JsonNode.Parse(json);
-            if (node is not JsonObject value)
-                throw Invalid("Command payload must be a JSON object.");
-            return value;
-        }
-        catch (Slice1BusinessException)
-        {
-            throw;
+            if (node is not JsonObject obj) throw Invalid("Payload must be a JSON object.");
+            return obj;
         }
         catch (JsonException error)
         {
-            throw new Slice1BusinessException("INVALID_INPUT", "Command payload JSON is invalid.", error);
+            throw new Slice1BusinessException("INVALID_INPUT", "Payload JSON is invalid.", error);
         }
     }
 
     private static JsonObject ParseState(string json)
     {
-        ValidateNoDuplicateProperties(json, "RUNTIME_DEPENDENCY_UNAVAILABLE");
         try
         {
             var node = JsonNode.Parse(json);
-            if (node is not JsonObject value)
-                throw new Slice1BusinessException("RUNTIME_DEPENDENCY_UNAVAILABLE", "Current state JSON is not an object.");
-            return value;
-        }
-        catch (Slice1BusinessException)
-        {
-            throw;
+            if (node is not JsonObject obj)
+                throw new Slice1BusinessException("RUNTIME_DEPENDENCY_UNAVAILABLE", "Local state JSON is invalid.");
+            return obj;
         }
         catch (JsonException error)
         {
-            throw new Slice1BusinessException("RUNTIME_DEPENDENCY_UNAVAILABLE", "Current state JSON is invalid.", error);
+            throw new Slice1BusinessException("RUNTIME_DEPENDENCY_UNAVAILABLE", "Local state JSON is invalid.", error);
         }
     }
 
-    private static void ValidateNoDuplicateProperties(string json, string code)
+    private static JsonObject BuildPresenceState(
+        JsonObject payload,
+        string employeeId,
+        string targetState,
+        string businessDate,
+        long entityVersion,
+        JsonObject? prior = null)
     {
-        try
-        {
-            using var document = JsonDocument.Parse(json);
-            if (document.RootElement.ValueKind != JsonValueKind.Object)
-                throw new Slice1BusinessException(code, "JSON root must be an object.");
-            var properties = document.RootElement.EnumerateObject().Select(property => property.Name).ToArray();
-            if (properties.Distinct(StringComparer.Ordinal).Count() != properties.Length)
-                throw new Slice1BusinessException(code, "JSON object contains duplicate property names.");
-        }
-        catch (Slice1BusinessException)
-        {
-            throw;
-        }
-        catch (JsonException error)
-        {
-            throw new Slice1BusinessException(code, "JSON is invalid.", error);
-        }
+        var next = prior is null ? new JsonObject() : (JsonObject)prior.DeepClone();
+        next["employeeId"] = employeeId;
+        next["currentState"] = targetState;
+        next["businessDate"] = businessDate;
+        next["lastOccurredAt"] = OptionalString(payload, "occurredAt") ?? DateTimeOffset.UtcNow.ToString("O");
+        next["lastSource"] = OptionalString(payload, "source") ?? "LAN";
+        next["entityVersion"] = entityVersion;
+        return next;
     }
 
     private static void ValidateRequest(Slice1BusinessCommandRequest request)
     {
-        if (request is null) throw new ArgumentNullException(nameof(request));
+        ArgumentNullException.ThrowIfNull(request);
         RequireBounded(request.AuthenticatedUserId, "AUTH_REQUIRED", 1, 240);
         RequireBounded(request.RequestId, "INVALID_INPUT", 1, 200);
         RequireBounded(request.IdempotencyKey, "INVALID_INPUT", 1, 240);
@@ -670,8 +654,10 @@ public sealed record Slice1BusinessCommandRequest(
 
 public sealed record Slice1BusinessAdapterInspection(
     bool Ready,
+    bool SupportedSubsetReady,
     int CatalogCommandCount,
     IReadOnlyList<string> SupportedCommandCodes,
+    IReadOnlyList<string> BlockedCommandCodes,
     IReadOnlyList<Slice1BusinessAdapterBlocker> Blockers);
 
 public sealed record Slice1BusinessAdapterBlocker(string Code, string Message);
