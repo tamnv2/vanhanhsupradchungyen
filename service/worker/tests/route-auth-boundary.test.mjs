@@ -214,7 +214,7 @@ test('public password login issues a bearer token while persisting only its hash
   assert.notEqual(db.state.sessionInsertArgs[3], body.session.token);
 });
 
-test('ROOT password login never creates a permanent-password session and directs to email OTP', async () => {
+test('ROOT login bootstrap requires email OTP without accepting a permanent password', async () => {
   const db = loginDb({
     user_id: 'ROOT-1',
     username: 'admin',
@@ -229,7 +229,7 @@ test('ROOT password login never creates a permanent-password session and directs
   const request = new Request('https://beta.example/api/v1/auth/login', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ username: 'admin', password: 'ignored-root-password' })
+    body: JSON.stringify({ username: 'admin' })
   });
   const response = await handleRequest(request, { DB: db, APP_ENV: 'BETA', BUILD_SHA: 'test-build' });
   assert.equal(response.status, 401);
