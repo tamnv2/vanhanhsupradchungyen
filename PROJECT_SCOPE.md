@@ -44,7 +44,7 @@ The VHDCHY product is one platform with four first-class deliverables:
 
 ## UI product direction
 
-- Web + App expose Vietnamese / English / Chinese; default English unless a later Owner decision overrides it.
+- Current Web + Android/PDA App UI is **Vietnamese only** under `DECISIONS_V7.md`. Vietnamese / English / Chinese is deferred to a later feature phase and is not a current acceptance requirement.
 - Android/PDA App UI/UX direction is taken from the actual Pick Pack 1291 App reference, adapted to current VHDCHY workflows/terminology/permissions/data/runtime. Old Pick Pack business logic does not become authority.
 - Online Web + LAN Web use the Owner-supplied DNSHE screenshots as visual direction: dark navy navigation, light blue/white spacious backgrounds, white rounded cards, royal-blue primary actions, compact icon/status tiles and a clean enterprise console hierarchy.
 - DNSHE branding/proprietary assets are not copied; VHDCHY keeps its own product identity and information architecture.
@@ -98,7 +98,7 @@ Build shared domain core, Cloud Service, LAN Service, Online/LAN Web, Android/PD
 
 Unavailable final company-network hardware may delay physical regression only; it must not pause independent source/contracts/build/UI work.
 
-Current progress/position is recorded in `CURRENT_STATE.md`; current evidence-weighted baseline is 53.3% / displayed 53% as of 2026-09-14.
+Current progress/position is recorded in `CURRENT_STATE.md`; current evidence-weighted baseline is **55.4% exact / displayed 55%** as of 2026-09-14. Phase 6 LAN Service is **60%** pending live target-host/public-trust/physical acceptance.
 
 ## Reset rule
 
