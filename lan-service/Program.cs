@@ -42,6 +42,8 @@ await edgeStore.InitializeAsync(environment, clusterId, instanceId, edgeEpoch, D
 await EmployeeCodeUniqueClaimStore.EnsureAsync(edgeStore.DatabasePath);
 var stagedMediaRoot = Path.Combine(root, "staged-media");
 await LanStagedMediaStore.EnsureAsync(edgeStore.DatabasePath, stagedMediaRoot);
+var cloudSyncQueue = new CloudSyncQueueStore(edgeStore.DatabasePath);
+var recoveredInterruptedCloudSync = await cloudSyncQueue.RecoverInterruptedClaimsAsync();
 var startupIntegrity = await edgeStore.CheckIntegrityAsync();
 if (!startupIntegrity.Ok)
 {
@@ -80,6 +82,7 @@ app.MapGet("/health", async (CancellationToken cancellationToken) =>
         edgeStoreIntegrity = "PASS",
         readiness = state.Readiness,
         businessMutationEnabled = false,
+        recoveredInterruptedCloudSync,
         localDataRoot = root
     });
 });
@@ -119,11 +122,13 @@ app.MapGet("/api/v1/capabilities", () => Results.Json(new
         "LOCAL_WEB_HOSTING",
         "EDGE_STATE_LOCAL_DURABLE",
         "CLOUD_SYNC_OUTBOX_STORAGE_LOCAL_DURABLE",
+        "CLOUD_SYNC_QUEUE_STATE_MACHINE_LOCAL_DURABLE",
+        "CLOUD_SYNC_INTERRUPTED_CLAIM_RECOVERY",
         "GOOGLE_OUTBOX_RECEIPT_STORAGE_LOCAL_DURABLE",
         "CONFLICT_STORAGE_LOCAL_DURABLE",
         "AUTHORITY_SNAPSHOT_STORAGE_LOCAL_DURABLE",
         "STAGED_MEDIA_LOCAL_DURABLE",
-        "CLOUD_SYNC_ENGINE_PLANNED",
+        "CLOUD_RECONCILIATION_TRANSPORT_PLANNED",
         "DIRECT_GOOGLE_SENDER_PLANNED"
     }
 }));
@@ -160,6 +165,7 @@ app.MapMethods("/api/v1/{**path}", new[] { "POST", "PUT", "PATCH", "DELETE" }, (
 
 Console.WriteLine($"{ServiceName} {version} environment={environment} cluster={clusterId}");
 Console.WriteLine($"Listening on :{port}; data={root}; readiness=EDGE_EMPTY; webRoot={webRoot}; edgeSchema={EdgeStore.SchemaVersion}");
+Console.WriteLine($"Cloud sync queue recovery active; interruptedClaimsRecovered={recoveredInterruptedCloudSync}; transport remains PLANNED.");
 Console.WriteLine("Edge persistence is durable. Business mutation remains FAIL_CLOSED until synchronized authority and shared domain adapters are active.");
 
 await app.RunAsync();
