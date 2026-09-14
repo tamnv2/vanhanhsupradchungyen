@@ -7,6 +7,7 @@ const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
 const token = process.env.CLOUDFLARE_API_TOKEN;
 const expectedWorker = 'vhdchy-beta';
 const expectedD1 = 'vhdchy-data-beta';
+const verifyOnlyBinding = String(process.env.VHDCHY_VERIFY_ONLY_BINDING || '').trim();
 const requiredReconciliationTables = [
   'domain_events',
   'projection_outbox',
@@ -35,6 +36,12 @@ const requiredEdgeIngestColumns = [
   'canonical_event_id',
   'conflict_id'
 ];
+const bindingRequirements = new Map([
+  ['DB', new Set(['d1'])],
+  ['APP_ENV', new Set(['plain_text'])],
+  ['LAN_RECONCILIATION_KEY_ID', new Set(['plain_text', 'secret_text'])],
+  ['LAN_RECONCILIATION_SHARED_SECRET', new Set(['secret_text'])]
+]);
 
 async function cfRaw(path, init = {}) {
   const response = await fetch(`https://api.cloudflare.com/client/v4${path}`, {
@@ -96,8 +103,8 @@ function firstQueryRows(payload) {
 }
 
 async function d1Select(databaseId, sql, params = []) {
-  const path = `/accounts/${encodeURIComponent(accountId)}/d1/database/${encodeURIComponent(databaseId)}/query`;
-  const payload = await cf(path, {
+  const apiPath = `/accounts/${encodeURIComponent(accountId)}/d1/database/${encodeURIComponent(databaseId)}/query`;
+  const payload = await cf(apiPath, {
     method: 'POST',
     body: JSON.stringify({ sql, params })
   });
@@ -148,45 +155,46 @@ async function inspectD1ReadOnly(databaseId) {
   console.log('D1 read-only inspection PASS');
 }
 
-function assertWorkerBindings(bindings) {
+function assertWorkerBindings(bindings, onlyName = '') {
   const byName = new Map(bindings.map(binding => [binding.name, binding.type]));
-  const requirements = [
-    ['DB', new Set(['d1'])],
-    ['APP_ENV', new Set(['plain_text'])],
-    ['LAN_RECONCILIATION_KEY_ID', new Set(['plain_text', 'secret_text'])],
-    ['LAN_RECONCILIATION_SHARED_SECRET', new Set(['secret_text'])]
-  ];
+  const requirements = onlyName
+    ? [[onlyName, bindingRequirements.get(onlyName)]]
+    : [...bindingRequirements.entries()];
   for (const [name, allowedTypes] of requirements) {
+    if (!allowedTypes) throw new Error(`UNKNOWN_WORKER_BINDING_REQUIREMENT=${name}`);
     const actualType = byName.get(name);
     if (!actualType) throw new Error(`WORKER_REQUIRED_BINDING_MISSING=${name}`);
     if (!allowedTypes.has(actualType)) {
       throw new Error(`WORKER_REQUIRED_BINDING_TYPE_MISMATCH=${name}:${actualType}`);
     }
   }
-  console.log('WORKER_RECONCILIATION_BINDINGS_PASS');
+  console.log(onlyName ? `WORKER_BINDING_PASS=${onlyName}` : 'WORKER_RECONCILIATION_BINDINGS_PASS');
 }
 
-async function inspectWorkerReadOnly() {
+async function inspectWorkerReadOnly(onlyBinding = '') {
+  const settingsPayload = await cf(`/accounts/${encodeURIComponent(accountId)}/workers/scripts/${encodeURIComponent(expectedWorker)}/settings`);
+  const bindings = (Array.isArray(settingsPayload?.result?.bindings) ? settingsPayload.result.bindings : [])
+    .map(item => ({ name: item?.name || '', type: item?.type || '' }))
+    .filter(item => item.name && item.type)
+    .sort((a, b) => a.name.localeCompare(b.name));
+  console.log(`WORKER_BINDING_NAMES_TYPES=${JSON.stringify(bindings)}`);
+  assertWorkerBindings(bindings, onlyBinding);
+
+  if (onlyBinding) return;
+
   const accountSubdomain = await cf(`/accounts/${encodeURIComponent(accountId)}/workers/subdomain`);
   const workerSubdomain = await cf(`/accounts/${encodeURIComponent(accountId)}/workers/scripts/${encodeURIComponent(expectedWorker)}/subdomain`);
   const domainsPayload = await cf(`/accounts/${encodeURIComponent(accountId)}/workers/domains`);
-  const settingsPayload = await cf(`/accounts/${encodeURIComponent(accountId)}/workers/scripts/${encodeURIComponent(expectedWorker)}/settings`);
   const subdomain = String(accountSubdomain?.result?.subdomain || '');
   const enabled = workerSubdomain?.result?.enabled === true;
   const previewsEnabled = workerSubdomain?.result?.previews_enabled === true;
   const domains = (Array.isArray(domainsPayload?.result) ? domainsPayload.result : [])
     .filter(item => item?.service === expectedWorker)
     .map(item => ({ hostname: item.hostname, zone_name: item.zone_name, environment: item.environment || null }));
-  const bindings = (Array.isArray(settingsPayload?.result?.bindings) ? settingsPayload.result.bindings : [])
-    .map(item => ({ name: item?.name || '', type: item?.type || '' }))
-    .filter(item => item.name && item.type)
-    .sort((a, b) => a.name.localeCompare(b.name));
   console.log(`WORKERS_DEV_ACCOUNT_SUBDOMAIN=${subdomain}`);
   console.log(`WORKERS_DEV_ENABLED=${enabled ? 'yes' : 'no'}`);
   console.log(`WORKERS_DEV_PREVIEWS_ENABLED=${previewsEnabled ? 'yes' : 'no'}`);
   console.log(`WORKER_CUSTOM_DOMAINS=${JSON.stringify(domains)}`);
-  console.log(`WORKER_BINDING_NAMES_TYPES=${JSON.stringify(bindings)}`);
-  assertWorkerBindings(bindings);
   if (subdomain && enabled) {
     console.log(`WORKER_PUBLIC_URL=https://${expectedWorker}.${subdomain}.workers.dev`);
   }
@@ -214,7 +222,11 @@ if (!worker || !database) {
   throw new Error(`Cloudflare expected-resource mismatch: worker=${worker ? 'found' : 'missing'}, d1=${database ? 'found' : 'missing'}. Fail closed; no resources were created.`);
 }
 
-await inspectWorkerReadOnly();
+await inspectWorkerReadOnly(verifyOnlyBinding);
+if (verifyOnlyBinding) {
+  console.log(`Cloudflare BETA isolated binding verification PASS: ${verifyOnlyBinding}`);
+  process.exit(0);
+}
 
 const databaseId = database.uuid || database.id;
 await inspectD1ReadOnly(databaseId);
