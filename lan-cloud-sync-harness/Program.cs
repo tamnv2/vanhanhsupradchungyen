@@ -1,3 +1,7 @@
+using System.Net;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 using Microsoft.Data.Sqlite;
 using Vhdchy.LanService;
 
@@ -18,6 +22,8 @@ const string environment = "BETA";
 const string clusterId = "PICK_PACK_1291";
 const string compatibility = "VHDCHY_DOMAIN_V1";
 const string actorUserId = "USER-SYNC-ACTOR";
+const string machineKeyId = "lan-beta-harness-01";
+const string machineKeyMaterial = "test-only-lan-cloud-reconciliation-key-material-2026";
 
 static void Assert(bool condition, string code)
 {
@@ -116,7 +122,7 @@ async Task InsertCompletedProjectionReceipt(string logicalKey)
     await insert.ExecuteNonQueryAsync();
 }
 
-// 1) Claim -> retry wait -> reclaim -> reconcile, including completed Google receipt evidence.
+// 1) Claim -> signed HTTP envelope -> retry wait -> reclaim -> reconcile, including completed Google receipt evidence.
 const string projectionKey = "PROJ-CLOUD-SYNC-1";
 var firstAccepted = await Accept("1", new[]
 {
@@ -138,6 +144,22 @@ Assert(firstTransport.ActorUserId == actorUserId, "ACTOR_EVIDENCE_NOT_PRESERVED"
 Assert(firstTransport.EdgeSchemaVersion == "VHDCHY_EDGE_V2", "EDGE_SCHEMA_NOT_PRESERVED");
 Assert(firstTransport.PayloadJson == first.Envelope.PayloadJson, "PAYLOAD_NOT_PRESERVED");
 Assert(firstTransport.CompletedIntegrationReceipts.Count == 1, "TRANSPORT_RECEIPT_NOT_PRESERVED");
+
+var signingHandler = new ReconciliationSigningHandler(environment, machineKeyId, machineKeyMaterial);
+using (var signingClient = new HttpClient(signingHandler))
+{
+    var sender = new CloudReconciliationHttpSender(
+        signingClient,
+        new Uri("https://beta.example/api/v1/reconciliation/events"),
+        environment,
+        machineKeyId,
+        machineKeyMaterial);
+    var sendResult = await sender.SendAsync(firstTransport);
+    Assert(sendResult.Outcome == CloudReconciliationHttpOutcome.Received, "SIGNED_HTTP_RESULT_WRONG");
+    Assert(signingHandler.SignatureValid, "SIGNED_HTTP_SIGNATURE_INVALID");
+    Assert(signingHandler.BodyHashValid, "SIGNED_HTTP_BODY_HASH_INVALID");
+    Assert(signingHandler.CamelCaseEnvelope, "SIGNED_HTTP_BODY_NOT_CAMEL_CASE");
+}
 
 await syncStore.MarkRetryAsync(first.OutboxId, "TEST_RETRY", DateTimeOffset.UtcNow.AddMilliseconds(200));
 Assert((await syncStore.ClaimDueAsync(10)).Count == 0, "RETRY_BACKOFF_NOT_RESPECTED");
@@ -183,5 +205,57 @@ Assert(inspection.Reconciled == 3, "QUEUE_RECONCILED_WRONG");
 Assert(inspection.Conflict == 1, "QUEUE_CONFLICT_WRONG");
 Assert(inspection.Pending == 0 && inspection.Synchronizing == 0 && inspection.RetryWait == 0, "QUEUE_NOT_DRAINED");
 
-Console.WriteLine("LAN_CLOUD_SYNC_QUEUE_PASS claim=PASS receiptEnvelope=PASS actorTransport=PASS edgeSchemaTransport=PASS retry=PASS reconcile=PASS conflict=PASS restartRecovery=PASS claimRace=PASS total=4 reconciled=3 conflict=1");
+Console.WriteLine("LAN_CLOUD_SYNC_QUEUE_PASS claim=PASS receiptEnvelope=PASS actorTransport=PASS edgeSchemaTransport=PASS signedHttp=PASS bodyHash=PASS camelCase=PASS retry=PASS reconcile=PASS conflict=PASS restartRecovery=PASS claimRace=PASS total=4 reconciled=3 conflict=1");
 return 0;
+
+sealed class ReconciliationSigningHandler : HttpMessageHandler
+{
+    private readonly string _environment;
+    private readonly string _keyId;
+    private readonly byte[] _keyMaterial;
+
+    public ReconciliationSigningHandler(string environment, string keyId, string keyMaterial)
+    {
+        _environment = environment;
+        _keyId = keyId;
+        _keyMaterial = Encoding.UTF8.GetBytes(keyMaterial);
+    }
+
+    public bool SignatureValid { get; private set; }
+    public bool BodyHashValid { get; private set; }
+    public bool CamelCaseEnvelope { get; private set; }
+
+    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        var body = await request.Content!.ReadAsStringAsync(cancellationToken);
+        using var document = JsonDocument.Parse(body);
+        CamelCaseEnvelope = document.RootElement.TryGetProperty("eventId", out _) && !document.RootElement.TryGetProperty("EventId", out _);
+
+        var suppliedBodyHash = request.Headers.GetValues("X-VHDCHY-Content-SHA256").Single();
+        var calculatedBodyHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(body))).ToLowerInvariant();
+        BodyHashValid = string.Equals(suppliedBodyHash, calculatedBodyHash, StringComparison.Ordinal);
+
+        var timestamp = request.Headers.GetValues("X-VHDCHY-Machine-Timestamp").Single();
+        var nonce = request.Headers.GetValues("X-VHDCHY-Machine-Nonce").Single();
+        var keyId = request.Headers.GetValues("X-VHDCHY-Machine-Key-Id").Single();
+        var suppliedSignature = request.Headers.GetValues("X-VHDCHY-Machine-Signature").Single();
+        var canonical = string.Join('\n',
+            CloudReconciliationHttpSender.AuthVersion,
+            "POST",
+            request.RequestUri!.AbsolutePath,
+            timestamp,
+            nonce,
+            calculatedBodyHash,
+            _environment,
+            _keyId);
+        var expectedSignature = Convert.ToHexString(HMACSHA256.HashData(_keyMaterial, Encoding.UTF8.GetBytes(canonical))).ToLowerInvariant();
+        SignatureValid = keyId == _keyId && CryptographicOperations.FixedTimeEquals(
+            Convert.FromHexString(expectedSignature),
+            Convert.FromHexString(suppliedSignature));
+
+        return new HttpResponseMessage(HttpStatusCode.Accepted)
+        {
+            Content = new StringContent("{\"ok\":true,\"reconciliationStatus\":\"RECEIVED\",\"edgeEventId\":\"edge-test\",\"duplicate\":false}", Encoding.UTF8, "application/json")
+        };
+    }
+}
