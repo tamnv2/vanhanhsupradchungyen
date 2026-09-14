@@ -33,5 +33,25 @@ jobs:
       - name: Checkout source authority
         uses: actions/checkout@v4
 
-      - name: Verify Cloudflare BETA identity and inspect D1 read-only
+      - name: Verify D1 binding
+        env:
+          VHDCHY_VERIFY_ONLY_BINDING: DB
+        run: node .github/scripts/cloudflare-verify.mjs
+
+      - name: Verify APP_ENV binding
+        env:
+          VHDCHY_VERIFY_ONLY_BINDING: APP_ENV
+        run: node .github/scripts/cloudflare-verify.mjs
+
+      - name: Verify LAN reconciliation key-id binding
+        env:
+          VHDCHY_VERIFY_ONLY_BINDING: LAN_RECONCILIATION_KEY_ID
+        run: node .github/scripts/cloudflare-verify.mjs
+
+      - name: Verify LAN reconciliation shared-secret binding
+        env:
+          VHDCHY_VERIFY_ONLY_BINDING: LAN_RECONCILIATION_SHARED_SECRET
+        run: node .github/scripts/cloudflare-verify.mjs
+
+      - name: Verify Cloudflare BETA identity and reconciliation D1 schema read-only
         run: node .github/scripts/cloudflare-verify.mjs
