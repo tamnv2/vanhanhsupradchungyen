@@ -17,6 +17,7 @@ if (!File.Exists(databasePath))
 const string environment = "BETA";
 const string clusterId = "PICK_PACK_1291";
 const string compatibility = "VHDCHY_DOMAIN_V1";
+const string actorUserId = "USER-SYNC-ACTOR";
 
 static void Assert(bool condition, string code)
 {
@@ -52,12 +53,18 @@ Assert(authority.Activated, "AUTHORITY_NOT_ACTIVE");
 
 var commandStore = new LocalCommandStore(databasePath, environment, clusterId, compatibility);
 var syncStore = new CloudSyncQueueStore(databasePath);
+var actorEvidenceStore = new EdgeActorEvidenceStore(databasePath);
+var transportBuilder = new CloudSyncTransportEnvelopeBuilder(databasePath);
 
 async Task<LanLocalCommandResult> Accept(string suffix, IReadOnlyList<LanGoogleProjectionWork>? projections = null)
 {
+    var requestId = $"REQ-SYNC-{suffix}";
+    var idempotencyKey = $"IDEM-SYNC-{suffix}";
+    await actorEvidenceStore.StageAsync(requestId, idempotencyKey, actorUserId);
+
     return await commandStore.ExecuteAsync(new LanLocalCommandEnvelope(
-        RequestId: $"REQ-SYNC-{suffix}",
-        IdempotencyKey: $"IDEM-SYNC-{suffix}",
+        RequestId: requestId,
+        IdempotencyKey: idempotencyKey,
         ModuleId: "IDENTITY_EMPLOYEE_ATTENDANCE",
         CommandCode: "EMPLOYEE_CREATE",
         EventCode: "EMPLOYEE_CREATED",
@@ -126,6 +133,12 @@ Assert(first.Envelope.DomainContractVersion == compatibility, "DOMAIN_CONTRACT_N
 Assert(first.Envelope.CompletedIntegrationReceipts.Count == 1, "COMPLETED_RECEIPT_NOT_ATTACHED");
 Assert(first.Envelope.CompletedIntegrationReceipts[0].LogicalKey == projectionKey, "RECEIPT_LOGICAL_KEY_WRONG");
 
+var firstTransport = await transportBuilder.BuildAsync(first);
+Assert(firstTransport.ActorUserId == actorUserId, "ACTOR_EVIDENCE_NOT_PRESERVED");
+Assert(firstTransport.EdgeSchemaVersion == "VHDCHY_EDGE_V2", "EDGE_SCHEMA_NOT_PRESERVED");
+Assert(firstTransport.PayloadJson == first.Envelope.PayloadJson, "PAYLOAD_NOT_PRESERVED");
+Assert(firstTransport.CompletedIntegrationReceipts.Count == 1, "TRANSPORT_RECEIPT_NOT_PRESERVED");
+
 await syncStore.MarkRetryAsync(first.OutboxId, "TEST_RETRY", DateTimeOffset.UtcNow.AddMilliseconds(200));
 Assert((await syncStore.ClaimDueAsync(10)).Count == 0, "RETRY_BACKOFF_NOT_RESPECTED");
 await Task.Delay(300);
@@ -170,5 +183,5 @@ Assert(inspection.Reconciled == 3, "QUEUE_RECONCILED_WRONG");
 Assert(inspection.Conflict == 1, "QUEUE_CONFLICT_WRONG");
 Assert(inspection.Pending == 0 && inspection.Synchronizing == 0 && inspection.RetryWait == 0, "QUEUE_NOT_DRAINED");
 
-Console.WriteLine("LAN_CLOUD_SYNC_QUEUE_PASS claim=PASS receiptEnvelope=PASS retry=PASS reconcile=PASS conflict=PASS restartRecovery=PASS claimRace=PASS total=4 reconciled=3 conflict=1");
+Console.WriteLine("LAN_CLOUD_SYNC_QUEUE_PASS claim=PASS receiptEnvelope=PASS actorTransport=PASS edgeSchemaTransport=PASS retry=PASS reconcile=PASS conflict=PASS restartRecovery=PASS claimRace=PASS total=4 reconciled=3 conflict=1");
 return 0;
