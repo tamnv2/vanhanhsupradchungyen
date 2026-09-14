@@ -103,6 +103,7 @@ function authErrorText(error) {
   const code = error?.code || error?.payload?.error?.code || '';
   const known = {
     AUTH_FAILED: 'Sai thông tin đăng nhập hoặc phiên không hợp lệ.',
+    INVALID_CREDENTIALS: 'Sai thông tin đăng nhập hoặc phiên không hợp lệ.',
     ACCOUNT_NOT_FOUND: 'Tài khoản không hợp lệ.',
     ACCOUNT_NOT_ACTIVE: 'Tài khoản không ở trạng thái hoạt động.',
     ROOT_EMAIL_OTP_REQUIRED: 'ROOT phải đăng nhập bằng mật khẩu một lần qua email theo V6. Public email-OTP route chưa được công bố nên Web giữ fail-closed.',
@@ -115,23 +116,26 @@ function authErrorText(error) {
   return known[code] || error?.message || 'Không thể hoàn tất xác thực.';
 }
 
+function loginBlockedByRuntime() {
+  return currentRuntime === 'UNKNOWN' ||
+    (currentRuntime === 'LAN' && currentCapabilities?.secureMutationTransportEnabled !== true);
+}
+
 function updateAuthAvailability() {
   byId('authRuntimeBadge').textContent = currentRuntime;
   const loginButton = byId('loginButton');
+  loginButton.disabled = loginBlockedByRuntime();
 
   if (currentRuntime === 'UNKNOWN') {
-    loginButton.disabled = true;
     setAuthMessage('Không xác định được Service runtime; đăng nhập đang fail-closed.', 'error');
     return;
   }
 
   if (currentRuntime === 'LAN' && currentCapabilities?.secureMutationTransportEnabled !== true) {
-    loginButton.disabled = true;
     setAuthMessage('LAN đang ở chế độ read-only hoặc chưa có HTTPS hợp lệ; không gửi thông tin đăng nhập.', 'error');
     return;
   }
 
-  loginButton.disabled = false;
   if (currentRuntime === 'LAN') {
     setAuthMessage('LAN login chỉ được gửi khi bộ ký thiết bị đã ghép đôi cung cấp đủ P-256 request proof.');
   } else {
@@ -253,8 +257,7 @@ byId('loginForm').addEventListener('submit', async (event) => {
     lockShell();
     setAuthMessage(authErrorText(error), 'error');
   } finally {
-    loginButton.disabled = false;
-    updateAuthAvailability();
+    loginButton.disabled = loginBlockedByRuntime();
   }
 });
 
