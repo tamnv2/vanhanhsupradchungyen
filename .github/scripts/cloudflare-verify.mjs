@@ -7,6 +7,34 @@ const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
 const token = process.env.CLOUDFLARE_API_TOKEN;
 const expectedWorker = 'vhdchy-beta';
 const expectedD1 = 'vhdchy-data-beta';
+const requiredReconciliationTables = [
+  'domain_events',
+  'projection_outbox',
+  'edge_sources',
+  'edge_event_ingest',
+  'integration_receipts',
+  'edge_sync_checkpoints',
+  'conflict_corrections'
+];
+const requiredEdgeIngestColumns = [
+  'edge_event_id',
+  'edge_source_id',
+  'request_id',
+  'idempotency_key',
+  'command_code',
+  'event_type',
+  'entity_type',
+  'entity_id',
+  'base_entity_version',
+  'resulting_entity_version',
+  'payload_json',
+  'payload_hash',
+  'actor_user_id',
+  'authority_snapshot_version',
+  'status',
+  'canonical_event_id',
+  'conflict_id'
+];
 
 async function cfRaw(path, init = {}) {
   const response = await fetch(`https://api.cloudflare.com/client/v4${path}`, {
@@ -84,6 +112,20 @@ async function inspectD1ReadOnly(databaseId) {
   const tables = tableRows.map(row => String(row.name || '')).filter(Boolean);
   console.log(`D1_READ_ONLY_TABLES=${JSON.stringify(tables)}`);
 
+  const missingReconciliationTables = requiredReconciliationTables.filter(table => !tables.includes(table));
+  if (missingReconciliationTables.length) {
+    throw new Error(`D1_RECONCILIATION_TABLES_MISSING=${missingReconciliationTables.join(',')}`);
+  }
+
+  const edgeColumnsRows = await d1Select(databaseId, 'PRAGMA table_info(edge_event_ingest)');
+  const edgeColumns = edgeColumnsRows.map(row => String(row.name || '')).filter(Boolean);
+  const missingEdgeColumns = requiredEdgeIngestColumns.filter(column => !edgeColumns.includes(column));
+  console.log(`D1_EDGE_INGEST_COLUMNS=${JSON.stringify(edgeColumns)}`);
+  if (missingEdgeColumns.length) {
+    throw new Error(`D1_EDGE_INGEST_COLUMNS_MISSING=${missingEdgeColumns.join(',')}`);
+  }
+  console.log('D1 reconciliation schema preflight PASS');
+
   let schemaVersion = '(missing)';
   if (tables.includes('vhdchy_meta')) {
     const rows = await d1Select(databaseId, `SELECT value FROM vhdchy_meta WHERE key = ? LIMIT 1`, ['schema_version']);
@@ -106,6 +148,24 @@ async function inspectD1ReadOnly(databaseId) {
   console.log('D1 read-only inspection PASS');
 }
 
+function assertWorkerBindings(bindings) {
+  const byName = new Map(bindings.map(binding => [binding.name, binding.type]));
+  const requirements = [
+    ['DB', new Set(['d1'])],
+    ['APP_ENV', new Set(['plain_text'])],
+    ['LAN_RECONCILIATION_KEY_ID', new Set(['plain_text', 'secret_text'])],
+    ['LAN_RECONCILIATION_SHARED_SECRET', new Set(['secret_text'])]
+  ];
+  for (const [name, allowedTypes] of requirements) {
+    const actualType = byName.get(name);
+    if (!actualType) throw new Error(`WORKER_REQUIRED_BINDING_MISSING=${name}`);
+    if (!allowedTypes.has(actualType)) {
+      throw new Error(`WORKER_REQUIRED_BINDING_TYPE_MISMATCH=${name}:${actualType}`);
+    }
+  }
+  console.log('WORKER_RECONCILIATION_BINDINGS_PASS');
+}
+
 async function inspectWorkerReadOnly() {
   const accountSubdomain = await cf(`/accounts/${encodeURIComponent(accountId)}/workers/subdomain`);
   const workerSubdomain = await cf(`/accounts/${encodeURIComponent(accountId)}/workers/scripts/${encodeURIComponent(expectedWorker)}/subdomain`);
@@ -126,6 +186,7 @@ async function inspectWorkerReadOnly() {
   console.log(`WORKERS_DEV_PREVIEWS_ENABLED=${previewsEnabled ? 'yes' : 'no'}`);
   console.log(`WORKER_CUSTOM_DOMAINS=${JSON.stringify(domains)}`);
   console.log(`WORKER_BINDING_NAMES_TYPES=${JSON.stringify(bindings)}`);
+  assertWorkerBindings(bindings);
   if (subdomain && enabled) {
     console.log(`WORKER_PUBLIC_URL=https://${expectedWorker}.${subdomain}.workers.dev`);
   }
