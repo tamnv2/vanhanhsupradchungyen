@@ -11,7 +11,7 @@ Active decisions: `DECISIONS.md` + `DECISIONS_V3.md` + `DECISIONS_V4.md` + `DECI
 
 `Overall: 55% | Exact weighted baseline: 55.4% | Primary current phase: Phase 6 — LAN continuity/offline/reconcile`
 
-Phase 6 remains **60%** and Phase 7 remains **25%**. No completion increase is taken from governance cleanup or from newly written auth routes until accepted validation/evidence supports a progress-model change.
+Phase 6 remains **60%** and Phase 7 remains **25%**. No completion increase is taken from governance cleanup or the newly validated auth route slice because the current progress model does not justify another phase-level increment from this source slice alone.
 
 Parallel active lanes: broader core business Service/API, Gateway/integrations, Online+LAN Web V7 UI, Android/PDA App, account-security routes and Cloud reconciliation transport.
 
@@ -30,20 +30,34 @@ The project implementation direction is consistent with current Owner authority:
 
 The audit found governance drift, not an architecture drift. Stale canonical wording has been reconciled in `PROJECT_SCOPE.md`, `CONTEXT_INDEX.md`, `docs/OWNER_BUSINESS_RULES_V1.md`, `docs/DATA_MODEL_GUIDE_V2.md`, `docs/DELIVERY_PLAN_V5.md`, `docs/LAN_SECURE_HTTP_V1.md` and `docs/LAN_SOURCE_REVIEW_20260913.md` so that V6/V7 auth/language rules, current 55.4% progress and current LAN authority/certificate gates are no longer contradicted by those active guides.
 
-## Account-security continuation
+## Account-security continuation — source/CI PASS for current route slice
 
-Existing source already contained reviewed password/session primitives and the V6 email-OTP lifecycle. This continuation adds the public Cloud Worker route layer for the parts that can be implemented without inventing an email provider:
+Existing source already contained reviewed password/session primitives and the V6 email-OTP lifecycle. This continuation added and validated the public Cloud Worker route layer for the parts that can be implemented without inventing an email provider:
 
 - `POST /api/v1/auth/login` for normal permanent-password login;
 - ROOT username-only login bootstrap returns `ROOT_EMAIL_OTP_REQUIRED` and never creates a permanent-password session;
 - `POST /api/v1/auth/change-password` for authenticated normal accounts, including restricted `MUST_CHANGE_PASSWORD` sessions;
 - bounded JSON request parsing and route tests covering bearer-token persistence semantics, ROOT permanent-password exclusion and permanent-password establishment.
 
-Latest source/test commits for the ROOT bootstrap correction are `2bffb170319f9bf6d6d5f1953655ce960115d35e` and `1f2d328f21af90d09c5e3b260ad6452af05835c6`.
+Latest ROOT-bootstrap source/test commits: `2bffb170319f9bf6d6d5f1953655ce960115d35e` and `1f2d328f21af90d09c5e3b260ad6452af05835c6`.
+
+Clean-baseline evidence at checkpoint v38:
+
+- HEAD `3bb22252a53ce25d69901c3261efd2ee3c54f57d`;
+- workflow run `34830186926`;
+- job/check `103931457439`;
+- result: **SUCCESS**;
+- authority/resume invariants: PASS;
+- checkpoint freshness: PASS;
+- Worker source syntax: PASS;
+- auth crypto contract: PASS;
+- Worker unit tests: PASS;
+- clean D1 schema: PASS;
+- schema/runtime contract: PASS.
+
+Therefore the current public normal login + normal change-password + ROOT password-exclusion/bootstrap slice is **SOURCE/CI PASS**.
 
 The public ROOT OTP request/delivery/verify flow is **not** claimed complete. Current OTP source correctly fails closed without a delivery callback, and current schema stores protected destination hashes/hints rather than a readable email address for Worker use. A reviewed delivery adapter + secure destination provisioning boundary and verified provider migration state are still required. Migration `0010_auth_v6_email_otp.sql` exists in source; live BETA application is not inferred until verified.
-
-Final source/unit-test PASS for the new route layer is pending the clean-baseline run after the current checkpoint is reconciled; the preceding pushes intentionally stopped at checkpoint-freshness validation because active authority docs had changed.
 
 ## Reconciled LAN transport/certificate/package evidence through `e4731983fa681541c317d853276abc9bf206366e`
 
