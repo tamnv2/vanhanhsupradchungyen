@@ -140,9 +140,9 @@ Prepare isolated STABLE during development, keep business traffic fail-closed un
 
 ## Current progress authority
 
-The current baseline is defined by `docs/PROGRESS_TRACKING_V1.md`: **54.6% exact / 55% displayed** as of 2026-09-14.
+The current baseline is defined by `docs/PROGRESS_TRACKING_V1.md`: **55.4% exact / 55% displayed** as of 2026-09-14.
 
-The increase from 53.3% is supported by automated current-source evidence for the durable LAN Cloud-sync queue/restart mechanics and the shared Vietnamese-only V7 Web shell. Do not raise progress from plans, chat discussion, mockups, governance-only edits, tool-call volume or legacy evidence alone.
+The current evidence delta is backed by reviewed current-source/CI evidence, including the durable LAN Cloud-sync queue/restart mechanics, secure LAN-host package foundations and shared Vietnamese-only V7 Web shell. Do not raise progress from plans, chat discussion, mockups, governance-only edits, tool-call volume or legacy evidence alone.
 
 ## Current Owner decision gate
 
