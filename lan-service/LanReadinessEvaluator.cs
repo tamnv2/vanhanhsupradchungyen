@@ -12,6 +12,7 @@ public sealed class LanReadinessEvaluator
     private readonly string[] _requiredModules;
     private readonly LanAuthorizationEvaluator _authorizationEvaluator;
     private readonly Slice1BusinessAdapter _slice1Adapter;
+    private readonly LanClientSecurityStore _clientSecurityStore;
 
     public LanReadinessEvaluator(
         string databasePath,
@@ -49,6 +50,7 @@ public sealed class LanReadinessEvaluator
             expectedEnvironment,
             expectedClusterId,
             expectedDomainContractVersion);
+        _clientSecurityStore = new LanClientSecurityStore(databasePath);
     }
 
     public async Task<LanReadinessReport> EvaluateAsync(CancellationToken cancellationToken = default)
@@ -170,15 +172,24 @@ public sealed class LanReadinessEvaluator
                 $"No reviewed local business adapter is linked for required module: {requiredModule}."));
         }
 
-        // Snapshot + business-adapter readiness is no longer blocked by the unresolved portrait
-        // command. Portrait stays command-scoped fail-closed. Public mutations remain globally
-        // closed until authenticated client pairing/channel and security-epoch verification are
-        // implemented and linked to the HTTP mutation path.
+        // Portrait replacement remains command-scoped fail-closed. Other reviewed Slice-1 commands
+        // may advance through readiness independently. Public mutations stay globally fail-closed
+        // until both the signed client channel and an authenticated LAN user/session binding are linked.
         if (snapshotPrerequisitesReady && supportedCommands.Count > 0)
         {
-            blockers.Add(new LanReadinessBlocker(
-                "PUBLIC_CLIENT_SECURITY_REQUIRED",
-                "Reviewed client pairing/channel authentication and security-epoch verification are not yet linked to public LAN mutations."));
+            var security = await _clientSecurityStore.InspectAsync(cancellationToken);
+            if (!security.Ready || security.ActiveDeviceCount < 1)
+            {
+                blockers.Add(new LanReadinessBlocker(
+                    "PUBLIC_CLIENT_SECURITY_REQUIRED",
+                    "No active reviewed signed-client pairing is available for public LAN mutations."));
+            }
+            else
+            {
+                blockers.Add(new LanReadinessBlocker(
+                    "LAN_USER_SESSION_AUTH_REQUIRED",
+                    "Signed client channel is available, but authenticated LAN user/session binding is not yet linked to public business mutations."));
+            }
         }
 
         var ready = blockers.Count == 0;
