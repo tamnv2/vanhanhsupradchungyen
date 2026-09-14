@@ -10,7 +10,8 @@
     "session.js",
     "permission-store.js",
     "projection.js",
-    "runtime-contract.js"
+    "runtime-contract.js",
+    "reconciliation.js"
   ],
   "compatibility_date": "2026-09-13",
   "public_origin": "https://beta.supra.cc.cd",
