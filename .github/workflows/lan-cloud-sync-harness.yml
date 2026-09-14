@@ -6,6 +6,7 @@ on:
     paths:
       - 'lan-service/**'
       - 'lan-cloud-sync-harness/**'
+      - 'lan-reconciliation-rebase-harness/**'
       - '.github/workflows/lan-cloud-sync-harness.yml'
   workflow_dispatch:
 
@@ -21,11 +22,12 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: Build LAN Service and sync harness
+      - name: Build LAN Service and reconciliation harnesses
         run: |
           set -euo pipefail
           dotnet build lan-service/Vhdchy.LanService.csproj -c Release
           dotnet build lan-cloud-sync-harness/Vhdchy.LanCloudSync.Harness.csproj -c Release
+          dotnet build lan-reconciliation-rebase-harness/Vhdchy.LanReconciliationRebase.Harness.csproj -c Release
 
       - name: Initialize durable edge store
         shell: bash
@@ -54,7 +56,9 @@ jobs:
           wait "$pid" || true
           trap - EXIT
           test -s "$data_root/edge.db"
+          cp "$data_root/edge.db" "$data_root/rebase.db"
           printf '%s\n' "$data_root/edge.db" > "$RUNNER_TEMP/edge-db-path.txt"
+          printf '%s\n' "$data_root/rebase.db" > "$RUNNER_TEMP/rebase-db-path.txt"
 
       - name: Run durable Cloud sync queue vectors
         shell: bash
@@ -71,5 +75,20 @@ jobs:
           test "$(sqlite3 "$db" "SELECT COUNT(*) FROM edge_reconciliation_state WHERE state='RECONCILED';")" = "3"
           test "$(sqlite3 "$db" "SELECT COUNT(*) FROM edge_reconciliation_state WHERE state='CONFLICT';")" = "1"
           test "$(sqlite3 "$db" "SELECT meta_value FROM edge_meta WHERE meta_key='last_cloud_sync_event_id';")" != ""
+          test "$(sqlite3 "$db" "PRAGMA quick_check;")" = "ok"
+          test "$(sqlite3 "$db" "PRAGMA foreign_key_check;")" = ""
+
+      - name: Run post-reconciliation rebase vectors
+        shell: bash
+        run: |
+          set -euo pipefail
+          db="$(cat "$RUNNER_TEMP/rebase-db-path.txt")"
+          dotnet run --project lan-reconciliation-rebase-harness/Vhdchy.LanReconciliationRebase.Harness.csproj -c Release --no-build -- "$db" | tee "$RUNNER_TEMP/rebase-harness.log"
+          grep -Fq 'LAN_RECONCILIATION_REBASE_PASS' "$RUNNER_TEMP/rebase-harness.log"
+
+          test "$(sqlite3 "$db" "SELECT COUNT(*) FROM cloud_sync_outbox WHERE state='RECONCILED';")" = "3"
+          test "$(sqlite3 "$db" "SELECT COUNT(*) FROM edge_reconciliation_state WHERE state='RECONCILED';")" = "3"
+          test "$(sqlite3 "$db" "SELECT COUNT(*) FROM edge_meta WHERE meta_key='post_reconciliation_rebase_cursor_v1';")" = "1"
+          test "$(sqlite3 "$db" "SELECT meta_value FROM edge_meta WHERE meta_key='post_reconciliation_rebase_last_covered_count';")" = "1"
           test "$(sqlite3 "$db" "PRAGMA quick_check;")" = "ok"
           test "$(sqlite3 "$db" "PRAGMA foreign_key_check;")" = ""
