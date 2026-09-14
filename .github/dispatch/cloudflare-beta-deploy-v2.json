@@ -1,6 +1,6 @@
 {
-  "enabled": true,
+  "enabled": false,
   "target": "beta",
   "operation": "deploy_worker_multimodule_business_core_v3",
-  "reason": "Provision reconciliation machine credential after D1 V2 schema PASS; keep finality disabled"
+  "reason": "Secret-store gate failed before provider mutation; waiting for LAN_RECONCILIATION_SHARED_SECRET in GitHub beta environment"
 }
