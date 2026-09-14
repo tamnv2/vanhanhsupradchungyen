@@ -82,6 +82,17 @@ public sealed class OperationalSnapshotStore
                     Activated: string.Equals(existing.Status, "ACTIVE", StringComparison.Ordinal));
             }
 
+            int? materializedStateCount = null;
+            if (validated.ScopeModules.Contains(Slice1OperationalStateMaterializer.ModuleId, StringComparer.Ordinal))
+            {
+                materializedStateCount = await Slice1OperationalStateMaterializer.MaterializeAsync(
+                    connection,
+                    transaction,
+                    validated.CanonicalStateJson,
+                    importedAt,
+                    cancellationToken);
+            }
+
             await ExecuteAsync(connection, transaction, """
                 INSERT INTO operational_snapshot_state(
                   snapshot_version, source_checkpoint, imported_at,
@@ -120,6 +131,24 @@ public sealed class OperationalSnapshotStore
             await UpsertMetaAsync(connection, transaction, "operational_snapshot_state_sha256", validated.StateHash, importedAt, cancellationToken);
             await UpsertMetaAsync(connection, transaction, "operational_snapshot_authority_version", activeAuthority, importedAt, cancellationToken);
 
+            if (materializedStateCount is not null)
+            {
+                await UpsertMetaAsync(
+                    connection,
+                    transaction,
+                    "slice1_materialized_snapshot_version",
+                    envelope.SnapshotVersion,
+                    importedAt,
+                    cancellationToken);
+                await UpsertMetaAsync(
+                    connection,
+                    transaction,
+                    "slice1_materialized_state_count",
+                    materializedStateCount.Value.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    importedAt,
+                    cancellationToken);
+            }
+
             var active = await ReadActiveVersionAsync(connection, transaction, cancellationToken);
             if (!string.Equals(active, envelope.SnapshotVersion, StringComparison.Ordinal))
             {
@@ -128,9 +157,8 @@ public sealed class OperationalSnapshotStore
                     "Operational snapshot did not become the sole active generation.");
             }
 
-            // Intentionally do not set readiness=EDGE_READY here. Snapshot activation proves durable
-            // compatible state only. A later readiness coordinator must also prove the reviewed
-            // domain/authz adapter for the declared modules before business mutations can open.
+            // Snapshot activation and Slice-1 state materialization prove only synchronized state.
+            // Readiness remains fail-closed until the reviewed business adapter is linked and proven.
             transaction.Commit();
             return new OperationalSnapshotImportResult(
                 SnapshotVersion: envelope.SnapshotVersion,
@@ -205,6 +233,7 @@ public sealed class OperationalSnapshotStore
             .Distinct(StringComparer.Ordinal)
             .OrderBy(module => module, StringComparer.Ordinal)
             .ToArray();
+
         foreach (var requiredModule in required)
         {
             if (!scopeModules.Contains(requiredModule, StringComparer.Ordinal))
@@ -220,11 +249,14 @@ public sealed class OperationalSnapshotStore
             envelope.ClusterId,
             canonicalScope,
             canonicalState);
+
         return new ValidatedSnapshot(
-            evidenceJson,
-            Sha256Hex(evidenceJson),
-            Sha256Hex(canonicalScope),
-            Sha256Hex(canonicalState));
+            EvidenceJson: evidenceJson,
+            EvidenceHash: Sha256Hex(evidenceJson),
+            ScopeHash: Sha256Hex(canonicalScope),
+            StateHash: Sha256Hex(canonicalState),
+            CanonicalStateJson: canonicalState,
+            ScopeModules: scopeModules);
     }
 
     private static string[] ReadScopeModules(string canonicalScope)
@@ -240,6 +272,7 @@ public sealed class OperationalSnapshotStore
                 throw new OperationalSnapshotException("OPERATIONAL_SCOPE_MODULE_INVALID", "Every operational module identifier must be a non-empty string.");
             result.Add(module.GetString()!.Trim());
         }
+
         if (result.Count == 0)
             throw new OperationalSnapshotException("OPERATIONAL_SCOPE_MODULES_REQUIRED", "Operational snapshot must declare at least one module.");
         if (result.Distinct(StringComparer.Ordinal).Count() != result.Count)
@@ -448,7 +481,9 @@ public sealed class OperationalSnapshotStore
         string EvidenceJson,
         string EvidenceHash,
         string ScopeHash,
-        string StateHash);
+        string StateHash,
+        string CanonicalStateJson,
+        IReadOnlyList<string> ScopeModules);
 
     private sealed record OperationalSnapshotRow(
         string SourceCheckpoint,
