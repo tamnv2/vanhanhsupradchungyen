@@ -40,6 +40,8 @@ var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "
 var edgeStore = new EdgeStore(Path.Combine(root, "edge.db"));
 await edgeStore.InitializeAsync(environment, clusterId, instanceId, edgeEpoch, DomainContractVersion);
 await EmployeeCodeUniqueClaimStore.EnsureAsync(edgeStore.DatabasePath);
+var stagedMediaRoot = Path.Combine(root, "staged-media");
+await LanStagedMediaStore.EnsureAsync(edgeStore.DatabasePath, stagedMediaRoot);
 var startupIntegrity = await edgeStore.CheckIntegrityAsync();
 if (!startupIntegrity.Ok)
 {
@@ -120,6 +122,7 @@ app.MapGet("/api/v1/capabilities", () => Results.Json(new
         "GOOGLE_OUTBOX_RECEIPT_STORAGE_LOCAL_DURABLE",
         "CONFLICT_STORAGE_LOCAL_DURABLE",
         "AUTHORITY_SNAPSHOT_STORAGE_LOCAL_DURABLE",
+        "STAGED_MEDIA_LOCAL_DURABLE",
         "CLOUD_SYNC_ENGINE_PLANNED",
         "DIRECT_GOOGLE_SENDER_PLANNED"
     }
