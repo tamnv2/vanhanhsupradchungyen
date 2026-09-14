@@ -7,6 +7,14 @@ function requiredEnv(name) {
   return value;
 }
 
+function bindingName(value, context) {
+  const normalized = String(value || '').trim();
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(normalized)) {
+    throw new Error(`Invalid Worker binding name ${context}: ${normalized}`);
+  }
+  return normalized;
+}
+
 async function main() {
   const accountId = requiredEnv('CLOUDFLARE_ACCOUNT_ID');
   const apiToken = requiredEnv('CLOUDFLARE_API_TOKEN');
@@ -33,14 +41,32 @@ async function main() {
     if (!fs.existsSync(modulePath)) throw new Error(`Missing Worker module ${modulePath}`);
   }
 
+  if (!spec?.d1_binding?.name || !spec?.d1_binding?.database_id) {
+    throw new Error('Deployment spec must define d1_binding.name and d1_binding.database_id');
+  }
+
+  const plainTextBindings = Object.entries(spec.vars || {}).map(([name, value]) => {
+    const safeName = bindingName(name, 'vars');
+    if (safeName === 'BUILD_SHA') throw new Error('BUILD_SHA is reserved by the deployment uploader');
+    if (typeof value !== 'string') throw new Error(`Worker plain-text binding ${safeName} must be a string`);
+    return { type: 'plain_text', name: safeName, text: value };
+  });
+
+  const inheritBindings = [...new Set(Array.isArray(spec.inherit_bindings) ? spec.inherit_bindings : [])]
+    .map(name => bindingName(name, 'inherit_bindings'));
+  const explicitNames = new Set([spec.d1_binding.name, 'BUILD_SHA', ...plainTextBindings.map(item => item.name)]);
+  for (const name of inheritBindings) {
+    if (explicitNames.has(name)) throw new Error(`Inherited binding ${name} collides with an explicit deployment binding`);
+  }
+
   const metadata = {
     main_module: mainModule,
     compatibility_date: spec.compatibility_date,
     bindings: [
       { type: 'd1', name: spec.d1_binding.name, database_id: spec.d1_binding.database_id },
-      { type: 'plain_text', name: 'APP_ENV', text: spec.vars.APP_ENV },
+      ...plainTextBindings,
       { type: 'plain_text', name: 'BUILD_SHA', text: process.env.GITHUB_SHA || 'local' },
-      { type: 'plain_text', name: 'GAS_EXEC_URL', text: spec.vars.GAS_EXEC_URL }
+      ...inheritBindings.map(name => ({ type: 'inherit', name }))
     ]
   };
 
@@ -52,7 +78,8 @@ async function main() {
     form.append(moduleName, new Blob([source], { type: 'application/javascript+module' }), moduleName);
   }
 
-  const url = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/workers/scripts/${encodeURIComponent(spec.target_worker)}`;
+  const strictInheritance = inheritBindings.length ? '?bindings_inherit=strict' : '';
+  const url = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/workers/scripts/${encodeURIComponent(spec.target_worker)}${strictInheritance}`;
   const response = await fetch(url, {
     method: 'PUT',
     headers: { authorization: `Bearer ${apiToken}` },
@@ -69,6 +96,7 @@ async function main() {
 
   console.log(`WORKER_MULTI_MODULE_UPLOAD_PASS worker=${spec.target_worker} modules=${modules.length}`);
   for (const moduleName of modules) console.log(`WORKER_MODULE=${moduleName}`);
+  for (const name of inheritBindings) console.log(`WORKER_INHERITED_BINDING=${name}`);
 }
 
 main().catch((error) => {
