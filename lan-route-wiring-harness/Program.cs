@@ -23,24 +23,6 @@ static void A(bool value, string code)
     if (!value) throw new InvalidOperationException(code);
 }
 
-static string B64(byte[] value) => Convert.ToBase64String(value).TrimEnd('=').Replace('+', '-').Replace('/', '_');
-static object Credential(string id, string userId, string password, byte seed, bool mustChange)
-{
-    var salt = Enumerable.Range(0, 16).Select(i => unchecked((byte)(seed + i))).ToArray();
-    const int iterations = 100_000;
-    var digest = Rfc2898DeriveBytes.Pbkdf2(Encoding.UTF8.GetBytes(password), salt, iterations, HashAlgorithmName.SHA256, 32);
-    return new
-    {
-        credentialId = id,
-        userId,
-        credentialType = "PASSWORD",
-        secretHash = B64(digest),
-        hashAlgorithm = $"PBKDF2-SHA256${iterations}${B64(salt)}",
-        mustChange,
-        status = "ACTIVE"
-    };
-}
-
 static string AuthorityPayload() => JsonSerializer.Serialize(new
 {
     schemaVersion = LanPrimaryCredentialVerifier.LoginAuthoritySchemaVersion,
@@ -51,12 +33,7 @@ static string AuthorityPayload() => JsonSerializer.Serialize(new
         new { userId = denyUser, username = "route.deny", employeeId = "E_ROUTE_DENY", displayName = "Route Deny", email = "route.deny@example.invalid", status = "ACTIVE", securityLevel = "NORMAL" },
         new { userId = changeUser, username = "route.change", employeeId = "E_ROUTE_CHANGE", displayName = "Route Change", email = "route.change@example.invalid", status = "ACTIVE", securityLevel = "NORMAL" }
     },
-    credentials = new object[]
-    {
-        Credential("C_OP", opUser, "Route-Operator-Password-1291!", 11, false),
-        Credential("C_DENY", denyUser, "Route-Deny-Password-1291!", 41, false),
-        Credential("C_CHANGE", changeUser, "Route-Change-Password-1291!", 71, true)
-    },
+    credentials = Array.Empty<object>(),
     roles = Array.Empty<object>(),
     permissions = new object[]
     {
@@ -80,6 +57,7 @@ static string Body(string id, string idem, string code, string entity, object pa
 
 static LanClientSignedRequestProof Sign(ECDsa key, string device, string epoch, string nonce, string body, DateTimeOffset at, string? target = null)
 {
+    nonce = $"vhdchy-route-{nonce}";
     var unsigned = new LanClientSignedRequestProof(
         device,
         epoch,
@@ -88,7 +66,7 @@ static LanClientSignedRequestProof Sign(ECDsa key, string device, string epoch, 
         LanBusinessRouteCoordinator.BusinessCommandMethod,
         target ?? LanBusinessRouteCoordinator.BusinessCommandRouteTarget,
         LanClientSecurityStore.Sha256Hex(body),
-        "placeholder");
+        "placeholder-signature");
     var canonical = LanClientSecurityStore.BuildCanonicalRequest(unsigned);
     var signature = key.SignData(Encoding.UTF8.GetBytes(canonical), HashAlgorithmName.SHA256, DSASignatureFormat.IeeeP1363FixedFieldConcatenation);
     return unsigned with { SignatureBase64 = Convert.ToBase64String(signature) };
