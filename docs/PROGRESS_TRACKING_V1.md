@@ -72,6 +72,14 @@ This baseline reconciles repository source through the secure LAN HTTPS login/se
 
 Human-facing status rounds this baseline to **56% complete**.
 
+### 2026-09-15 evidence closure with no percentage change
+
+The previously source-advanced Google/Drive integration receipt conflict/recovery layer now has direct hosted-CI proof without changing the weighted baseline. Dedicated workflow `34879543693` at commit `da216d54119280aeed57f19d79ccdde6091e6036` completed `SUCCESS`; its production-runtime regression step proves integration interrupted-claim startup recovery, `/health` recovery visibility, `/api/v1/sync/status` receipt/review visibility, aggregate conflict status including integration `REVIEW_REQUIRED`, and preservation of the existing reconciliation/rebase vectors. Same-commit clean baseline `34879543810` also completed `SUCCESS`.
+
+Historical runs `34853854932` at conflict commit `53ae98a530228badaeaeb9dc2cb03a905ec8df82` and `34853938581` at recovery commit `3d0a732e33a8d4ce4ac97c3e4efaf9f58838381c` remain supporting evidence for receipt-conflict/cloud-conflict/restart mechanics; recovery clean baseline `34853938669` was also successful.
+
+This closes an automated-evidence gap inside the Phase-6 reconciliation sub-slice already scored at 65%. It does **not** close live BETA machine credentials/provider linkage, real Google Sheets/Drive provider I/O, company-network/browser/PDA trust, >=60-minute outage acceptance, capacity/soak/UAT or STABLE promotion. Therefore Phase 6 remains 65% and `TOTAL_PRODUCT_COMPLETION` remains **56.2%**.
+
 ### Evidence supporting the increase from 55.4% to 56.2%
 
 **Phase 6: 60% -> 65%.**
@@ -106,9 +114,9 @@ The Android phase remains at 15%: visible shell text is Vietnamese and the curre
 
 ## 5. Why the project is not scored higher
 
-The repository has substantial architecture, business/data contracts, Cloud/Service foundation and a materially implemented LAN Slice-1 with automated evidence. LAN now also includes durable staged media, durable Cloud-sync queue mechanics, an automated secure HTTPS login/session -> public Slice-1 business route, and an automated signed operational refresh/rebase/readiness-recovery path.
+The repository has substantial architecture, business/data contracts, Cloud/Service foundation and a materially implemented LAN Slice-1 with automated evidence. LAN now also includes durable staged media, durable Cloud-sync queue mechanics, an automated secure HTTPS login/session -> public Slice-1 business route, an automated signed operational refresh/rebase/readiness-recovery path, and hosted-CI-proven integration receipt conflict/recovery status behavior.
 
-However, the final product still lacks enough evidence to credit the remaining work as complete: the production-trusted LAN certificate/DNS/real-device path is unproven; current Android/PDA product UI is not yet faithfully reconstructed from the authorized Pick Pack 1291 visual source; Web authentication and business modules are incomplete; live BETA machine credential/provider LAN->Cloud transport and exact provider linkage are unaccepted; target-company-network/NLS-MT90 physical regression is pending; the 60-minute Internet-cut acceptance is pending; broader business/provider paths remain; capacity/soak/UAT remain; and STABLE production promotion/handover has not been completed.
+However, the final product still lacks enough evidence to credit the remaining work as complete: the production-trusted LAN certificate/DNS/real-device path is unproven; current Android/PDA product UI is not yet faithfully reconstructed from the authorized Pick Pack 1291 visual source; Web authentication and business modules are incomplete; live BETA machine credential/provider LAN->Cloud transport and exact provider linkage are unaccepted; real Google Sheets/Drive provider I/O remains unaccepted; target-company-network/NLS-MT90 physical regression is pending; the 60-minute Internet-cut acceptance is pending; broader business/provider paths remain; capacity/soak/UAT remain; and STABLE production promotion/handover has not been completed.
 
 ## 6. Update rules
 
