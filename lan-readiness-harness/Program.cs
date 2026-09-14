@@ -31,15 +31,19 @@ var evaluator = new LanReadinessEvaluator(
     new[] { moduleId });
 
 var report = await evaluator.EvaluateAsync();
-Assert(!report.Ready, "READINESS_MUST_REMAIN_FALSE_WITHOUT_REVIEWED_SLICE_ADAPTER");
+Assert(!report.Ready, "READINESS_MUST_REMAIN_FALSE_WITHOUT_CLIENT_SECURITY");
 Assert(report.Readiness == "EDGE_NOT_READY", "READINESS_STATE_WRONG");
 Assert(report.SnapshotPrerequisitesReady, "SNAPSHOT_PREREQUISITES_NOT_READY");
 Assert(report.AuthoritySnapshotVersion == "AUTH-TEST-2", "READINESS_AUTHORITY_VERSION_WRONG");
 Assert(report.OperationalSnapshotVersion == "OP-TEST-2", "READINESS_OPERATIONAL_VERSION_WRONG");
 Assert(report.OperationalAuthoritySnapshotVersion == "AUTH-TEST-2", "READINESS_OPERATIONAL_AUTHORITY_LINK_WRONG");
 Assert(report.RequiredModules.SequenceEqual(new[] { moduleId }), "READINESS_REQUIRED_MODULES_WRONG");
+Assert(report.SupportedCommandCodes.Count == 7, "READINESS_SUPPORTED_COMMAND_COUNT_WRONG");
+Assert(report.SupportedCommandCodes.Contains("EMPLOYEE_CREATE"), "READINESS_EMPLOYEE_CREATE_NOT_LINKED");
+Assert(report.SupportedCommandCodes.Contains("ATTENDANCE_IN"), "READINESS_ATTENDANCE_IN_NOT_LINKED");
+Assert(report.BlockedCommandCodes.SequenceEqual(new[] { Slice1BusinessAdapter.PortraitCommandCode }), "READINESS_PORTRAIT_BLOCK_NOT_SCOPED");
 Assert(report.Blockers.Count == 1, "READINESS_HAS_UNEXPECTED_BLOCKERS");
-Assert(report.Blockers[0].Code == "SLICE_ADAPTER_REQUIRED", "READINESS_ADAPTER_GATE_MISSING");
+Assert(report.Blockers[0].Code == "PUBLIC_CLIENT_SECURITY_REQUIRED", "READINESS_SECURITY_GATE_MISSING");
 
-Console.WriteLine("LAN_READINESS_HARNESS_PASS snapshots=PASS authorityLink=PASS requiredModules=PASS adapterGate=PASS ready=false");
+Console.WriteLine("LAN_READINESS_HARNESS_PASS snapshots=PASS authorityLink=PASS requiredModules=PASS supportedSubset=PASS portraitScopedBlock=PASS securityGate=PASS ready=false");
 return 0;
