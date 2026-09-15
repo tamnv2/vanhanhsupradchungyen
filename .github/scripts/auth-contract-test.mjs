@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import {
   createPasswordRecord,
   generateBearerToken,
@@ -43,4 +44,28 @@ assert(
   'invalid TOTP must fail'
 );
 
-console.log('AUTH_CONTRACT_TEST_PASS');
+// Google projection management plane stays owner-only and fail-closed.
+const gatewayManifest = JSON.parse(await readFile('service/google-gateway/appsscript.json', 'utf8'));
+assert(gatewayManifest?.webapp?.access === 'ANYONE_ANONYMOUS', 'Google Gateway data-plane Web App access drifted');
+assert(gatewayManifest?.webapp?.executeAs === 'USER_DEPLOYING', 'Google Gateway Web App execution identity drifted');
+assert(gatewayManifest?.executionApi?.access === 'MYSELF', 'Google Gateway management API must be MYSELF only');
+
+const gatewayCode = await readFile('service/google-gateway/Code.gs', 'utf8');
+new Function(gatewayCode);
+assert(gatewayCode.includes('function provisionProjectionAuth('), 'projection auth provisioning function missing');
+assert(gatewayCode.includes('function projectionManagementHealth('), 'projection management readback function missing');
+assert(gatewayCode.includes('VHDCHY_PROJECTION_SHARED_TOKEN_SHA256: verifierSha256'), 'GAS must store only projection verifier');
+assert(gatewayCode.includes('VHDCHY_PROJECTION_ENABLED: "false"'), 'provisioning must force projection disabled');
+assert(!gatewayCode.includes('function setProjectionEnabled('), 'projection activation must remain a separate not-yet-implemented gate');
+
+const gasSync = await readFile('.github/scripts/gas-sync.mjs', 'utf8');
+assert(gasSync.includes("'provision_projection'"), 'CI projection provisioning operation missing');
+assert(gasSync.includes("'provisionProjectionAuth'"), 'CI must call the verifier-only GAS function');
+assert(gasSync.includes("'projectionManagementHealth'"), 'CI must perform management readback');
+assert(gasSync.includes('PROJECTION_AUTH_PROVISION_PASS authConfigured=true enabled=false'), 'CI fail-closed provisioning evidence marker missing');
+
+const gasWorkflow = await readFile('.github/workflows/gas-beta-sync.yml', 'utf8');
+assert(gasWorkflow.includes('VHDCHY_PROJECTION_SHARED_TOKEN: ${{ secrets.VHDCHY_PROJECTION_SHARED_TOKEN }}'), 'projection raw token must come from GitHub secret store');
+assert(gasWorkflow.includes("service/google-gateway/**"), 'Google Gateway source changes must trigger sync/deploy');
+
+console.log('AUTH_CONTRACT_TEST_PASS projectionManagement=PASS');
