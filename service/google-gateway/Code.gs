@@ -7,6 +7,7 @@ const BOOTSTRAP = Object.freeze({
 });
 
 const PROJECTION_PROTOCOL = "VHDCHY_PROJECTION_V1";
+const PROJECTION_MANAGEMENT_VERSION = "VHDCHY_PROJECTION_MANAGEMENT_V1";
 const PROJECTION_MAX_ITEMS = 50;
 const PROJECTION_SHEETS = Object.freeze({
   "DANH SÁCH PDA": { keyHeader: "Seri PDA" },
@@ -71,6 +72,67 @@ function projectionHealth_() {
     enabled: props.getProperty("VHDCHY_PROJECTION_ENABLED") === "true",
     authConfigured: Boolean(props.getProperty("VHDCHY_PROJECTION_SHARED_TOKEN_SHA256")),
     allowedSheetCount: Object.keys(PROJECTION_SHEETS).length
+  };
+}
+
+function projectionManagementContext_(expectedEnvironment) {
+  const requestedEnvironment = String(expectedEnvironment || "").toUpperCase();
+  if (!requestedEnvironment || requestedEnvironment !== String(BOOTSTRAP.environment).toUpperCase()) {
+    throw new Error("PROJECTION_MANAGEMENT_ENVIRONMENT_MISMATCH");
+  }
+
+  const bootstrap = bootstrapHealth_();
+  if (!bootstrap.authorized || !bootstrap.configMatch) {
+    throw new Error("BOOTSTRAP_NOT_READY");
+  }
+
+  const activeEmail = Session.getActiveUser().getEmail() || Session.getEffectiveUser().getEmail();
+  if (!activeEmail || activeEmail.toLowerCase() !== BOOTSTRAP.ownerEmail.toLowerCase()) {
+    throw new Error("OWNER_ACCOUNT_MISMATCH");
+  }
+
+  return bootstrap;
+}
+
+/**
+ * Management-plane operation for Apps Script API execution only.
+ * Accepts a SHA-256 verifier, never the raw shared token, and always leaves
+ * projection disabled. Activation is intentionally a separate future gate.
+ */
+function provisionProjectionAuth(verifierSha256, expectedEnvironment) {
+  const bootstrap = projectionManagementContext_(expectedEnvironment);
+  if (typeof verifierSha256 !== "string" || !/^[a-f0-9]{64}$/.test(verifierSha256)) {
+    throw new Error("PROJECTION_VERIFIER_INVALID");
+  }
+
+  PropertiesService.getScriptProperties().setProperties({
+    VHDCHY_PROJECTION_SHARED_TOKEN_SHA256: verifierSha256,
+    VHDCHY_PROJECTION_ENABLED: "false",
+    VHDCHY_PROJECTION_AUTH_PROVISIONED_AT: new Date().toISOString()
+  }, false);
+
+  const projection = projectionHealth_();
+  if (!projection.authConfigured || projection.enabled) {
+    throw new Error("PROJECTION_AUTH_PROVISION_READBACK_FAILED");
+  }
+
+  return {
+    ok: true,
+    managementVersion: PROJECTION_MANAGEMENT_VERSION,
+    environment: BOOTSTRAP.environment,
+    bootstrap,
+    projection
+  };
+}
+
+function projectionManagementHealth(expectedEnvironment) {
+  const bootstrap = projectionManagementContext_(expectedEnvironment);
+  return {
+    ok: true,
+    managementVersion: PROJECTION_MANAGEMENT_VERSION,
+    environment: BOOTSTRAP.environment,
+    bootstrap,
+    projection: projectionHealth_()
   };
 }
 

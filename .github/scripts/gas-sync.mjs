@@ -1,4 +1,5 @@
 import fs from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 
 const required = [
   'APP_ENV',
@@ -70,12 +71,39 @@ function renderCode(source) {
 }
 
 function webAppUrl(deployment) {
-  const entry = (deployment.entryPoints || []).find(item => item?.webApp?.url);
+  const entry = (deployment.entryPoints || []).find(item => item?.entryPointType === 'WEB_APP' && item?.webApp?.url);
   return entry?.webApp?.url || null;
+}
+
+function executionApiAccess(deployment) {
+  const entry = (deployment.entryPoints || []).find(item => item?.entryPointType === 'EXECUTION_API');
+  return entry?.executionApi?.entryPointConfig?.access || null;
+}
+
+function sha256Hex(value) {
+  return createHash('sha256').update(value, 'utf8').digest('hex');
 }
 
 async function sleep(ms) {
   await new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function publicGatewayHealth(execUrl) {
+  const response = await fetch(execUrl, { redirect: 'follow', cache: 'no-store' });
+  const text = await response.text();
+  if (!response.ok) throw new Error(`Gateway health returned HTTP ${response.status}: ${text.slice(0, 500)}`);
+  return JSON.parse(text);
+}
+
+function assertGatewayIdentity(health) {
+  const ok =
+    health?.ok === true &&
+    health?.service === 'VHDCHY_GOOGLE_GATEWAY' &&
+    String(health?.environment || '').toUpperCase() === 'BETA' &&
+    health?.scriptId === process.env.GAS_SCRIPT_ID &&
+    health?.bootstrap?.authorized === true &&
+    health?.bootstrap?.configMatch === true;
+  if (!ok) throw new Error(`Gateway identity/bootstrap mismatch: ${JSON.stringify(health).slice(0, 1200)}`);
 }
 
 async function deployVersion(token, scriptId) {
@@ -123,41 +151,30 @@ async function deployVersion(token, scriptId) {
   if (!deployment.deploymentId) throw new Error('Deployment response did not contain deploymentId');
 
   let execUrl = webAppUrl(deployment);
-  for (let attempt = 0; !execUrl && attempt < 5; attempt += 1) {
+  let apiAccess = executionApiAccess(deployment);
+  for (let attempt = 0; (!execUrl || apiAccess !== 'MYSELF') && attempt < 8; attempt += 1) {
     await sleep(2000);
     deployment = await scriptApi(
       `projects/${scriptId}/deployments/${encodeURIComponent(deployment.deploymentId)}`,
       token
     );
     execUrl = webAppUrl(deployment);
+    apiAccess = executionApiAccess(deployment);
   }
   if (!execUrl) throw new Error('Deployment did not expose a Web App URL');
+  if (apiAccess !== 'MYSELF') throw new Error(`Execution API access mismatch: ${apiAccess || 'missing'}`);
 
   let lastError = 'unknown';
   for (let attempt = 1; attempt <= 10; attempt += 1) {
     try {
-      const response = await fetch(execUrl, { redirect: 'follow', cache: 'no-store' });
-      const text = await response.text();
-      if (!response.ok) {
-        lastError = `HTTP ${response.status}: ${text.slice(0, 500)}`;
-      } else {
-        const health = JSON.parse(text);
-        const ok =
-          health?.ok === true &&
-          health?.service === 'VHDCHY_GOOGLE_GATEWAY' &&
-          String(health?.environment || '').toUpperCase() === 'BETA' &&
-          health?.scriptId === process.env.GAS_SCRIPT_ID &&
-          health?.bootstrap?.authorized === true &&
-          health?.bootstrap?.configMatch === true;
-        if (ok) {
-          console.log(`GAS deployment PASS: version=${version.versionNumber}`);
-          console.log(`GAS_DEPLOYMENT_ID=${deployment.deploymentId}`);
-          console.log(`GAS_EXEC_URL=${execUrl}`);
-          console.log('GAS bootstrap verification PASS');
-          return;
-        }
-        lastError = `identity/bootstrap mismatch: ${JSON.stringify(health)}`;
-      }
+      const health = await publicGatewayHealth(execUrl);
+      assertGatewayIdentity(health);
+      console.log(`GAS deployment PASS: version=${version.versionNumber}`);
+      console.log(`GAS_DEPLOYMENT_ID=${deployment.deploymentId}`);
+      console.log(`GAS_EXEC_URL=${execUrl}`);
+      console.log('GAS bootstrap verification PASS');
+      console.log('GAS execution API access PASS: MYSELF');
+      return { execUrl, deploymentId: deployment.deploymentId, versionNumber: version.versionNumber };
     } catch (error) {
       lastError = error instanceof Error ? error.message : String(error);
     }
@@ -167,8 +184,67 @@ async function deployVersion(token, scriptId) {
   throw new Error(`Web App verification failed after retries: ${lastError}`);
 }
 
+async function runScriptFunction(token, scriptId, functionName, parameters = []) {
+  let lastError = 'unknown';
+  for (let attempt = 1; attempt <= 8; attempt += 1) {
+    try {
+      const operation = await scriptApi(`scripts/${scriptId}:run`, token, {
+        method: 'POST',
+        body: JSON.stringify({ function: functionName, parameters, devMode: false })
+      });
+      if (operation?.error) {
+        const message = operation.error?.message || 'Apps Script execution failed';
+        throw new Error(`${functionName} execution error: ${message}`);
+      }
+      if (!operation?.response || !Object.hasOwn(operation.response, 'result')) {
+        throw new Error(`${functionName} execution response did not contain result`);
+      }
+      return operation.response.result;
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : String(error);
+      if (attempt < 8) await sleep(2500);
+    }
+  }
+  throw new Error(`Apps Script execution ${functionName} failed after retries: ${lastError}`);
+}
+
+function assertProjectionManagementHealth(result) {
+  const ok =
+    result?.ok === true &&
+    result?.managementVersion === 'VHDCHY_PROJECTION_MANAGEMENT_V1' &&
+    String(result?.environment || '').toUpperCase() === 'BETA' &&
+    result?.bootstrap?.authorized === true &&
+    result?.bootstrap?.configMatch === true &&
+    result?.projection?.authConfigured === true &&
+    result?.projection?.enabled === false;
+  if (!ok) throw new Error(`Projection management health mismatch: ${JSON.stringify(result).slice(0, 1200)}`);
+}
+
+async function provisionProjectionAuth(token, scriptId, execUrl) {
+  const rawToken = process.env.VHDCHY_PROJECTION_SHARED_TOKEN || '';
+  if (rawToken.length < 32 || rawToken.length > 256) {
+    throw new Error('VHDCHY_PROJECTION_SHARED_TOKEN is missing or outside the approved length range');
+  }
+
+  const verifier = sha256Hex(rawToken);
+  const provisioned = await runScriptFunction(token, scriptId, 'provisionProjectionAuth', [verifier, 'BETA']);
+  assertProjectionManagementHealth(provisioned);
+
+  const readback = await runScriptFunction(token, scriptId, 'projectionManagementHealth', ['BETA']);
+  assertProjectionManagementHealth(readback);
+
+  const publicHealth = await publicGatewayHealth(execUrl);
+  assertGatewayIdentity(publicHealth);
+  if (publicHealth?.projection?.authConfigured !== true || publicHealth?.projection?.enabled !== false) {
+    throw new Error('Public Gateway projection readback must be authConfigured=true and enabled=false');
+  }
+
+  console.log('PROJECTION_AUTH_PROVISION_PASS authConfigured=true enabled=false');
+}
+
 const dispatch = JSON.parse(await fs.readFile('.github/dispatch/gas-beta-sync.json', 'utf8'));
-if (!['sync', 'deploy'].includes(dispatch.operation)) throw new Error(`Unsupported operation: ${dispatch.operation}`);
+const supportedOperations = new Set(['sync', 'deploy', 'provision_projection']);
+if (!supportedOperations.has(dispatch.operation)) throw new Error(`Unsupported operation: ${dispatch.operation}`);
 
 const codeTemplate = await fs.readFile('service/google-gateway/Code.gs', 'utf8');
 const manifestSource = await fs.readFile('service/google-gateway/appsscript.json', 'utf8');
@@ -181,6 +257,12 @@ const expectedScopes = new Set([
 const actualScopes = new Set(manifest.oauthScopes || []);
 if (actualScopes.size !== expectedScopes.size || [...expectedScopes].some(scope => !actualScopes.has(scope))) {
   throw new Error('Unexpected Google Gateway runtime scopes');
+}
+if (manifest?.webapp?.access !== 'ANYONE_ANONYMOUS' || manifest?.webapp?.executeAs !== 'USER_DEPLOYING') {
+  throw new Error('Unexpected Google Gateway Web App access contract');
+}
+if (manifest?.executionApi?.access !== 'MYSELF') {
+  throw new Error('Google Gateway executionApi must be restricted to MYSELF');
 }
 
 const code = renderCode(codeTemplate);
@@ -213,6 +295,12 @@ if (JSON.stringify(remoteManifest) !== JSON.stringify(manifest)) throw new Error
 
 console.log(`GAS sync PASS: ${process.env.APP_ENV} / ${process.env.GAS_SCRIPT_ID}`);
 
-if (dispatch.operation === 'deploy' || dispatch.deploy === true) {
-  await deployVersion(token, scriptId);
+let deployment = null;
+if (dispatch.operation === 'deploy' || dispatch.operation === 'provision_projection' || dispatch.deploy === true) {
+  deployment = await deployVersion(token, scriptId);
+}
+
+if (dispatch.operation === 'provision_projection') {
+  if (!deployment?.execUrl) throw new Error('Projection provisioning requires a verified deployment');
+  await provisionProjectionAuth(token, scriptId, deployment.execUrl);
 }
