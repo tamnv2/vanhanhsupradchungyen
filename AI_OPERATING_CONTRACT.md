@@ -2,6 +2,7 @@
 
 Status: ACTIVE
 Protocol: `AI_AUTHORITY_RESUME_V2`
+Execution model: `DECISIONS_V9.md` + `docs/EXECUTION_MODEL_V1.md`
 
 ## 1. Bootstrap
 
@@ -44,6 +45,8 @@ Use `CONTEXT_INDEX.md` to choose `FAST`, `FOCUSED` or `FULL` reads.
 
 Do not read historical logs, full changelog or unrelated lanes merely for completeness. Escalate context only when correctness requires it.
 
+Volatile state must be read from its V9 owner rather than copied values in unrelated documents.
+
 ## 4. Owner approval protocol and strict non-stop execution rule
 
 For a genuinely new material scope, analyze intent, risks, dependencies and parallelizable work, then use the Owner's current instruction as the approval boundary. Once the Owner has approved or directly instructed the scope, execute all available actions end-to-end without adding routine confirmation gates.
@@ -60,7 +63,7 @@ Any other condition — including ordinary implementation errors, failed CI, tra
 
 If one lane is blocked, continue every independent safe lane. Reaching one of the three stop conditions pauses only the affected dependency path by default. A whole-project/session halt is permitted only when one of those three conditions applies **and no independent safe ready work remains**.
 
-Do not ask Owner to reconfirm a choice already resolved by current instruction, `DECISIONS.md`, provider evidence or task-specific authority.
+Do not ask Owner to reconfirm a choice already resolved by current instruction, `DECISIONS*.md`, provider evidence or task-specific authority.
 
 A technical failure is not an Owner blocker unless safe diagnosis/correction reduces it to `OWNER_DECISION_REQUIRED`, `OWNER_PERMISSION_REQUIRED` or a proven `TOOL_CAPABILITY_LIMIT`. First attempt safe diagnosis, correction, alternate connected execution, GitHub-hosted CI, or read-only evidence collection.
 
@@ -102,7 +105,7 @@ Provider secrets must remain in provider/GitHub secret stores. Do not ask Owner 
 
 CI mutation workflows must be fail-closed: verify environment, account/resource identity and required preconditions before write; perform only the reviewed operation; verify the post-state before PASS; never accept arbitrary provider commands/SQL from an untrusted dispatch payload when a fixed operation can be encoded instead.
 
-## 6. Dependency and parallel execution
+## 6. Dependency graph, WIP and parallel execution
 
 Build and continuously maintain a dependency graph before and during substantial execution.
 
@@ -113,30 +116,40 @@ Classify work nodes where useful as:
 - `OWNER_INTERACTION`
 - `PHYSICAL`
 
-At every checkpoint or newly completed gate, immediately re-evaluate which remaining nodes are independent and start/execute them without waiting for unrelated nodes. Parallelism is a required operating behavior, not an optional optimization.
+V9 normal WIP limit is:
+
+1. one integrating acceptance vertical slice;
+2. at most one independent client/Web lane;
+3. at most one next-domain preparation lane.
+
+Blocked provider/physical gates are tracked but do not occupy WIP. Do not create many nominally active lanes that dilute delivery throughput.
 
 Execute independent nodes in parallel when tools and safety permit. Execute dependency-bound nodes in order. Serialize writes to the same file, branch/ref, database or provider resource.
 
 If one node fails, isolate the failure, preserve evidence, and continue all nodes that do not depend on it. A failed node becomes a global stop only if it creates `OWNER_PERMISSION_REQUIRED`, `OWNER_DECISION_REQUIRED` or a proven `TOOL_CAPABILITY_LIMIT` and no other actionable independent work remains.
 
-Do not block Service work merely because physical LAN testing is unavailable. Do not block projection design merely because auth runtime work is active. Do not block Web/API contract work merely because projection activation is pending when their shared dependencies are already stable. When Owner is at the company, independent LAN and Service work may proceed in parallel.
+Every normal technical task must close or unblock an acceptance item, or be a mandatory architecture/security/migration/provider/release prerequisite. Speculative generic infrastructure is deferred.
 
-## 7. Checkpoint and interruption protocol
+Do not block Service work merely because physical LAN testing is unavailable. Do not block Web/client work merely because a provider gate is pending when its contracts are stable.
+
+## 7. Checkpoint and governance reconciliation protocol
 
 `CHECKPOINT.md` is the short-lived resume ledger. It is overwritten with current truth; it is not a historical log.
 
-Checkpoint at these boundaries:
-- after Owner approval and before the first material mutation when practical;
-- after each important provider mutation, migration, deployment, version/promotion or irreversible/risky action;
-- after each important PASS/FAIL or newly discovered blocker;
-- before a long/risky operation;
-- periodically during long tool sessions, targeting roughly 10–15 minutes when elapsed time is observable;
-- by roughly 18–20 minutes when a tool/session budget appears near the known interruption window;
-- before voluntarily ending a long execution session.
+V9 intentionally reduces checkpoint/governance churn. Checkpoint/reconcile at meaningful boundaries:
 
-Because exact tool lifetime may not always be observable, milestone checkpoints are mandatory and more important than relying on a clock alone.
+- after a material Owner decision/approval changes persistent authority;
+- before/after important provider mutation, migration, deployment, version/promotion or irreversible/risky action;
+- after a vertical-slice or major security/provider acceptance PASS/FAIL;
+- when a newly discovered blocker would materially change resume order;
+- before interruption when unreconciled state could cause unsafe repeat/mutation;
+- before release/promotion boundaries.
 
-A checkpoint records at minimum: protocol version, active lanes, status/gate, approved scope or approval state, reconciled commit, completed items, in-progress/blocked items, parallel work still actionable, next actions, direct evidence references, and `do_not_repeat` safeguards.
+Do **not** require a checkpoint or separate governance PR merely because a helper/class/test/mechanic was added or because a low-risk internal commit passed.
+
+Long tool sessions should still preserve a safe resume point before interruption, but elapsed time alone is not a reason to create repetitive governance commits when current source/evidence remains reconstructable and no unsafe mutation would be repeated.
+
+A checkpoint records at minimum: protocol version, active WIP/slice status, reconciled commit, accepted evidence, in-progress/blocked items, next actions and `do_not_repeat` safeguards.
 
 Do not convert checkpointing into a pause. After writing a checkpoint, continue automatically unless `OWNER_PERMISSION_REQUIRED`, `OWNER_DECISION_REQUIRED` or a proven `TOOL_CAPABILITY_LIMIT` applies and no independent work remains.
 
@@ -145,10 +158,10 @@ Do not convert checkpointing into a pause. After writing a checkpoint, continue 
 On resume:
 1. read `AI_ENTRYPOINT.md`, `AI_OPERATING_CONTRACT.md`, `CHECKPOINT.md`, `CONTEXT_INDEX.md`;
 2. compare checkpoint reconciliation point with current `main` changes;
-3. read the minimum relevant authority/source/evidence;
+3. read all active decision layers and the minimum task-specific authority/source/evidence;
 4. verify uncertain previous outcomes before repeating any mutation;
-5. rebuild the dependency/parallel-work view;
-6. continue from all currently actionable safe nodes, not just a single serial next step.
+5. rebuild the V9 WIP/dependency view;
+6. continue from all currently actionable safe nodes within the WIP limit.
 
 If only unrelated documentation changed, use focused reconciliation. If relevant authority/source changed, reconcile before continuing. If the checkpoint cannot be reconciled safely, escalate to FULL for the affected lane while unrelated lanes continue.
 
@@ -158,6 +171,8 @@ Never repeat a migration/deploy/provider mutation merely because a previous sess
 
 A requested or automated action is not `PASS` merely because the command was issued. PASS requires observable evidence such as a successful API response, provider state, GitHub Actions result, remote health result, or other task-appropriate verification.
 
+Keep evidence levels distinct: design/contract, source pass, CI pass, live-provider pass, physical pass and acceptance. Do not silently promote one level into another.
+
 If outcome is uncertain, record `UNKNOWN`/`VERIFY_REQUIRED`, investigate it, and continue independent work. Do not turn uncertainty alone into an Owner stop.
 
 ## 10. Fail closed
@@ -166,25 +181,38 @@ Before provider changes, verify the current account, environment and exact resou
 
 Do not silently recreate provider resources, overwrite unknown databases, broaden permissions, promote STABLE, or infer current remote state from old history.
 
-Fail-closed applies to the affected mutation, not automatically to all project progress. Continue independent safe lanes.
+Fail closed applies to the affected mutation, not automatically to all project progress. Continue independent safe lanes.
 
-## 11. Repository discipline
+## 11. Repository discipline and single-source ownership
 
 - `main` is the active source/authority baseline.
 - `beta` and `stable`, when used, are deployment pointers rather than scratch branches.
 - Move/promote STABLE only after BETA PASS and explicit Owner approval.
-- `CHECKPOINT.md` holds short-lived execution/resume state.
-- `CURRENT_STATE.md` holds concise current system truth.
-- `NEXT_ACTIONS.md` holds remaining ordered/parallel gates and work.
-- `SERVICE_AUTHORITY.md` holds canonical identities/resource authority.
-- `DECISIONS.md` holds active architectural/operational decisions.
+- `DECISIONS*.md` hold persistent Owner/product/execution decisions.
+- `PROJECT_SCOPE.md` holds stable scope, not current percentage/provider liveness.
+- `SERVICE_AUTHORITY.md` holds provider/resource identities and stable boundaries, not volatile PASS/FAIL state.
+- `CURRENT_STATE.md` holds volatile operational/product/provider evidence.
+- `NEXT_ACTIONS.md` holds current WIP/READY/BLOCKED queue.
+- `docs/PROGRESS_TRACKING_V2.md` exclusively owns current exact/displayed percentage and evidence credits.
+- `CHECKPOINT.md` holds short-lived execution/resume reconciliation.
 - `CHANGELOG.md` holds history and is not a default FAST read.
-- Avoid duplicating the same detailed ledger across files.
+- Avoid duplicating the same volatile ledger across files.
 
-## 12. Source restoration and history
+## 12. CI strategy
+
+Use V9 layered CI:
+
+- Tier 1 fast affected syntax/unit/contract checks;
+- Tier 2 affected vertical-slice/component/harness checks;
+- Tier 3 clean baseline plus affected product foundations before merge;
+- Tier 4 affected main confirmation after merge.
+
+Reuse existing focused workflows/harnesses. Do not add or execute redundant full-product/provider work when affected-scope evidence already covers the change. High-risk provider/migration/security operations keep dedicated guarded workflows.
+
+## 13. Source restoration and history
 
 `backup/pre-zero-20260912` is evidence/reference, not current authority. Restore a component only after reviewing it against current scope and correcting stale assumptions.
 
-## 13. Security
+## 14. Security
 
 Sensitive access/signing material stays outside source history. Repository documentation records only identifiers, ownership, secret names where necessary, and verification state; never secret values.
