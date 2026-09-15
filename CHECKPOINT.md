@@ -1,10 +1,10 @@
 # CHECKPOINT — VHDCHY
 
-checkpoint_version: 57
+checkpoint_version: 58
 protocol: AI_AUTHORITY_RESUME_V2
 status: EXECUTING_PRODUCT_V7_BETA
-reconciled_through_commit: b839b8a74daa8fb677f24c6be449ba1f2d86fc21
 action_mode: AUTONOMOUS_PARALLEL
+reconciled_through_commit: 12b9d7904106289af5b611d921e336e464022e9d
 active_lanes: REPO_GOVERNANCE / SHARED_DOMAIN / CLOUD_SERVICE / LAN_FULL_SERVICE / AUTH / GOOGLE_SYNC / WEB_ONLINE_LAN / ANDROID_PDA / RECONCILIATION / STABLE_PREPARATION
 paused_lanes: PHYSICAL_CORPORATE_LAN_REGRESSION
 
@@ -21,94 +21,60 @@ context_index_ref: CONTEXT_INDEX.md
 
 ## Progress
 
-- Evidence-weighted total: **56.2% exact / 56% displayed**.
-- Phase 6 LAN continuity/offline/reconcile: **65%**.
-- Android endpoint acquisition is now source/CI PASS, but no weighted phase threshold is moved: Android business workflows, session/scanner/lifecycle mechanics, final UI and physical PDA acceptance remain open.
+- Evidence-weighted total remains **56.2% exact / 56% displayed**.
+- Phase 6 LAN continuity/offline/reconcile remains **65%**.
+- Android endpoint acquisition is accepted source/CI PASS; session persistence is IN PROGRESS and unverified until PR CI/build evidence succeeds.
 
 ## Fresh-chat resume anchor
 
 1. Live-fetch `AI_ENTRYPOINT.md` from GitHub `main` and execute its bootstrap.
-2. Compare current main HEAD with this checkpoint reconciliation point.
-3. Read changed authority/current-state/source paths after `b839b8a74daa8fb677f24c6be449ba1f2d86fc21` before mutation.
-4. Follow current `NEXT_ACTIONS.md`; primary ready source lane is Android session persistence/expiry unless later main evidence supersedes it.
+2. Compare main HEAD against this checkpoint reconciliation point.
+3. Read changed authority/current-state/source paths after `12b9d7904106289af5b611d921e336e464022e9d` before mutation.
+4. If the Android session-persistence PR remains open, continue it; otherwise follow current `NEXT_ACTIONS.md`.
 
 Memory/chat summaries are NON_AUTHORITY.
 
 ## Latest accepted main evidence
 
-### Android endpoint acquisition — MERGED SOURCE/CI PASS
-
-PR #32 merged at `00ac446a6bb3d93f1c69c1bce8ab2571ec5f11a3`.
-
-- PR clean baseline `34931008972`: SUCCESS;
-- PR Android foundation `34931008973`: SUCCESS;
-- endpoint harness: `ANDROID_ENDPOINT_ACQUISITION_PASS checks=24`;
-- reconnect harness: `ANDROID_RECONNECT_BEHAVIOR_PASS checks=7`;
-- transport harness: `ANDROID_TRANSPORT_BEHAVIOR_PASS checks=52`;
-- post-merge clean baseline `34933290109`: SUCCESS;
-- post-merge product foundations `34933290105`: Cloud/Web/Android/LAN SUCCESS.
-
-Accepted semantics:
-
-- `cached healthy endpoint -> LAN discovery -> manual recovery`;
-- HTTPS-only and health-probed candidates;
-- cache-first anti-flapping;
-- stale/invalid cache safe fallback;
-- invalid discovery discarded;
-- manual recovery last and fail-closed for insecure/invalid endpoints;
-- probe errors are unhealthy;
-- no fabricated endpoint;
-- no automatic Cloud/LAN authority switch.
-
-`.github/workflows/android-pr-foundation.yml` now gives Android-changing PRs a pre-merge APK/harness gate.
-
-### V6 email OTP source — MERGED SOURCE/CI PASS / PROVIDER GATED
-
-PR #30 merged at `c45b9fca28b189dc4aa7e0b42ac7db9307c3613a`.
-
-- PR clean baseline `34930120980`: SUCCESS;
-- post-merge clean baseline `34930171765`: SUCCESS;
-- product foundations `34930171683`: Cloud/Web/Android/LAN SUCCESS.
-
-Real provider delivery/request/use E2E remains gated by reviewed runtime provider/bindings/secrets. TOTP-enabled ROOT remains fail-closed because current authority does not define enough verifier implementation detail to invent one safely.
-
-### Retained accepted evidence
-
+- Governance PR #33 merged at `54d623ad50be7f930255d41a618f6da7cecf6298`; checkpoint v57/current state reflect Android endpoint acquisition PASS.
+- Issue #8 is synchronized to main `54d623ad50be7f930255d41a618f6da7cecf6298`.
+- Android endpoint PR #32 merged at `00ac446a6bb3d93f1c69c1bce8ab2571ec5f11a3`; pre-merge clean `34931008972`, Android foundation `34931008973`, post-merge clean `34933290109`, product foundations `34933290105`: SUCCESS.
 - Projection live E2E `34927511443`, cleaned deploy `34927869845`, observer `34927996370`: SUCCESS.
-- Web employee-create PR #19 merged; clean baseline `34928090928`, product foundations `34928090885`: SUCCESS.
-- LAN operational refresh/rebase integration `34851773729`, clean baseline `34851772963`: SUCCESS.
+- V6 email-OTP PR #30 merged/source-CI PASS; live provider delivery remains gated.
 
-## Current primary READY — Android session persistence/expiry
+## Active Android session persistence lane — IN PROGRESS / NOT YET PASS
 
-Current `PdaSession` is in-memory only.
+Branch: `ai/android-session-persistence-20260915`, based on accepted/reconciled main `54d623ad50be7f930255d41a618f6da7cecf6298`.
 
-Approved implementation boundary from current architecture/security rules:
+Implemented through `12b9d7904106289af5b611d921e336e464022e9d`:
 
-- secure local credential-verification/storage format is an implementation-security decision;
-- raw passwords, email OTPs, TOTP secrets/codes and provider credentials must never be persisted;
-- persisted bearer session state may contain only what is required to restore the same authenticated context: bearer token, expiry and original runtime mode;
-- encrypted-at-rest persistence uses Android Keystore-backed AES-GCM and app-private storage for ciphertext/IV/version metadata;
-- restore only before expiry and with structurally valid state;
-- expiry/corruption/key invalidation/decrypt failure/unknown runtime clears persisted session and fails closed;
-- restore must not perform endpoint discovery or switch Cloud/LAN authority.
+- `PdaSession` now has a persistence-safe in-memory `Snapshot` carrying only bearer token, expiry and original runtime mode;
+- snapshot is allowed only for a currently usable session;
+- snapshot `toString()` redacts the bearer token;
+- restore clears any existing in-memory session first, rejects null/expired/invalid snapshots and preserves the original runtime mode only on valid restore;
+- exact expiry boundary is rejected (`expiresAt <= now`);
+- transport harness now tests restore-before-expiry, exact-expiry rejection, prior-session clearing on failed restore, null snapshot behavior, runtime preservation and snapshot redaction;
+- Android-specific `AndroidPdaSessionStore` persists only encrypted bearer-session evidence using Android Keystore AES-GCM;
+- app-private `SharedPreferences` stores only format version, IV and ciphertext;
+- save removes any previous persisted session first so a failed replacement cannot leave an older bearer blob behind;
+- restore never creates a replacement key when the prior Keystore key is missing;
+- missing key, malformed format, corruption, decrypt failure, unknown runtime mode, invalid token or expiry causes persisted state + target session to clear and fail closed;
+- passwords, email OTPs, TOTP secrets/codes and provider credentials are outside the store contract;
+- Android manifest already has `android:allowBackup="false"`, so the private ciphertext prefs are not exported through app backup;
+- restore has no endpoint discovery/fallback logic and cannot switch Cloud/LAN authority.
 
-Next implementation sequence:
+This source has not yet passed clean baseline or Android PR foundation build. Do not report it PASS before both succeed.
 
-1. branch from the accepted/reconciled main;
-2. extend `PdaSession` with persistence-safe snapshot/restore behavior and pure-Java harness vectors;
-3. add Android-specific Keystore persistence adapter outside the pure transport harness compile set;
-4. do not add final UI work;
-5. checkpoint last;
-6. require clean baseline + Android PR foundation PASS before exact-head merge;
-7. run post-merge evidence and reconcile governance.
+## Current READY queue
 
-## Following READY queue
-
-- scanner input -> domain command handoff without direct DB writes;
-- reconnect/resync/network lifecycle;
-- HTTPS/trust fail-closed behavior;
-- foreground/background recovery/stale-session handling;
-- independent safe Web/integration work where current contracts are sufficient.
+1. Open a focused PR from `ai/android-session-persistence-20260915`.
+2. Require clean baseline + Android PR foundation SUCCESS on the exact head.
+3. Diagnose/fix source/harness/Android compile failures until green.
+4. Merge only the exact tested head if clean.
+5. Verify post-merge clean baseline + product foundations on main.
+6. Reconcile `CURRENT_STATE.md`, `NEXT_ACTIONS.md`, `CHECKPOINT.md`, Issue #8.
+7. Continue Android scanner command handoff, then reconnect/resync/network lifecycle, HTTPS/trust and foreground/background recovery as dependencies permit.
+8. Continue independent safe Web/integration work where authority is sufficient; keep provider/physical/STABLE/portrait gates isolated.
 
 ## Current blockers / gates
 
@@ -122,4 +88,4 @@ Next implementation sequence:
 ## do_not_repeat
 
 do_not_repeat:
-Do not treat memory as authority. Do not replay migrations 0009 or 0014. Do not expose or infer secret values. Do not invent TOTP verifier parameters or OTP failure-attempt limits. Do not deploy/claim OTP provider PASS without evidence. Do not auto-switch Android runtime authority. Do not accept non-HTTPS LAN endpoints. Do not persist raw password/OTP/TOTP/provider secrets. Do not restore expired/corrupt session state. Do not invent Pick Pack UI details. Do not inflate progress without weighted acceptance evidence. Do not promote STABLE without explicit Owner approval. Do not voluntarily final while approved READY work remains; run `PRE_FINAL_TERMINATION_GUARD` first.
+Do not treat memory as authority. Do not replay migrations 0009 or 0014. Do not expose or infer secret values. Do not invent TOTP verifier parameters or OTP failure-attempt limits. Do not persist raw password/OTP/TOTP/provider secrets. Do not generate a new key during restore when the original session key is unavailable. Do not restore expired/corrupt session state. Do not auto-switch Android runtime authority. Do not accept non-HTTPS LAN endpoints. Do not call the session persistence slice PASS before clean baseline + Android PR foundation evidence. Do not invent Pick Pack UI details. Do not inflate progress without weighted acceptance evidence. Do not promote STABLE without explicit Owner approval. Do not voluntarily final while approved READY work remains; run `PRE_FINAL_TERMINATION_GUARD` first.
