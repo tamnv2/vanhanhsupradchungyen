@@ -43,6 +43,9 @@ const requiredEdgeIngestColumns = [
 const bindingRequirements = new Map([
   ['DB', new Set(['d1'])],
   ['APP_ENV', new Set(['plain_text'])],
+  ['GAS_EXEC_URL', new Set(['plain_text'])],
+  ['PROJECTION_DELIVERY_ENABLED', new Set(['plain_text'])],
+  ['VHDCHY_PROJECTION_SHARED_TOKEN', new Set(['secret_text'])],
   ['LAN_RECONCILIATION_KEY_ID', new Set(['plain_text', 'secret_text'])],
   ['LAN_RECONCILIATION_SHARED_SECRET', new Set(['secret_text'])]
 ]);
@@ -175,12 +178,13 @@ function assertWorkerBindings(bindings, onlyName = '') {
       throw new Error(`WORKER_REQUIRED_BINDING_TYPE_MISMATCH=${name}:${actualType}`);
     }
   }
-  console.log(onlyName ? `WORKER_BINDING_PASS=${onlyName}` : 'WORKER_RECONCILIATION_BINDINGS_PASS');
+  console.log(onlyName ? `WORKER_BINDING_PASS=${onlyName}` : 'WORKER_RUNTIME_BINDINGS_PASS');
 }
 
 async function inspectWorkerReadOnly(onlyBinding = '') {
   const settingsPayload = await cf(`/accounts/${encodeURIComponent(accountId)}/workers/scripts/${encodeURIComponent(expectedWorker)}/settings`);
-  const bindings = (Array.isArray(settingsPayload?.result?.bindings) ? settingsPayload.result.bindings : [])
+  const rawBindings = Array.isArray(settingsPayload?.result?.bindings) ? settingsPayload.result.bindings : [];
+  const bindings = rawBindings
     .map(item => ({ name: item?.name || '', type: item?.type || '' }))
     .filter(item => item.name && item.type)
     .sort((a, b) => a.name.localeCompare(b.name));
@@ -188,6 +192,17 @@ async function inspectWorkerReadOnly(onlyBinding = '') {
   assertWorkerBindings(bindings, onlyBinding);
 
   if (onlyBinding) return;
+
+  const projectionGate = rawBindings.find(item => item?.name === 'PROJECTION_DELIVERY_ENABLED');
+  const projectionGateValue = projectionGate?.type === 'plain_text' ? String(projectionGate?.text || '') : '';
+  console.log(`WORKER_PROJECTION_DELIVERY_ENABLED=${projectionGateValue || '(missing)'}`);
+
+  const schedulesPayload = await cf(`/accounts/${encodeURIComponent(accountId)}/workers/scripts/${encodeURIComponent(expectedWorker)}/schedules`);
+  const schedules = (Array.isArray(schedulesPayload?.result?.schedules) ? schedulesPayload.result.schedules : [])
+    .map(item => String(item?.cron || ''))
+    .filter(Boolean)
+    .sort();
+  console.log(`WORKER_CRON_SCHEDULES=${JSON.stringify(schedules)}`);
 
   const accountSubdomain = await cf(`/accounts/${encodeURIComponent(accountId)}/workers/subdomain`);
   const workerSubdomain = await cf(`/accounts/${encodeURIComponent(accountId)}/workers/scripts/${encodeURIComponent(expectedWorker)}/subdomain`);
