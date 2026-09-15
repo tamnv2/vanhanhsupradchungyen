@@ -4,18 +4,35 @@ import { PROJECTION_SCHEDULE_LIMIT, runProjectionSchedule } from '../src/worker-
 
 const token = 'p'.repeat(48);
 
-test('projection schedule fails closed when runtime dependencies are missing', async () => {
-  const noDb = await runProjectionSchedule({});
+test('projection schedule is a no-op while delivery activation gate is false', async () => {
+  let calls = 0;
+  const result = await runProjectionSchedule({
+    DB: {},
+    GAS_EXEC_URL: 'https://example.test/exec',
+    VHDCHY_PROJECTION_SHARED_TOKEN: token,
+    PROJECTION_DELIVERY_ENABLED: 'false'
+  }, {
+    processor: async () => { calls += 1; throw new Error('SHOULD_NOT_RUN'); }
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.code, 'PROJECTION_DELIVERY_DISABLED');
+  assert.equal(result.loaded, 0);
+  assert.equal(calls, 0);
+});
+
+test('projection schedule fails closed when enabled runtime dependencies are missing', async () => {
+  const enabled = { PROJECTION_DELIVERY_ENABLED: 'true' };
+  const noDb = await runProjectionSchedule(enabled);
   assert.equal(noDb.code, 'PROJECTION_DB_UNAVAILABLE');
 
-  const noGateway = await runProjectionSchedule({ DB: {} });
+  const noGateway = await runProjectionSchedule({ ...enabled, DB: {} });
   assert.equal(noGateway.code, 'PROJECTION_GATEWAY_URL_NOT_CONFIGURED');
 
-  const noToken = await runProjectionSchedule({ DB: {}, GAS_EXEC_URL: 'https://example.test/exec' });
+  const noToken = await runProjectionSchedule({ ...enabled, DB: {}, GAS_EXEC_URL: 'https://example.test/exec' });
   assert.equal(noToken.code, 'PROJECTION_SHARED_TOKEN_NOT_CONFIGURED');
 });
 
-test('projection schedule passes only bounded non-secret runtime config to processor', async () => {
+test('projection schedule passes only bounded non-secret runtime config to processor when enabled', async () => {
   let receivedDb = null;
   let received = null;
   const db = { marker: 'db' };
@@ -23,6 +40,7 @@ test('projection schedule passes only bounded non-secret runtime config to proce
     DB: db,
     GAS_EXEC_URL: 'https://script.google.com/macros/s/example/exec',
     VHDCHY_PROJECTION_SHARED_TOKEN: token,
+    PROJECTION_DELIVERY_ENABLED: 'true',
     APP_ENV: 'beta'
   }, {
     nowMs: Date.parse('2026-09-15T01:00:00Z'),
