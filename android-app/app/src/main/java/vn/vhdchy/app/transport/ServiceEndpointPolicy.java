@@ -9,8 +9,8 @@ public final class ServiceEndpointPolicy {
     private final URI lanBase;
 
     public ServiceEndpointPolicy(String cloudBase, String lanBase) {
-        this.cloudBase = validateBase(cloudBase, "CLOUD_ENDPOINT_INVALID");
-        this.lanBase = validateBase(lanBase, "LAN_ENDPOINT_INVALID");
+        this.cloudBase = normalizeHttpsBase(cloudBase, "CLOUD_ENDPOINT_INVALID");
+        this.lanBase = normalizeHttpsBase(lanBase, "LAN_ENDPOINT_INVALID");
     }
 
     public URI select(RuntimeMode mode) {
@@ -26,7 +26,7 @@ public final class ServiceEndpointPolicy {
         return URI.create(base.getScheme() + "://" + base.getAuthority() + apiPath);
     }
 
-    private static URI validateBase(String value, String code) {
+    static URI normalizeHttpsBase(String value, String code) {
         if (value == null || value.isBlank()) throw new IllegalArgumentException(code);
         URI uri;
         try {
