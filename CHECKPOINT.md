@@ -1,9 +1,9 @@
 # CHECKPOINT — VHDCHY
 
-checkpoint_version: 54
+checkpoint_version: 55
 protocol: AI_AUTHORITY_RESUME_V2
 status: EXECUTING_PRODUCT_V7_BETA
-reconciled_through_commit: 75b4c467ff4bfe41e883beefe405521f32fd1567
+reconciled_through_commit: 9f2f7682f43215186b2b21c67683299b57be1ecc
 action_mode: AUTONOMOUS_PARALLEL
 active_lanes: REPO_GOVERNANCE / SHARED_DOMAIN / CLOUD_SERVICE / LAN_FULL_SERVICE / AUTH / GOOGLE_SYNC / WEB_ONLINE_LAN / ANDROID_PDA / RECONCILIATION / STABLE_PREPARATION
 paused_lanes: PHYSICAL_CORPORATE_LAN_REGRESSION
@@ -23,67 +23,106 @@ context_index_ref: CONTEXT_INDEX.md
 
 - Evidence-weighted total: **56.2% exact / 56% displayed**.
 - Phase 6 LAN continuity/offline/reconcile: **65%**.
-- No progress increase is claimed from the current auth source slice before CI/provider/acceptance evidence.
+- No weighted percentage increase is claimed from governance or source-only Android work.
 
 ## Fresh-chat resume anchor
 
 1. Live-fetch `AI_ENTRYPOINT.md` from GitHub `main` and execute its bootstrap.
 2. Compare main HEAD with this checkpoint reconciliation point.
-3. Read changed authority/current-state/source paths after `75b4c467ff4bfe41e883beefe405521f32fd1567` before mutation.
-4. Continue the V6 email-OTP HTTP slice if it remains open; otherwise follow current `NEXT_ACTIONS.md`.
+3. Read changed authority/current-state/source paths after `9f2f7682f43215186b2b21c67683299b57be1ecc` before mutation.
+4. Follow current `NEXT_ACTIONS.md`; primary ready source lane is Android endpoint acquisition unless later main evidence supersedes it.
 
 Memory/chat summaries are NON_AUTHORITY.
 
 ## Latest accepted main evidence
 
-- Governance PR #29 merged at `e46325d762ce792200e574aace824bb865b9c94b`; post-merge clean baseline `34929584409`: SUCCESS.
-- Projection live E2E `34927511443`: SUCCESS; cleaned BETA deploy `34927869845`: SUCCESS; post-deploy Cron observer `34927996370`: SUCCESS.
-- Web employee-create PR #19 merged at `db746a71ed80dafd288218f599ab3e990f87e439`; post-merge clean baseline `34928090928` and product foundations `34928090885`: SUCCESS.
-- Issue #8 has been synchronized to main `e46325d762ce792200e574aace824bb865b9c94b`.
+### Projection — LIVE BETA PASS
 
-## Active AUTH V6 source slice — IN PROGRESS / NOT YET PASS
+- isolated projection live E2E `34927511443`: SUCCESS;
+- cleaned BETA deploy `34927869845`: SUCCESS;
+- post-deploy observer `34927996370`: SUCCESS;
+- active Worker handlers `fetch` + `scheduled`; Cron exactly `*/2 * * * *`.
 
-Branch: `ai/auth-v6-email-otp-http-20260915`.
+### Web employee-create — MERGED PASS
 
-Authority correction already made in `NEXT_ACTIONS.md`:
+- PR #19 merged at `db746a71ed80dafd288218f599ab3e990f87e439`;
+- post-merge clean baseline `34928090928`: SUCCESS;
+- product foundations `34928090885`: Cloud/Web/Android/LAN SUCCESS.
 
-- do not invent an OTP failure-attempt limit; V6 does not define one;
-- ROOT TOTP is optional, but when an active verified TOTP is enrolled, ROOT authentication must satisfy TOTP in addition to the email OTP.
+### V6 email OTP source — MERGED SOURCE/CI PASS
 
-Implemented on the branch through `75b4c467ff4bfe41e883beefe405521f32fd1567`:
+PR #30 merged at `c45b9fca28b189dc4aa7e0b42ac7db9307c3613a`.
 
-- new `service/worker/src/email-otp-auth.js` composition service;
-- normal-account recovery uses the registered `auth_users.email`;
-- ROOT actual recovery email remains runtime-only and must hash-match an ACTIVE `root_recovery_allowlist` entry before issuance;
-- fixed OTP request/use HTTP paths are defined;
-- runtime email delivery is an injected binding and fails closed when absent;
-- OTP remains four digits, 5-minute validity, 5-minute resend cooldown and single-use through the existing V6 OTP core;
-- normal OTP login creates `MUST_CHANGE_PASSWORD` session state;
-- ROOT without active TOTP may use email OTP alone;
-- ROOT with active verified TOTP returns `ROOT_TOTP_REQUIRED` before OTP consumption unless trusted server-side TOTP verification has already succeeded;
-- HTTP request body cannot assert its own TOTP success;
-- deploy module manifest packages `email-otp-auth.js` but does not provision OTP secrets/provider bindings;
-- new unit tests cover normal request, ROOT allowlist, normal/ROOT use, TOTP gate and delivery adapter behavior.
+- PR clean baseline `34930120980`: SUCCESS;
+- post-merge clean baseline `34930171765`: SUCCESS;
+- post-merge product foundations `34930171683`: Cloud/Web/Android/LAN SUCCESS.
 
-This branch has not yet passed CI and has not been merged or deployed. Real email provider delivery remains a separate gate.
+Accepted source behavior:
+
+- fixed email-OTP request/use Cloud HTTP paths;
+- normal recovery uses registered email and creates restricted `MUST_CHANGE_PASSWORD` session;
+- ROOT runtime-only recovery email must hash-match active allowlist;
+- 4-digit, 5-minute validity/cooldown, single-use lifecycle retained;
+- runtime delivery binding is injected and fail-closed when missing;
+- active verified ROOT TOTP blocks completion before OTP consumption unless trusted server-side TOTP verification has already satisfied the factor;
+- HTTP clients cannot self-assert TOTP success.
+
+Not live-PASS:
+
+- auth slice was not deployed to BETA because approved OTP runtime provider/bindings/secrets are not provisioned;
+- real ROOT/normal email request/delivery/use E2E remains pending;
+- current repo has no trusted TOTP verifier and authority does not lock enough operational verifier detail to invent one safely.
+
+## Active Android source lane — IN PROGRESS / UNVERIFIED
+
+Branch: `ai/android-endpoint-acquisition-20260915`, based on main `c45b9fca28b189dc4aa7e0b42ac7db9307c3613a`.
+
+Current main Android transport foundation already has:
+
+- HTTPS-only Cloud/LAN endpoint normalization;
+- in-memory session expiry;
+- bounded idempotent retry/backoff;
+- same-runtime reconnect decisions;
+- scanner normalization;
+- authenticated request planning.
+
+Phase 6.2 locks reusable ordering:
+
+`cached healthy endpoint -> LAN discovery -> manual recovery`
+
+Unverified branch work currently adds:
+
+- package-private shared HTTPS endpoint normalization;
+- pure-Java `LanEndpointAcquisitionPolicy`;
+- cache-first health-probed selection to avoid discovery flapping;
+- invalid/unhealthy cache fallback to discovery;
+- untrusted invalid discovery candidate rejection;
+- manual endpoint only after cache/discovery fail;
+- no Cloud authority fallback input;
+- no fabricated selection when every health probe fails;
+- `EndpointAcquisitionHarness` wired into Android `preBuild`.
+
+This Android branch has not yet been reconciled to the governance merge, opened as a PR or validated by CI. Do not report it PASS yet.
 
 ## Current READY queue
 
-1. Open/auth PR from `ai/auth-v6-email-otp-http-20260915`, run clean baseline, diagnose/fix until green, then merge exact tested head if clean.
-2. Verify post-merge main CI/product foundations as triggered.
-3. Reconcile auth state/governance and identify the next provider-independent V6 gap, including the trusted TOTP verification path.
-4. Continue Android endpoint/session/scanner/retry/HTTPS/reconnect mechanics in parallel where independent.
-5. Keep physical/STABLE/portrait gates isolated.
+1. Merge this governance reconciliation after clean-baseline PASS.
+2. Reconcile `ai/android-endpoint-acquisition-20260915` onto the resulting main without losing its intended Android-only diff.
+3. Update checkpoint last on the Android branch, open PR and require clean baseline + Android product foundation PASS.
+4. Merge exact tested Android head if clean; run post-merge evidence and reconcile governance.
+5. Continue next Android mechanics (session persistence/expiry, scanner command handoff, reconnect/resync, HTTPS/trust, lifecycle) where authority is sufficient.
+6. Keep OTP provider/TOTP-verifier, physical, STABLE and portrait gates isolated.
 
 ## Current blockers / gates
 
-- Real ROOT/normal email-OTP delivery E2E requires approved runtime delivery provider/bindings and secrets; do not fake provider PASS.
-- Physical company-network/PDA/public-trust and >=60-minute Internet-cut acceptance require the physical environment.
-- Android/PDA final visual fidelity requires authorized Pick Pack reference evidence.
-- Portrait replacement semantics remain `OWNER_DECISION_REQUIRED`.
+- real ROOT/normal email-OTP provider delivery/request/use E2E requires reviewed runtime provider/bindings/secrets;
+- ROOT TOTP verifier crypto/runtime detail is not sufficiently locked to invent safely;
+- physical company-network/PDA/public-trust and >=60-minute Internet-cut acceptance require physical environment;
+- final Android/PDA visual fidelity requires authorized Pick Pack reference evidence;
+- portrait replacement remains `OWNER_DECISION_REQUIRED`;
 - STABLE promotion requires explicit Owner approval after mandatory BETA acceptance.
 
 ## do_not_repeat
 
 do_not_repeat:
-Do not treat memory as authority. Do not replay migrations 0009 or 0014. Do not expose or infer secret values. Do not invent OTP failure-attempt limits. Do not treat TOTP as an alternative to email OTP when TOTP is actively enrolled for ROOT. Do not let a client-supplied flag bypass TOTP verification. Do not provision or deploy unverified OTP provider secrets as part of this source-only slice. Do not reopen the solved Cron incident without new failing evidence. Do not inflate progress without acceptance-backed weighted evidence. Do not invent Pick Pack UI details. Do not promote STABLE without explicit Owner approval. Do not voluntarily final while approved READY work remains; run `PRE_FINAL_TERMINATION_GUARD` first.
+Do not treat memory as authority. Do not replay migrations 0009 or 0014. Do not expose or infer secret values. Do not invent OTP failure-attempt limits. Do not treat TOTP as an alternative to email OTP when active. Do not invent TOTP algorithm/digits/window/secret resolution without authority. Do not deploy/claim OTP provider PASS without provider evidence. Do not reopen solved Cron incident without new failure evidence. Do not count unverified Android branch work as PASS. Do not invent Pick Pack UI details. Do not inflate progress without weighted acceptance evidence. Do not promote STABLE without explicit Owner approval. Do not voluntarily final while approved READY work remains; run `PRE_FINAL_TERMINATION_GUARD` first.

@@ -15,60 +15,82 @@ Do not continue the former Cron root-cause investigation unless new evidence reo
 Accepted evidence:
 
 - isolated live projection E2E `34927511443`: SUCCESS;
-- real canonical D1 marker/outbox -> ACK -> Google Sheet readback -> replay dedupe exactly one logical row -> full cleanup: PASS;
+- canonical D1 marker/outbox -> ACK -> real Google Sheet readback -> replay dedupe exactly one logical row -> full cleanup: PASS;
 - cleaned Worker deploy `34927869845`: SUCCESS;
-- live BETA build `a501e4b7ae551cf1cd86f15786f4ca994032b522`, `BUSINESS_CORE_V3`, authority D1, Google not degraded;
 - post-deploy observer `34927996370`: SUCCESS;
-- active Cloudflare version 14 serves 100% with handlers `fetch` + `scheduled`;
-- live Cron is exactly `*/2 * * * *`;
-- outbox/pending count is 0;
-- temporary scheduler-probe code/config has been removed.
+- active Cloudflare version exports `fetch` + `scheduled`, Cron is exactly `*/2 * * * *`, outbox/pending count is 0.
 
-The historical D1 `projection_scheduler_probe` row was written by the prior diagnostic build and is not evidence the current build still writes diagnostics.
+## B — Web Slice-1 — FIRST AUTHENTICATED EMPLOYEE CREATE MERGED PASS
 
-## B — Web Slice-1 — FIRST AUTHENTICATED EMPLOYEE CREATE MERGED
+PR #19 is merged at `db746a71ed80dafd288218f599ab3e990f87e439`.
 
-PR #19 is merged at main commit `db746a71ed80dafd288218f599ab3e990f87e439`.
+- PR clean baseline `34928060646`: SUCCESS;
+- post-merge clean baseline `34928090928`: SUCCESS;
+- product foundations `34928090885`: Cloud/Web/Android/LAN SUCCESS.
+
+Continue Web work only where current state/version contracts support safe UX. Do not invent a read/version model merely to expose update/status/MNV/attendance actions.
+
+## C — Account/security V6 email OTP source slice — MERGED PASS / PROVIDER LIVE GATED
+
+PR #30 is merged at `c45b9fca28b189dc4aa7e0b42ac7db9307c3613a`.
 
 Evidence:
 
-- reconciled against latest main with only 3 intended Web files differing;
-- PR clean baseline `34928060646`: SUCCESS;
-- post-merge clean baseline `34928090928`: SUCCESS;
-- post-merge product foundations `34928090885`: Cloud/Web/Android/LAN SUCCESS.
+- PR clean baseline `34930120980`: SUCCESS;
+- post-merge clean baseline `34930171765`: SUCCESS;
+- post-merge product foundations `34930171683`: Cloud/Web/Android/LAN SUCCESS.
 
-Continue Web work only where current state/version contracts support safe UX. Do not expose update/status/MNV/attendance mutations by inventing a read/version model.
+Current source now provides:
 
-## C — NEXT READY: Account/security V6 source/contract work
+- fixed Cloud HTTP email-OTP request/use paths;
+- normal-account registered-email recovery -> restricted `MUST_CHANGE_PASSWORD` session;
+- ROOT runtime-only recovery destination checked against the ACTIVE hashed allowlist;
+- 4-digit / 5-minute validity / 5-minute resend cooldown / single-use semantics;
+- injected delivery binding with fail-closed behavior when runtime provider inputs are absent;
+- ROOT TOTP gate before OTP consumption when active verified TOTP exists;
+- no client-supplied flag can claim that TOTP has been verified.
 
-Provider-independent work may proceed now.
+Still gated:
+
+1. Do **not** deploy/claim live OTP delivery until the approved runtime delivery provider/binding, OTP pepper and ROOT destination are provisioned through a reviewed provider path.
+2. Real ROOT + normal-account request/delivery/use E2E remains required.
+3. Current authority does not lock enough TOTP verifier operational detail to invent algorithm/digits/time-step/window or `secret_ref` resolution. Keep TOTP-enabled ROOT fail-closed until that contract is resolved or an authoritative existing verifier is surfaced.
+4. Do not invent an OTP failure-attempt limit; V6 does not define one.
+
+Provider-independent auth work may continue only where those gates are not prerequisites.
+
+## D — CURRENT PRIMARY READY: Android/PDA endpoint mechanics
+
+Current main already has HTTPS endpoint validation, in-memory session expiry, bounded retry, same-runtime reconnect decisions, scanner normalization and authenticated request planning.
+
+Delivery Plan Phase 6.2 locks the reusable endpoint order:
+
+`cached healthy endpoint -> LAN discovery -> manual recovery`
+
+Current in-progress branch: `ai/android-endpoint-acquisition-20260915`.
 
 Exact next sequence:
 
-1. Inspect current Cloud + LAN auth routes/services/tests against `DECISIONS_V6.md`.
-2. Map which V6 requirements already exist in source and which are missing:
-   - ROOT normal login uses the fixed approved email one-time-password channel;
-   - email OTP validity is 5 minutes and resend cooldown is 5 minutes;
-   - normal-account forgot-password uses the registered recovery email and enters `MUST_CHANGE_PASSWORD` after successful OTP login;
-   - ROOT TOTP is optional, but when it is enabled ROOT authentication must satisfy the TOTP factor in addition to the valid email OTP according to the current ROOT auth state machine;
-   - request/use/failure/security events are auditable without OTP plaintext or provider secrets in logs/audit/source.
-3. Implement the smallest contract-backed missing source slice that does **not** require secret/provider mutation.
-4. Add/extend automated tests for request/use, expiry, cooldown, replay/consumption, audit redaction and ROOT TOTP gate semantics as applicable to the implemented slice.
-5. Do **not** invent an OTP failure-attempt limit unless a later Owner decision or current authoritative security contract explicitly defines one.
-6. Keep real email delivery/provider E2E separate until the required account/provider capability is available. Do not fake provider PASS and do not repeatedly retry equivalent blocked secret mutations.
+1. complete pure-Java LAN endpoint acquisition policy with:
+   - HTTPS-only normalized candidates;
+   - cached endpoint selected only after health probe passes;
+   - healthy cache prevents discovery/manual flapping;
+   - invalid/unhealthy cache falls through to discovery;
+   - untrusted invalid discovery candidates are discarded;
+   - manual endpoint is considered only after cache/discovery fail;
+   - no automatic Cloud/LAN authority switch;
+   - no fabricated endpoint when all probes fail;
+2. wire an automated harness into Android `preBuild`;
+3. write checkpoint last so freshness validation sees all source changes before its reconciliation anchor;
+4. open PR, run clean baseline + Android product build, fix until green, merge exact tested head if clean;
+5. after merge, reconcile governance and continue the next source-testable Android gap:
+   - session persistence/expiry;
+   - scanner command handoff;
+   - reconnect/resync and network lifecycle;
+   - HTTPS/trust fail-closed behavior;
+   - foreground/background recovery.
 
-## D — PARALLEL READY: Android/PDA mechanics
-
-Continue mechanics independent of unavailable final visual references:
-
-1. inspect current endpoint selection/cache/discovery/manual recovery behavior;
-2. session/login persistence and expiry handling;
-3. scanner input/command handoff;
-4. retry/backoff/reconnect/resync under LAN/Wi-Fi loss;
-5. HTTPS/trust/fail-closed behavior;
-6. background/foreground recovery where source-testable.
-
-Current APK build is green, but that is not final visual/workflow acceptance. Do not fabricate Pick Pack 1291 visual details without authorized current-product reference assets.
+Do not fabricate Pick Pack 1291 final UI details. Current acceptance UI remains Vietnamese only.
 
 ## E — LAN/provider proof — PARTLY GATED
 
@@ -79,7 +101,7 @@ Retained source/HOSTED CI PASS:
 - atomic authoritative import;
 - post-reconciliation rebase confirmation;
 - fail-closed readiness while canonical events remain unre-based;
-- integration run `34851773729` and clean baseline `34851772963`: SUCCESS.
+- integration `34851773729` and clean baseline `34851772963`: SUCCESS.
 
 Still pending and not inferable from CI:
 
@@ -92,7 +114,7 @@ Still pending and not inferable from CI:
 
 ## F — Gateway / integrations
 
-The projection path is now live-PASS. Continue only genuinely open integration coverage:
+The projection path is live-PASS. Continue only genuinely open integration coverage:
 
 - bounded provider failure/recovery;
 - receipts/idempotency/reconciliation for broader current flows;
@@ -116,8 +138,8 @@ Progress remains **56.2% exact / 56% displayed** until a weighted phase threshol
 
 - Cloud schema parity migration `0014_employee_code_entity_version.sql`: LIVE BETA PASS; do not replay.
 - LAN integration receipt/conflict/recovery source/HOSTED CI evidence remains PASS.
-- Projection E2E cleanup is clean; do not re-clean absent E2E markers blindly.
-- Read-only Cron observer now supports manual dispatch; use it for evidence instead of mutating runtime merely to observe state.
+- Projection E2E cleanup is clean; do not re-clean absent markers blindly.
+- Read-only Cron observer supports manual dispatch; use it for evidence instead of mutating runtime merely to observe state.
 
 ## Owner decision / release boundaries
 
@@ -126,4 +148,4 @@ Progress remains **56.2% exact / 56% displayed** until a weighted phase threshol
 
 ## Current execution line
 
-`Overall 56% displayed / 56.2% exact | Phase 6 65% | Projection live BETA PASS end-to-end | Web employee-create merged + post-merge CI PASS | Next READY: V6 account/security source/contract work + Android mechanics in parallel | Physical Windows/PDA/outage acceptance pending`
+`Overall 56% displayed / 56.2% exact | Phase 6 65% | Projection live PASS | Web employee-create merged PASS | V6 email-OTP source + post-merge CI PASS, provider live E2E gated | Android endpoint acquisition branch IN PROGRESS | Physical Windows/PDA/outage acceptance pending`
