@@ -1,0 +1,49 @@
+name: Android PR foundation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'android-app/**'
+      - '.github/workflows/android-pr-foundation.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-pr-foundation-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  android-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Build Android BETA debug APK and transport harnesses
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s android-app/settings.gradle
+          test -s android-app/app/build.gradle
+          test -s android-app/app/src/main/AndroidManifest.xml
+          test -s android-app/app/src/main/java/vn/vhdchy/app/MainActivity.java
+          gradle -p android-app :app:assembleDebug --stacktrace
+          apk="android-app/app/build/outputs/apk/debug/app-debug.apk"
+          test -s "$apk"
+          mkdir -p out
+          cp "$apk" out/VHDCHY-Android-BETA-debug.apk
+          sha256sum out/VHDCHY-Android-BETA-debug.apk > out/VHDCHY-Android-BETA-debug.apk.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-pr-apk-foundation
+          path: |
+            out/VHDCHY-Android-BETA-debug.apk
+            out/VHDCHY-Android-BETA-debug.apk.sha256
+          if-no-files-found: error

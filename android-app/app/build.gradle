@@ -61,9 +61,16 @@ tasks.register('reconnectBehaviorHarness', JavaExec) {
     mainClass.set('vn.vhdchy.app.transport.ReconnectBehaviorHarness')
 }
 
+tasks.register('endpointAcquisitionHarness', JavaExec) {
+    dependsOn tasks.named('compileTransportBehaviorHarness')
+    classpath = files(transportHarnessClasses)
+    mainClass.set('vn.vhdchy.app.transport.EndpointAcquisitionHarness')
+}
+
 tasks.named('preBuild').configure {
     dependsOn tasks.named('transportBehaviorHarness')
     dependsOn tasks.named('reconnectBehaviorHarness')
+    dependsOn tasks.named('endpointAcquisitionHarness')
 }
 
 dependencies {
