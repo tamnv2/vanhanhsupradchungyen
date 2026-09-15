@@ -1,41 +1,13 @@
-# VẬN HÀNH DC HƯNG YÊN
+# VẬN HÀNH DC HƯNG YÊN — RESET ZERO
 
-Clean repository baseline rebuilt on 2026-09-12.
+Project status: **DORMANT / 0%** as of 2026-09-15.
 
-## Owner commands
+The previous implementation was reset because it did not meet the required delivery pace. Current `main` treats all pre-reset source, workflows, delivery plans, progress ledgers and decisions as **historical/inactive**, even where the files remain physically present for non-destructive reference.
 
-Normal resume:
-- `Tiếp tục VHDCHY`
-- `Tiếp tục việc đang làm`
-- `Tiếp tục việc đang dở`
+External provider containers/resources were intentionally retained to avoid repeatedly creating Google Drive/Sheets/Google Cloud/GAS/OAuth/CI and Cloudflare resources. See:
 
-Full project audit:
-- `Tiếp tục VHDCHY — full audit.`
-- `Rà soát toàn bộ dự án`
-- `Kiểm tra toàn bộ dự án`
+- `AI_ENTRYPOINT.md` — mandatory future-chat bootstrap;
+- `RESET_STATE.md` — exact reset boundary/evidence;
+- `RESOURCE_MANIFEST.md` — preserved non-secret resource identities.
 
-For any of these commands, AI must start from `AI_ENTRYPOINT.md` on `main`. AI memory/chat history is not project authority unless Owner explicitly requests its use.
-
-Current continuation handoff after the 2026-09-15 Web-auth / Android-transport work block is GitHub Issue **#8**. A fresh chat should bootstrap normally first, then use Issue #8 when reconciling the stale checkpoint with current `main`.
-
-## Current scope
-
-VHDCHY is the DC Hưng Yên operations platform. `PICK_PACK_1291` is the first cluster/module, not the whole system.
-
-Current execution priority is Service/BETA. Physical LAN testing is paused while Owner is off-site and resumes at the company.
-
-## Authority structure
-
-- `AI_ENTRYPOINT.md` — single bootstrap entry.
-- `AI_OPERATING_CONTRACT.md` — hard operating rules.
-- `CHECKPOINT.md` — short current resume state.
-- `CONTEXT_INDEX.md` — token-efficient task/lane routing.
-- `SERVICE_AUTHORITY.md` — canonical provider/resource authority.
-- `CURRENT_STATE.md` — concise current system truth.
-- `NEXT_ACTIONS.md` — remaining gates/work.
-- `DECISIONS.md` — active decisions.
-- `CHANGELOG.md` — history, not a default FAST read.
-
-Pre-reset source/history snapshot: `backup/pre-zero-20260912`.
-
-No secret, password, token, private key, keystore bytes, OAuth client secret or refresh token belongs in this public repository.
+The exact repository state immediately before this reset is preserved at `archive/pre-reset-20260915` and is historical reference only. A future restart begins from 0% and may reuse preserved infrastructure only after live verification and new Owner-approved scope.
