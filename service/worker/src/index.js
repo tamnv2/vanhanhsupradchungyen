@@ -1,4 +1,11 @@
 import { changePermanentPassword, loginWithPassword } from './auth-service.js';
+import {
+  EMAIL_OTP_REQUEST_PATH,
+  EMAIL_OTP_USE_PATH,
+  createRuntimeEmailOtpDelivery,
+  requestEmailOtpLogin,
+  useEmailOtpLogin
+} from './email-otp-auth.js';
 import { authenticateRequest } from './session.js';
 import { permissionSummary } from './permission-store.js';
 import { handleReconciliationIngestRoute } from './reconciliation-route.js';
@@ -222,6 +229,115 @@ async function handlePasswordLogin(request, env, requestId) {
   }, 200, requestId);
 }
 
+function otpFailureResponse(result, requestId) {
+  const code = result?.code || 'OTP_AUTH_FAILED';
+  if (code === 'OTP_RESEND_COOLDOWN') {
+    return error(
+      code,
+      'A new one-time password cannot be requested yet.',
+      429,
+      requestId,
+      { retryAfterMs: Number(result?.retryAfterMs || 0) }
+    );
+  }
+  if (code === 'ROOT_TOTP_REQUIRED') {
+    return error(
+      code,
+      'ROOT authentication also requires the enrolled TOTP factor.',
+      401,
+      requestId,
+      { requiredMethod: 'TOTP', challengeId: result?.challenge?.challengeId || null }
+    );
+  }
+  if (['OTP_INVALID_OR_EXPIRED', 'OTP_RECOVERY_NOT_AVAILABLE'].includes(code)) {
+    return error(code, 'One-time-password authentication was not accepted.', 401, requestId);
+  }
+  if (['OTP_REQUEST_CONTEXT_REQUIRED'].includes(code)) {
+    return error(code, 'One-time-password request is invalid.', 422, requestId);
+  }
+  if ([
+    'OTP_RUNTIME_NOT_CONFIGURED',
+    'OTP_DELIVERY_NOT_CONFIGURED',
+    'OTP_ROOT_DESTINATION_NOT_CONFIGURED',
+    'OTP_DELIVERY_FAILED',
+    'OTP_REQUEST_FAILED',
+    'OTP_REQUEST_IN_PROGRESS',
+    'OTP_STATE_COMMIT_FAILED',
+    'OTP_FAILURE_STATE_COMMIT_FAILED',
+    'OTP_CONSUME_FAILED'
+  ].includes(code)) {
+    return error(code, 'One-time-password service is temporarily unavailable.', 503, requestId);
+  }
+  return error(code, 'One-time-password authentication failed.', 401, requestId);
+}
+
+async function handleEmailOtpRequest(request, env, requestId) {
+  if (!env?.DB) return error('AUTH_DB_UNAVAILABLE', 'Authentication is unavailable.', 503, requestId);
+  const body = await readJsonObject(request, requestId);
+  if (body.response) return body.response;
+  const username = typeof body.value.username === 'string' ? body.value.username.trim() : '';
+  if (!username) return error('LOGIN_INPUT_REQUIRED', 'Username is required.', 422, requestId);
+
+  const result = await requestEmailOtpLogin(env.DB, username, {
+    pepper: env.VHDCHY_EMAIL_OTP_PEPPER,
+    rootRecoveryEmail: env.VHDCHY_ROOT_RECOVERY_EMAIL,
+    deliver: createRuntimeEmailOtpDelivery(env),
+    requestId
+  });
+  if (!result.ok) return otpFailureResponse(result, requestId);
+
+  return json({
+    ok: true,
+    challenge: {
+      challengeId: result.challengeId,
+      purpose: result.purpose,
+      destinationHint: result.destinationHint,
+      expiresAt: result.expiresAt,
+      resendNotBefore: result.resendNotBefore
+    }
+  }, 202, requestId);
+}
+
+async function handleEmailOtpUse(request, env, requestId) {
+  if (!env?.DB) return error('AUTH_DB_UNAVAILABLE', 'Authentication is unavailable.', 503, requestId);
+  const body = await readJsonObject(request, requestId);
+  if (body.response) return body.response;
+
+  const username = typeof body.value.username === 'string' ? body.value.username.trim() : '';
+  const challengeId = typeof body.value.challengeId === 'string' ? body.value.challengeId.trim() : '';
+  const code = typeof body.value.code === 'string' ? body.value.code.trim() : '';
+  if (!username || !challengeId || !/^\d{4}$/.test(code)) {
+    return error('OTP_USE_INPUT_REQUIRED', 'Username, challengeId and four-digit code are required.', 422, requestId);
+  }
+
+  // TOTP satisfaction is intentionally not accepted from the request body. A trusted
+  // server-side TOTP verifier must compose with useEmailOtpLogin before this gate can pass.
+  const result = await useEmailOtpLogin(env.DB, { username, challengeId, code }, {
+    pepper: env.VHDCHY_EMAIL_OTP_PEPPER,
+    requestId
+  });
+  if (!result.ok) return otpFailureResponse(result, requestId);
+
+  return json({
+    ok: true,
+    principal: {
+      userId: result.user.userId,
+      username: result.user.username,
+      employeeId: result.user.employeeId,
+      displayName: result.user.displayName,
+      securityLevel: result.user.securityLevel,
+      mustChangePassword: result.session.mustChangePassword,
+      authMethodCode: result.authMethodCode
+    },
+    session: {
+      token: result.session.token,
+      issuedAt: result.session.issuedAt,
+      expiresAt: result.session.expiresAt,
+      mustChangePassword: result.session.mustChangePassword
+    }
+  }, 200, requestId);
+}
+
 async function handlePasswordChange(request, env, requestId) {
   const auth = await requirePrincipal(request, env, requestId);
   if (auth.response) return auth.response;
@@ -341,6 +457,14 @@ export async function handleRequest(request, env) {
 
   if (url.pathname === "/api/v1/auth/login" && request.method === "POST") {
     return handlePasswordLogin(request, env, requestId);
+  }
+
+  if (url.pathname === EMAIL_OTP_REQUEST_PATH && request.method === 'POST') {
+    return handleEmailOtpRequest(request, env, requestId);
+  }
+
+  if (url.pathname === EMAIL_OTP_USE_PATH && request.method === 'POST') {
+    return handleEmailOtpUse(request, env, requestId);
   }
 
   if (url.pathname === "/api/v1/auth/change-password" && request.method === "POST") {
