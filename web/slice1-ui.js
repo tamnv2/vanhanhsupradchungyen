@@ -1,5 +1,11 @@
+import { createAuthClient } from './auth.js';
+import { createBusinessClient } from './business.js';
+
 const SLICE_VIEWS = new Set(['business', 'people', 'attendance']);
 const STATUS_CACHE_MS = 5000;
+const sliceAuthClient = createAuthClient();
+const sliceBusinessClient = createBusinessClient(sliceAuthClient);
+let lastEmployeeCreateResult = null;
 
 export function deriveSliceSurfaceState(input = {}) {
   const capabilities = input.capabilities || null;
@@ -77,9 +83,65 @@ export function describeSliceView(view) {
   });
 }
 
-function safeNumber(value) {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? Math.max(0, parsed) : null;
+function cleanOptional(value) {
+  const text = String(value ?? '').trim();
+  return text || null;
+}
+
+export function buildEmployeeCreateInput(values = {}, randomUUID = () => crypto.randomUUID()) {
+  const fullName = String(values.fullName || '').trim();
+  if (!fullName) throw new Error('EMPLOYEE_FULL_NAME_REQUIRED');
+  const employeeId = String(randomUUID()).trim();
+  if (!employeeId) throw new Error('EMPLOYEE_ID_GENERATION_FAILED');
+  const status = String(values.status || 'ACTIVE').trim().toUpperCase();
+  if (!['ACTIVE', 'INACTIVE', 'LEFT', 'ARCHIVED'].includes(status)) throw new Error('EMPLOYEE_STATUS_INVALID');
+
+  const payload = { employeeId, fullName, status };
+  for (const field of ['phone', 'mainPosition', 'vendor', 'department', 'site', 'warehouse', 'startDate', 'permanentLeaveDate', 'note']) {
+    const normalized = cleanOptional(values[field]);
+    if (normalized !== null) payload[field] = normalized;
+  }
+  return Object.freeze({
+    commandCode: 'EMPLOYEE_CREATE',
+    entityId: employeeId,
+    expectedEntityVersion: null,
+    payload: Object.freeze(payload)
+  });
+}
+
+export function employeeCreateResultText(result) {
+  if (!result?.ok) return 'Không có kết quả tạo nhân sự hợp lệ.';
+  const commit = {
+    CLOUD_COMMITTED: 'Đã chốt Cloud',
+    LAN_ACCEPTED_PENDING_SYNC: 'LAN đã nhận, chờ Cloud',
+    LAN_RECONCILED_CLOUD_COMMITTED: 'LAN đã đồng bộ Cloud',
+    QUEUED_CLIENT_LOCAL: 'Đang chờ trên thiết bị',
+    SYNC_CONFLICT: 'Có xung đột đồng bộ'
+  }[result.commitStatus] || result.commitStatus || 'Chưa rõ commit';
+  const google = {
+    NOT_REQUIRED: 'Google: không yêu cầu',
+    PENDING: 'Google: đang chờ',
+    COMPLETED: 'Google: hoàn tất',
+    FAILED_RETRYABLE: 'Google: sẽ thử lại',
+    REVIEW_REQUIRED: 'Google: cần rà soát'
+  }[result.googleOutputStatus] || `Google: ${result.googleOutputStatus || 'chưa rõ'}`;
+  return `${commit} · ${google}`;
+}
+
+function employeeCreateErrorText(error) {
+  const code = String(error?.code || error?.payload?.error?.code || error?.message || '');
+  const known = {
+    EMPLOYEE_FULL_NAME_REQUIRED: 'Cần nhập họ và tên nhân sự.',
+    EMPLOYEE_STATUS_INVALID: 'Trạng thái nhân sự không hợp lệ.',
+    AUTH_FAILED: 'Phiên đăng nhập không hợp lệ.',
+    INVALID_CREDENTIALS: 'Phiên đăng nhập không hợp lệ.',
+    PERMISSION_DENIED: 'Tài khoản không có quyền tạo nhân sự trong phạm vi hiện tại.',
+    FORBIDDEN: 'Tài khoản không có quyền tạo nhân sự trong phạm vi hiện tại.',
+    VERSION_CONFLICT: 'Nhân sự đã tồn tại hoặc dữ liệu vừa thay đổi.',
+    LAN_SIGNER_REQUIRED: 'LAN Web chưa có bằng chứng ký của thiết bị đã ghép đôi.',
+    LAN_SIGNER_INVALID_PROOF: 'Bộ ký LAN không cung cấp đủ bằng chứng thiết bị.'
+  };
+  return known[code] || error?.message || 'Không thể tạo nhân sự.';
 }
 
 function ensureSurface() {
@@ -96,6 +158,34 @@ function ensureSurface() {
 
 function authenticatedNow() {
   return !document.body.classList.contains('auth-locked');
+}
+
+function employeeCreatePanel(state) {
+  const disabled = !(state.authenticated && state.mutationReady && state.runtime !== 'UNKNOWN');
+  const resultText = lastEmployeeCreateResult ? employeeCreateResultText(lastEmployeeCreateResult) : '';
+  return `
+    <article class="slice1-card slice1-form-card">
+      <div class="slice1-form-heading">
+        <div><p class="eyebrow">Thao tác đã mở</p><h3>Tạo nhân sự</h3><p>Tạo hồ sơ mới bằng ID kỹ thuật tự sinh; người dùng không phải nhập entity version.</p></div>
+        <span class="slice1-form-gate ${disabled ? 'blocked' : 'ready'}">${disabled ? 'Chưa đủ điều kiện ghi' : 'Sẵn sàng ghi'}</span>
+      </div>
+      <form id="employeeCreateForm" class="slice1-form">
+        <label>Họ và tên<input name="fullName" maxlength="240" required ${disabled ? 'disabled' : ''}></label>
+        <label>Số điện thoại<input name="phone" maxlength="1000" inputmode="tel" ${disabled ? 'disabled' : ''}></label>
+        <label>Trạng thái<select name="status" ${disabled ? 'disabled' : ''}><option value="ACTIVE">Hoạt động</option><option value="INACTIVE">Tạm dừng</option><option value="LEFT">Đã nghỉ</option><option value="ARCHIVED">Lưu trữ</option></select></label>
+        <label>Vị trí chính<input name="mainPosition" maxlength="1000" ${disabled ? 'disabled' : ''}></label>
+        <label>Nhà cung cấp<input name="vendor" maxlength="1000" ${disabled ? 'disabled' : ''}></label>
+        <label>Bộ phận<input name="department" maxlength="1000" ${disabled ? 'disabled' : ''}></label>
+        <label>Site<input name="site" maxlength="1000" ${disabled ? 'disabled' : ''}></label>
+        <label>Kho<input name="warehouse" maxlength="1000" ${disabled ? 'disabled' : ''}></label>
+        <label>Ngày bắt đầu làm việc<input name="startDate" type="date" ${disabled ? 'disabled' : ''}></label>
+        <label class="slice1-form-wide">Ghi chú<textarea name="note" maxlength="4000" rows="3" ${disabled ? 'disabled' : ''}></textarea></label>
+        <div class="slice1-form-actions slice1-form-wide">
+          <button id="employeeCreateSubmit" class="primary-button" type="submit" ${disabled ? 'disabled' : ''}>Tạo nhân sự</button>
+          <span id="employeeCreateMessage" class="slice1-form-message" aria-live="polite">${resultText}</span>
+        </div>
+      </form>
+    </article>`;
 }
 
 function renderSurface(view, state) {
@@ -139,6 +229,7 @@ function renderSurface(view, state) {
       </div>
     </article>
     ${overviewCards}
+    ${view === 'people' ? employeeCreatePanel(state) : ''}
     <div class="slice1-note ${noteClass}" id="sliceStateDetail">${state.detail}${state.conflictCount > 0 ? ' Có xung đột chưa xử lý; UI không được diễn giải thành trạng thái xanh đồng bộ.' : ''}</div>`;
 
   surface.querySelectorAll('[data-slice-jump]').forEach(button => {
@@ -146,6 +237,49 @@ function renderSurface(view, state) {
       const target = button.dataset.sliceJump;
       document.querySelector(`[data-view="${target}"]`)?.click();
     });
+  });
+
+  if (view === 'people') bindEmployeeCreateForm(surface, state);
+}
+
+function formValues(form) {
+  const data = new FormData(form);
+  return Object.fromEntries(data.entries());
+}
+
+function setEmployeeCreateMessage(surface, text, tone = '') {
+  const message = surface.querySelector('#employeeCreateMessage');
+  if (!message) return;
+  message.textContent = text;
+  message.className = `slice1-form-message${tone ? ` ${tone}` : ''}`;
+}
+
+function bindEmployeeCreateForm(surface, state) {
+  const form = surface.querySelector('#employeeCreateForm');
+  if (!form) return;
+  form.addEventListener('submit', async event => {
+    event.preventDefault();
+    if (!(state.authenticated && state.mutationReady) || state.runtime === 'UNKNOWN') {
+      setEmployeeCreateMessage(surface, 'Chưa đủ điều kiện xác thực/runtime để gửi thao tác.', 'error');
+      return;
+    }
+
+    const submit = surface.querySelector('#employeeCreateSubmit');
+    submit.disabled = true;
+    setEmployeeCreateMessage(surface, 'Đang tạo nhân sự…');
+    try {
+      sliceAuthClient.configure({ runtime: state.runtime, capabilities: cachedStatus?.capabilities || null });
+      const input = buildEmployeeCreateInput(formValues(form));
+      const result = await sliceBusinessClient.submitCommand(input);
+      lastEmployeeCreateResult = result;
+      form.reset();
+      setEmployeeCreateMessage(surface, employeeCreateResultText(result), 'ok');
+      const refreshed = await readRuntimeState(true);
+      if (activeView === 'people') renderSurface('people', refreshed);
+    } catch (error) {
+      setEmployeeCreateMessage(surface, employeeCreateErrorText(error), 'error');
+      submit.disabled = false;
+    }
   });
 }
 
