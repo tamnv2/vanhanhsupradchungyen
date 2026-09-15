@@ -31,14 +31,14 @@ Newest applicable override wins only where it conflicts. Unaffected older decisi
 - `docs/DATA_MODEL_GUIDE_V2.md`
 - `docs/NON_FUNCTIONAL_BASELINE_V1.md`
 - `docs/BETA_ACCEPTANCE_MATRIX.md`
-- `docs/DELIVERY_PLAN_V5.md` — full start-to-production phase/scope map
+- `docs/DELIVERY_PLAN_V6.md` — current acceptance-first delivery sequencing; no volatile percentage
 - `docs/EXECUTION_MODEL_V1.md` — current vertical-slice/WIP/CI/governance operating procedure
 - `docs/PROGRESS_TRACKING_V2.md` — current deterministic evidence-credit percentage authority
 - `docs/LAN_HOST_DOMAIN_V1.md`
 - `docs/RELEASE_PROMOTION_V1.md`
 - `docs/LAN_SOURCE_REVIEW_20260913.md` — legacy/current LAN reuse boundary and physical-regression distinction
 
-`docs/PROGRESS_TRACKING_V1.md`, `docs/DELIVERY_PLAN_V4.md` and older V2 delivery/contract/edge documents remain historical/reference only where a current file above supersedes them.
+`docs/DELIVERY_PLAN_V5.md` remains historical/detail reference where not conflicting. `docs/PROGRESS_TRACKING_V1.md`, `docs/DELIVERY_PLAN_V4.md` and older V2 delivery/contract/edge documents remain historical/reference only where a current file above supersedes them.
 
 ## Volatile-state ownership
 
@@ -84,7 +84,7 @@ Use for a new/changed task inside active boundaries or when relevant paths chang
 - `SERVICE_AUTHORITY.md`
 - `CURRENT_STATE.md`
 - `NEXT_ACTIONS.md`
-- `docs/DELIVERY_PLAN_V5.md`
+- `docs/DELIVERY_PLAN_V6.md`
 - current architecture/contract/data/acceptance guide
 - relevant source/config/workflows/provider evidence.
 
@@ -98,13 +98,13 @@ Read/reconcile all root authority/governance files, all active decision layers, 
 
 ### REPO / GOVERNANCE
 
-Read bootstrap/governance files, all active decisions, `PROJECT_SCOPE.md`, `CURRENT_STATE.md`, `NEXT_ACTIONS.md`, Delivery Plan V5, Execution Model V1, Progress V2 and relevant validation evidence.
+Read bootstrap/governance files, all active decisions, `PROJECT_SCOPE.md`, `CURRENT_STATE.md`, `NEXT_ACTIONS.md`, Delivery Plan V6, Execution Model V1, Progress V2 and relevant validation evidence.
 
 Execution rule: enforce the V9 WIP limit. One integrating vertical slice plus at most two independent preparation/client lanes may run. Blocked provider/physical nodes do not occupy WIP. Reconcile governance once at meaningful boundaries rather than after every helper/mechanic.
 
 ### PRODUCT / SHARED DOMAIN
 
-Read all active decisions, Owner business rules, V3 target architecture, V3 Service contract, data-model guide, non-functional baseline, BETA acceptance matrix, Delivery Plan V5, Execution Model V1 and relevant migrations/source.
+Read all active decisions, Owner business rules, V3 target architecture, V3 Service contract, data-model guide, non-functional baseline, BETA acceptance matrix, Delivery Plan V6, Execution Model V1 and relevant migrations/source.
 
 Every technical task must map to an acceptance item or mandatory architecture/security/migration/provider/release prerequisite. Do not let stale `docs/SERVICE_API_CONTRACT.md`, `docs/CANONICAL_MUTATION_PLAN.md`, `docs/LAN_EDGE_STATE_V1.md` or older delivery text override current files.
 
@@ -122,7 +122,7 @@ Sheets/Drive are downstream outputs/storage and never business authority. Operat
 
 ### LAN SERVICE
 
-Read all active decisions, target architecture, V3 Service contract, LAN edge state, LAN host/domain guide, non-functional baseline, Delivery Plan V5, Execution Model V1, Progress V2 and active LAN source/evidence.
+Read all active decisions, target architecture, V3 Service contract, LAN edge state, LAN host/domain guide, non-functional baseline, Delivery Plan V6, Execution Model V1, Progress V2 and active LAN source/evidence.
 
 Hard constraints: full local Service, portable/no-admin host, no corporate-policy bypass, canonical LAN domains, current offline authority model, controlled Google output when reachable, event/outbox reconciliation to Cloud, explicit conflicts and fail-closed mutation readiness.
 
@@ -151,7 +151,7 @@ Current rules:
 
 ### BETA / STABLE / RELEASE PROMOTION
 
-Read all active decisions, `docs/RELEASE_PROMOTION_V1.md`, Delivery Plan V5, Execution Model V1, Progress V2, `SERVICE_AUTHORITY.md` and exact accepted release/provider evidence.
+Read all active decisions, `docs/RELEASE_PROMOTION_V1.md`, Delivery Plan V6, Execution Model V1, Progress V2, `SERVICE_AUTHORITY.md` and exact accepted release/provider evidence.
 
 Prepare isolated STABLE during development, keep business traffic fail-closed until explicit Owner promotion approval, promote the exact accepted BETA release, and never copy BETA runtime/business data by default.
 
