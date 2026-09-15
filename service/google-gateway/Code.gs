@@ -148,6 +148,97 @@ function projectionManagementHealth(expectedEnvironment) {
   };
 }
 
+function projectionE2EValidateMarker_(marker) {
+  const value = String(marker || "");
+  if (!/^VHDCHY-E2E-PROJECTION-[A-Za-z0-9._:-]{1,96}$/.test(value)) {
+    throw new Error("PROJECTION_E2E_MARKER_INVALID");
+  }
+  return value;
+}
+
+function projectionE2ERows_(marker, expectedEnvironment) {
+  projectionManagementContext_(expectedEnvironment);
+  const safeMarker = projectionE2EValidateMarker_(marker);
+  const workbook = SpreadsheetApp.openById(BOOTSTRAP.projectionSpreadsheetId);
+  const sheet = workbook.getSheetByName("LỊCH SỬ NGHIỆP VỤ");
+  if (!sheet) throw new Error("PROJECTION_E2E_SHEET_NOT_FOUND");
+
+  const lastColumn = Math.max(1, sheet.getLastColumn());
+  const headers = sheet.getRange(1, 1, 1, lastColumn).getDisplayValues()[0];
+  const eventIdIndex = headers.indexOf("Event ID");
+  const detailIndex = headers.indexOf("Chi tiết");
+  if (eventIdIndex < 0) throw new Error("PROJECTION_E2E_EVENT_ID_HEADER_NOT_FOUND");
+
+  const lastRow = sheet.getLastRow();
+  const rowNumbers = [];
+  let detailMatches = 0;
+  if (lastRow >= 2) {
+    const rows = sheet.getRange(2, 1, lastRow - 1, lastColumn).getDisplayValues();
+    rows.forEach(function(row, index) {
+      if (String(row[eventIdIndex] || "") !== safeMarker) return;
+      rowNumbers.push(index + 2);
+      if (detailIndex >= 0 && String(row[detailIndex] || "") === safeMarker) detailMatches += 1;
+    });
+  }
+
+  return {
+    ok: true,
+    managementVersion: PROJECTION_MANAGEMENT_VERSION,
+    environment: BOOTSTRAP.environment,
+    marker: safeMarker,
+    sheet: "LỊCH SỬ NGHIỆP VỤ",
+    count: rowNumbers.length,
+    detailMatches,
+    rowNumbers
+  };
+}
+
+function projectionE2EInspect(marker, expectedEnvironment) {
+  return projectionE2ERows_(marker, expectedEnvironment);
+}
+
+function projectionE2ECleanup(marker, expectedEnvironment) {
+  projectionManagementContext_(expectedEnvironment);
+  const safeMarker = projectionE2EValidateMarker_(marker);
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(10000)) throw new Error("PROJECTION_E2E_CLEANUP_BUSY");
+
+  try {
+    const workbook = SpreadsheetApp.openById(BOOTSTRAP.projectionSpreadsheetId);
+    const sheet = workbook.getSheetByName("LỊCH SỬ NGHIỆP VỤ");
+    if (!sheet) throw new Error("PROJECTION_E2E_SHEET_NOT_FOUND");
+    const lastColumn = Math.max(1, sheet.getLastColumn());
+    const headers = sheet.getRange(1, 1, 1, lastColumn).getDisplayValues()[0];
+    const eventIdIndex = headers.indexOf("Event ID");
+    if (eventIdIndex < 0) throw new Error("PROJECTION_E2E_EVENT_ID_HEADER_NOT_FOUND");
+
+    const rowsToDelete = [];
+    const lastRow = sheet.getLastRow();
+    if (lastRow >= 2) {
+      const values = sheet.getRange(2, eventIdIndex + 1, lastRow - 1, 1).getDisplayValues();
+      values.forEach(function(row, index) {
+        if (String(row[0] || "") === safeMarker) rowsToDelete.push(index + 2);
+      });
+    }
+    rowsToDelete.sort(function(a, b) { return b - a; }).forEach(function(rowNumber) {
+      sheet.deleteRow(rowNumber);
+    });
+
+    const readback = projectionE2ERows_(safeMarker, expectedEnvironment);
+    if (readback.count !== 0) throw new Error("PROJECTION_E2E_CLEANUP_READBACK_FAILED");
+    return {
+      ok: true,
+      managementVersion: PROJECTION_MANAGEMENT_VERSION,
+      environment: BOOTSTRAP.environment,
+      marker: safeMarker,
+      deleted: rowsToDelete.length,
+      remaining: 0
+    };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 function doGet() {
   const bootstrap = bootstrapHealth_();
   return json_({
