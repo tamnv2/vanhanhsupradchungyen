@@ -10,6 +10,7 @@ namespace Vhdchy.LanService;
 public static class LanSecureHttpRoutes
 {
     public const string LoginRouteTarget = "/api/v1/auth/login";
+    public const string AttendanceScanRouteTarget = LanAttendanceScanContextCoordinator.RouteTarget;
     public const string BusinessRouteTarget = LanBusinessRouteCoordinator.BusinessCommandRouteTarget;
     public const string DeviceIdHeader = "X-VHDCHY-Device-Id";
     public const string SecurityEpochHeader = "X-VHDCHY-Security-Epoch";
@@ -33,6 +34,10 @@ public static class LanSecureHttpRoutes
         var sessions = new LanUserSessionStore(databasePath);
         await sessions.EnsureAsync(cancellationToken);
         var credentials = new LanPrimaryCredentialVerifier(databasePath, expectedDomainContractVersion);
+        var attendanceScan = new LanAttendanceScanContextCoordinator(
+            databasePath,
+            expectedClusterId,
+            expectedDomainContractVersion);
         var business = new LanBusinessRouteCoordinator(
             databasePath,
             expectedEnvironment,
@@ -119,6 +124,43 @@ public static class LanSecureHttpRoutes
             }
         });
 
+        app.MapPost(AttendanceScanRouteTarget, async (HttpRequest request, CancellationToken ct) =>
+        {
+            var requestId = RequestId(request);
+            if (!request.IsHttps)
+                return Error("SECURE_TRANSPORT_REQUIRED", StatusCodes.Status503ServiceUnavailable, requestId);
+
+            try
+            {
+                var signedBody = await ReadSignedBodyAsync(request, ct);
+                var proof = BuildProof(request, AttendanceScanRouteTarget, signedBody.BodySha256);
+                var token = BearerToken(request);
+                var context = await attendanceScan.ExecuteAsync(
+                    new LanAttendanceScanContextRequest(token, proof, signedBody.RawBody),
+                    cancellationToken: ct);
+
+                return Results.Json(new
+                {
+                    ok = true,
+                    runtime = "LAN",
+                    requestId,
+                    context
+                });
+            }
+            catch (LanSecureHttpException error)
+            {
+                return Error(error.Code, error.StatusCode, requestId);
+            }
+            catch (LanClientSecurityException error)
+            {
+                return Error(error.Code, StatusCodes.Status401Unauthorized, requestId);
+            }
+            catch (LanAttendanceScanContextException error)
+            {
+                return Error(error.Code, RouteStatus(error.Code), requestId);
+            }
+        });
+
         app.MapPost(BusinessRouteTarget, async (HttpRequest request, CancellationToken ct) =>
         {
             var requestId = RequestId(request);
@@ -168,7 +210,7 @@ public static class LanSecureHttpRoutes
             }
             catch (LanBusinessRouteException error)
             {
-                return Error(error.Code, BusinessStatus(error.Code), requestId);
+                return Error(error.Code, RouteStatus(error.Code), requestId);
             }
         });
     }
@@ -298,11 +340,13 @@ public static class LanSecureHttpRoutes
         code.StartsWith("AUTHORITY_", StringComparison.Ordinal) ||
         code.StartsWith("LOGIN_AUTHORITY_", StringComparison.Ordinal);
 
-    private static int BusinessStatus(string code) => code switch
+    private static int RouteStatus(string code) => code switch
     {
         "PERMISSION_DENIED" => StatusCodes.Status403Forbidden,
         "PASSWORD_CHANGE_REQUIRED" => StatusCodes.Status403Forbidden,
         "INVALID_INPUT" => StatusCodes.Status422UnprocessableEntity,
+        "SCAN_CONTEXT_NOT_FOUND" => StatusCodes.Status404NotFound,
+        "SCAN_CONTEXT_CONFLICT" => StatusCodes.Status409Conflict,
         "IDEMPOTENCY_CONFLICT" => StatusCodes.Status409Conflict,
         "DEVICE_SEQUENCE_COLLISION" => StatusCodes.Status409Conflict,
         "ENTITY_VERSION_CONFLICT" => StatusCodes.Status409Conflict,
