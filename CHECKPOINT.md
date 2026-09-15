@@ -1,101 +1,90 @@
 # CHECKPOINT — VHDCHY
 
-checkpoint_version: 60
+checkpoint_version: 62
 protocol: AI_AUTHORITY_RESUME_V2
-status: EXECUTING_PRODUCT_V7_BETA
-action_mode: AUTONOMOUS_PARALLEL
-reconciled_through_commit: efb49c6879efc30932ebd9924f02fb2b22b2ef62
-active_lanes: REPO_GOVERNANCE / SHARED_DOMAIN / CLOUD_SERVICE / LAN_FULL_SERVICE / AUTH / GOOGLE_SYNC / WEB_ONLINE_LAN / ANDROID_PDA / RECONCILIATION / STABLE_PREPARATION
-paused_lanes: PHYSICAL_CORPORATE_LAN_REGRESSION
+status: EXECUTING_PRODUCT_V9_BETA
+action_mode: VERTICAL_SLICE_WIP3
+reconciled_through_commit: 18b708bedb99c7901978c582c2742fb0b987f950
+active_wip: LANE_A_ATTENDANCE / LANE_B_WEB / LANE_C_SESSION_PICK_PACK_RESOURCES
+paused_gates: PROVIDER_OTP_E2E / PHYSICAL_CORPORATE_LAN_REGRESSION / FINAL_PICK_PACK_VISUAL_EVIDENCE / PORTRAIT_OWNER_DECISION / STABLE_PROMOTION
 
 authority_v5_ref: DECISIONS_V5.md
 authority_v6_ref: DECISIONS_V6.md
 authority_v7_ref: DECISIONS_V7.md
+authority_v9_ref: DECISIONS_V9.md
 termination_guard_ref: AI_TERMINATION_GUARD.md
-delivery_plan_ref: docs/DELIVERY_PLAN_V5.md
-progress_ref: docs/PROGRESS_TRACKING_V1.md
+delivery_plan_ref: docs/DELIVERY_PLAN_V6.md
+execution_model_ref: docs/EXECUTION_MODEL_V1.md
+progress_ref: docs/PROGRESS_TRACKING_V2.md
 service_contract_ref: docs/SERVICE_API_CONTRACT_V3.md
 current_state_ref: CURRENT_STATE.md
 next_actions_ref: NEXT_ACTIONS.md
 context_index_ref: CONTEXT_INDEX.md
 
-## Progress
+## V9 operating-model migration
 
-- Evidence-weighted total remains **56.2% exact / 56% displayed**.
-- Phase 6 LAN continuity/offline/reconcile remains **65%**.
-- Android endpoint acquisition + secure session persistence are accepted source/CI PASS; scanner command planning is dependency-blocked until trusted MNV scan-context parity exists.
+Owner approved the full execution optimization on 2026-09-15.
+
+Persisted changes through the reconciliation commit:
+
+- vertical acceptance slice is the default delivery unit;
+- normal WIP is capped at one integrating slice plus two independent client/preparation lanes;
+- governance/checkpoints are batched at meaningful slice/security/provider/release boundaries rather than after every mechanic;
+- volatile truth has single-source owners;
+- current progress uses the fixed 20-credit-per-phase V2 evidence ledger;
+- CI is explicitly tiered and reuses existing focused workflows/harnesses;
+- current delivery sequencing is Attendance -> Session/PICK/PACK/resources -> labor/dropped goods -> documents/media -> product/physical/release closure.
+
+Current exact/displayed progress is read only from `docs/PROGRESS_TRACKING_V2.md`; do not copy it from this checkpoint.
+
+## Current WIP
+
+### Lane A — Attendance golden path — PRIMARY READY
+
+Immediate node is Cloud + LAN authenticated MNV scan-context parity.
+
+Required invariant: QR contains MNV only; MNV is never treated as technical `employeeId`. Resolve one ACTIVE code/employee plus current presence/version. Actor identity remains authenticated Service context. Lookup is read-only and creates no event/outbox/Google write.
+
+After scan-context parity, continue within the same vertical slice to Android ATTENDANCE_IN/OUT planning, minimal Vietnamese scanner/result/status UI, dispatch and retry/restart/idempotency acceptance.
+
+### Lane B — Web — READY PARALLEL
+
+Advance usable current-contract business actions and shared Online/LAN network/sync UX. Do not invent missing server contracts or unsafe version semantics.
+
+### Lane C — Session/PICK/PACK/resources — READY PARALLEL PREPARATION
+
+Lock the next vertical slice command/acceptance contract and focused core tests from current Owner rules. Do not build speculative generic infrastructure.
+
+## Accepted evidence carried forward
+
+- Projection live BETA: `34927511443`, cleaned deploy `34927869845`, observer `34927996370`: SUCCESS.
+- Web employee-create PR #19 merge `db746a71ed80dafd288218f599ab3e990f87e439`; post-merge clean `34928090928`, product foundations `34928090885`: SUCCESS.
+- V6 email OTP PR #30 merge `c45b9fca28b189dc4aa7e0b42ac7db9307c3613a`: SOURCE/CI PASS; real provider delivery gated.
+- Android endpoint acquisition PR #32 merge `00ac446a6bb3d93f1c69c1bce8ab2571ec5f11a3`: SOURCE/CI PASS.
+- Android secure session PR #34 merge `ebfb7d238268fb089a34779e2c5d53ae45693608`; `34933869114`, `34933869144`, `34933981747`, `34933981735`: SUCCESS.
+- Pre-V9 main clean baseline `34934745772`: SUCCESS.
+
+## Current gates
+
+- real ROOT/normal email-OTP provider E2E requires reviewed provider configuration/secrets;
+- ROOT TOTP verifier technical parameters remain insufficiently locked; do not invent;
+- physical company host/network/PDA/public trust, >=60-minute outage, reconnect/restart/network-change and capacity/soak/UAT require target physical environment;
+- final Android visual fidelity requires accessible authorized Pick Pack reference evidence;
+- portrait replacement conflicting behavior remains `OWNER_DECISION_REQUIRED`;
+- STABLE promotion requires explicit Owner approval after BETA acceptance.
+
+None of these gates stop the current independent source WIP.
 
 ## Fresh-chat resume anchor
 
 1. Live-fetch `AI_ENTRYPOINT.md` from GitHub `main` and execute its bootstrap.
-2. Compare current main HEAD with this checkpoint reconciliation point.
-3. Read changed authority/current-state/source paths after `efb49c6879efc30932ebd9924f02fb2b22b2ef62` before mutation.
-4. Follow current `NEXT_ACTIONS.md`; primary ready lane is Cloud+LAN attendance scan-context parity unless later main evidence supersedes it.
+2. Compare current main HEAD with this reconciliation point.
+3. Read any changed active authority/current-state/source paths after `18b708bedb99c7901978c582c2742fb0b987f950` before mutation.
+4. Rebuild V9 WIP from `NEXT_ACTIONS.md` and continue all safe READY nodes within the WIP limit.
 
 Memory/chat summaries are NON_AUTHORITY.
-
-## Latest accepted main evidence
-
-- Android session persistence PR #34 merged at `ebfb7d238268fb089a34779e2c5d53ae45693608`; PR clean `34933869114`, Android foundation `34933869144`, post-merge clean `34933981747`, product foundations `34933981735`: SUCCESS.
-- Android endpoint acquisition PR #32 merged at `00ac446a6bb3d93f1c69c1bce8ab2571ec5f11a3`; pre/post-merge CI PASS.
-- Projection live E2E `34927511443`, cleaned deploy `34927869845`, observer `34927996370`: SUCCESS.
-- Web employee-create PR #19 merged with post-merge CI PASS.
-- V6 email-OTP PR #30 source/CI PASS; real provider delivery remains gated.
-- Governance PR #35 merged at `0f1af567cb40fd673d492e4bec76a0a79e38c880` before this dependency correction.
-
-## Scanner identity dependency — VERIFIED
-
-Owner authority V5-002: QR contains MNV only.
-
-Current Cloud/LAN attendance mutations require technical `employeeId` as `entityId` and payload `employeeId`, and require current presence entity version when a presence state already exists. Actor authority is server-authenticated and is prohibited in client payload.
-
-Therefore scanned MNV must never be treated as employeeId.
-
-Underlying parity data is already available:
-
-- Cloud D1 `employees`, `employee_codes`, `presence_state`;
-- Cloud operational snapshot includes employees/current portrait ref, employee codes and presence;
-- LAN materializes all three into `module_current_state` and validates ACTIVE employee-code uniqueness.
-
-Missing dependency: no current public authenticated client route has been proven for MNV -> ACTIVE employee + current presence/version lookup.
-
-## Current primary READY — Cloud+LAN scan-context read parity
-
-Implement one read-only business meaning across Cloud and LAN.
-
-Required behavior:
-
-- bounded normalized MNV input only;
-- current authenticated user required;
-- normal password-change restriction applies;
-- attendance `scan` permission/scope required;
-- LAN also requires HTTPS + paired-device signed proof + matching LAN session/device/security epoch;
-- resolve exactly one ACTIVE employee-code assignment and require linked employee ACTIVE;
-- return `employeeCodeId`, MNV, technical `employeeId`, `fullName`, current portrait media reference or null, and current presence `{currentState,businessDate,entityVersion}` or null;
-- no actor fields accepted/returned as client authority;
-- no business mutation/event/outbox/Google side effect;
-- stable fail-closed not-found/inactive/ambiguity/runtime errors;
-- Cloud/LAN response semantics and tests must remain aligned.
-
-Android scanner command planning stays blocked until this dependency is accepted source/CI PASS.
-
-## Following READY queue
-
-1. After scan-context parity: Android `ATTENDANCE_IN/OUT` command planner using resolved employee identity + presence version.
-2. Android reconnect/resync/network lifecycle.
-3. HTTPS/trust fail-closed and foreground/background recovery.
-4. Independent safe Web/integration work where current contracts are sufficient.
-
-## Current blockers / gates
-
-- real ROOT/normal email-OTP provider E2E requires reviewed provider configuration/secrets;
-- ROOT TOTP verifier technical contract remains insufficiently specified;
-- physical company-network/PDA/public-trust and >=60-minute Internet-cut acceptance require physical environment;
-- final Android/PDA visual fidelity requires authorized Pick Pack reference evidence;
-- portrait replacement remains `OWNER_DECISION_REQUIRED`;
-- STABLE promotion requires explicit Owner approval after mandatory BETA acceptance.
 
 ## do_not_repeat
 
 do_not_repeat:
-Do not treat memory as authority. Do not replay migrations 0009 or 0014. Do not expose or infer secrets. Do not invent TOTP verifier parameters or OTP failure limits. Do not treat MNV as employeeId. Do not put actor authority in scanner/query payloads. Do not write Android scanner directly to database/Google. Do not implement scanner command planning before trusted MNV scan-context parity. Do not invent final Pick Pack UI details. Do not inflate progress without weighted acceptance evidence. Do not promote STABLE without explicit Owner approval. Do not voluntarily final while approved READY work remains; run `PRE_FINAL_TERMINATION_GUARD` first.
+Do not treat memory as authority. Do not restore V1 progress or V5 sequencing as current authority. Do not copy current percentage/provider liveness into non-owning files. Do not open more than the V9 normal WIP without closing/blocking/replacing a lane. Do not create governance-only PRs after every helper. Do not replay migrations 0009 or 0014. Do not expose or infer secrets. Do not invent TOTP verifier parameters or OTP failure limits. Do not treat MNV as employeeId. Do not put actor authority in scanner/query payloads. Do not write Android scanner directly to database/Google. Do not invent final Pick Pack UI details. Do not promote STABLE without explicit Owner approval. Do not voluntarily final while approved READY work remains; run `PRE_FINAL_TERMINATION_GUARD` first.
