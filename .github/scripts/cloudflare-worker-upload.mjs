@@ -45,6 +45,12 @@ async function cfJson(url, apiToken, init = {}) {
   return payload;
 }
 
+function sortedCronList(payload) {
+  return Array.isArray(payload?.result?.schedules)
+    ? payload.result.schedules.map(item => String(item?.cron || '')).filter(Boolean).sort()
+    : [];
+}
+
 async function main() {
   const accountId = requiredEnv('CLOUDFLARE_ACCOUNT_ID');
   const apiToken = requiredEnv('CLOUDFLARE_API_TOKEN');
@@ -149,14 +155,20 @@ async function main() {
   }
 
   if (schedules !== null) {
-    const schedulePayload = await cfJson(`${scriptBaseUrl}/schedules`, apiToken, {
-      method: 'PUT',
-      body: JSON.stringify(schedules.map(cron => ({ cron })))
-    });
-    const applied = Array.isArray(schedulePayload?.result?.schedules)
-      ? schedulePayload.result.schedules.map(item => String(item?.cron || '')).filter(Boolean).sort()
-      : [];
     const expected = [...schedules].sort();
+    const beforePayload = await cfJson(`${scriptBaseUrl}/schedules`, apiToken);
+    const before = sortedCronList(beforePayload);
+    let applied = before;
+    if (JSON.stringify(before) !== JSON.stringify(expected)) {
+      const schedulePayload = await cfJson(`${scriptBaseUrl}/schedules`, apiToken, {
+        method: 'PUT',
+        body: JSON.stringify(schedules.map(cron => ({ cron })))
+      });
+      applied = sortedCronList(schedulePayload);
+      console.log(`WORKER_CRON_SCHEDULES_UPDATED before=${JSON.stringify(before)} after=${JSON.stringify(applied)}`);
+    } else {
+      console.log(`WORKER_CRON_SCHEDULES_UNCHANGED schedules=${JSON.stringify(applied)}`);
+    }
     if (JSON.stringify(applied) !== JSON.stringify(expected)) {
       throw new Error(`Worker cron schedule readback mismatch expected=${JSON.stringify(expected)} actual=${JSON.stringify(applied)}`);
     }

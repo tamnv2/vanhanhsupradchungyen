@@ -1,0 +1,23 @@
+name: Cloudflare cron live observe
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/scripts/cloudflare-cron-observe.mjs'
+      - '.github/workflows/cloudflare-cron-observe.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  observe:
+    runs-on: ubuntu-latest
+    environment: beta
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Read live cron and D1 projection state
+        run: node .github/scripts/cloudflare-cron-observe.mjs
