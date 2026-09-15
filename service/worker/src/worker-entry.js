@@ -1,4 +1,5 @@
 import httpWorker from './index.js';
+import { ATTENDANCE_SCAN_CONTEXT_PATH, handleAttendanceScanContextRoute } from './attendance-scan-context.js';
 import { processProjectionOutbox } from './projection-processor.js';
 
 export const PROJECTION_SCHEDULE_LIMIT = 25;
@@ -20,6 +21,14 @@ function projectionRuntimeConfig(env) {
     sharedToken,
     environment: String(env.APP_ENV || 'BETA').toUpperCase()
   };
+}
+
+export async function handleWorkerFetch(request, env, ctx) {
+  const url = new URL(request.url);
+  if (url.pathname === ATTENDANCE_SCAN_CONTEXT_PATH) {
+    return handleAttendanceScanContextRoute(request, env);
+  }
+  return httpWorker.fetch(request, env, ctx);
 }
 
 export async function runProjectionSchedule(env, options = {}) {
@@ -70,6 +79,6 @@ async function scheduled(_controller, env, ctx) {
 }
 
 export default {
-  fetch: httpWorker.fetch,
+  fetch: handleWorkerFetch,
   scheduled
 };

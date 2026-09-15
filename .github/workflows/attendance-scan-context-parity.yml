@@ -1,0 +1,98 @@
+name: Validate attendance scan-context parity
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'service/worker/src/attendance-scan-context.js'
+      - 'service/worker/src/worker-entry.js'
+      - 'service/worker/tests/attendance-scan-context.test.mjs'
+      - 'service/worker/deploy.beta.json'
+      - 'lan-service/**'
+      - 'lan-attendance-scan-context-harness/**'
+      - '.github/workflows/attendance-scan-context-parity.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'service/worker/src/attendance-scan-context.js'
+      - 'service/worker/src/worker-entry.js'
+      - 'service/worker/tests/attendance-scan-context.test.mjs'
+      - 'service/worker/deploy.beta.json'
+      - 'lan-service/**'
+      - 'lan-attendance-scan-context-harness/**'
+      - '.github/workflows/attendance-scan-context-parity.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: attendance-scan-context-parity-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cloud-scan-context:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate focused Worker source and scan-context tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module --check < service/worker/src/attendance-scan-context.js
+          node --input-type=module --check < service/worker/src/worker-entry.js
+          node --test service/worker/tests/attendance-scan-context.test.mjs
+          node <<'NODE'
+          const fs = require('fs');
+          const spec = JSON.parse(fs.readFileSync('service/worker/deploy.beta.json', 'utf8'));
+          if (spec.source !== 'service/worker/src/worker-entry.js') throw new Error('Unexpected Worker entry source');
+          if (!Array.isArray(spec.modules) || !spec.modules.includes('attendance-scan-context.js')) {
+            throw new Error('attendance-scan-context.js missing from reviewed Worker module manifest');
+          }
+          console.log('ATTENDANCE_SCAN_CONTEXT_WORKER_MANIFEST_PASS');
+          NODE
+
+  lan-scan-context:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Build LAN runtime and attendance scan-context harness
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet build lan-service/Vhdchy.LanService.csproj -c Release
+          dotnet build lan-attendance-scan-context-harness/Vhdchy.LanAttendanceScanContext.Harness.csproj -c Release
+      - name: Prove secure read-only LAN scan-context semantics
+        shell: bash
+        run: |
+          set -euo pipefail
+          data_root="$RUNNER_TEMP/vhdchy-attendance-scan-context"
+          rm -rf "$data_root"
+          mkdir -p "$data_root"
+          dotnet run --project lan-attendance-scan-context-harness/Vhdchy.LanAttendanceScanContext.Harness.csproj \
+            -c Release --no-build -- \
+            "lan-service/bin/Release/net8.0/VHDCHY.LanService.dll" \
+            "$data_root" \
+            17914 2>&1 | tee "$RUNNER_TEMP/attendance-scan-context.log"
+          grep -Fq 'LAN_ATTENDANCE_SCAN_CONTEXT_PASS' "$RUNNER_TEMP/attendance-scan-context.log"
+          grep -Fq 'signedProof=PASS' "$RUNNER_TEMP/attendance-scan-context.log"
+          grep -Fq 'sessionDeviceEpoch=PASS' "$RUNNER_TEMP/attendance-scan-context.log"
+          grep -Fq 'permission=PASS' "$RUNNER_TEMP/attendance-scan-context.log"
+          grep -Fq 'strictMnv=PASS' "$RUNNER_TEMP/attendance-scan-context.log"
+          grep -Fq 'presenceVersion=PASS' "$RUNNER_TEMP/attendance-scan-context.log"
+          grep -Fq 'readOnly=PASS' "$RUNNER_TEMP/attendance-scan-context.log"
+          test "$(sqlite3 "$data_root/edge.db" "PRAGMA foreign_key_check;")" = ""
+          test "$(sqlite3 "$data_root/edge.db" "PRAGMA quick_check;")" = "ok"
+      - name: Upload attendance scan-context diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: attendance-scan-context-diagnostics
+          if-no-files-found: ignore
+          path: ${{ runner.temp }}/attendance-scan-context.log
