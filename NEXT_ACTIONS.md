@@ -8,102 +8,109 @@ Primary phase: **Phase 6 — LAN continuity/offline/reconcile**
 
 Default is `CONTINUE` with dependency-aware parallel execution. Evidence is required before PASS. A blocked lane does not stop unrelated ready work. `AI_TERMINATION_GUARD.md` forbids voluntary finalization while approved `READY` work remains.
 
-## A — Projection Cron / Google Sheet live chain — CLOSED PASS
+## Retained accepted milestones
 
-- isolated live projection E2E `34927511443`: SUCCESS;
-- cleaned Worker deploy `34927869845`: SUCCESS;
-- post-deploy observer `34927996370`: SUCCESS;
-- active Worker handlers `fetch` + `scheduled`, Cron `*/2 * * * *`.
+- Projection live chain: E2E `34927511443`, cleaned deploy `34927869845`, observer `34927996370`: SUCCESS.
+- Web employee-create PR #19: merged; post-merge clean `34928090928` + product foundations `34928090885`: SUCCESS.
+- V6 email OTP PR #30: source/CI PASS; real provider delivery E2E remains gated.
+- Android endpoint PR #32: merged; pre/post-merge clean and Android/product foundations SUCCESS.
+- Android secure session PR #34: merged at `ebfb7d238268fb089a34779e2c5d53ae45693608`; PR clean `34933869114`, Android foundation `34933869144`, post-merge clean `34933981747`, product foundations `34933981735`: SUCCESS.
 
-Do not reopen absent new failing evidence.
+## CURRENT PRIMARY READY — Cloud + LAN attendance scan-context parity
 
-## B — Web employee-create — MERGED PASS
+The previous plan to build the Android attendance command immediately is dependency-blocked by an identity boundary that is now proven:
 
-PR #19 merged; post-merge clean `34928090928` and product foundations `34928090885`: SUCCESS.
+- QR contains **MNV only** under V5-002;
+- current `ATTENDANCE_IN/OUT` mutation requires technical `employeeId` as both `entityId` and payload `employeeId`;
+- current presence `entityVersion` is required for guarded mutation when presence state already exists;
+- actor identity is server-authenticated and must never come from scanner payload.
 
-Continue Web only where current read/version/auth contracts support safe UX.
+Underlying data already exists in both runtimes:
 
-## C — V6 email OTP — SOURCE/CI PASS / PROVIDER GATED
+- Cloud D1: `employees`, `employee_codes`, `presence_state`;
+- Cloud operational snapshot includes employees + current portrait media id, employee codes and presence;
+- LAN materializes the same three datasets into `module_current_state` and validates ACTIVE-code uniqueness.
 
-PR #30 merged; clean baselines `34930120980`, `34930171765` and product foundations `34930171683`: SUCCESS.
+No current public authenticated MNV lookup route has been proven. Implement that read path first.
 
-Do not claim live provider delivery until reviewed provider/binding/secrets exist. Do not invent TOTP verifier parameters or an OTP failure-attempt limit.
+### Scan-context contract boundary
 
-## D — Android endpoint acquisition — MERGED SOURCE/CI PASS
+Use one reviewed route meaning in Cloud and LAN. Exact implementation path may be refined under Service API Contract V3; prefer a body-based authenticated request so MNV is not unnecessarily placed in URL/query logs and LAN can reuse signed-body evidence.
 
-PR #32 merged at `00ac446a6bb3d93f1c69c1bce8ab2571ec5f11a3`.
+Input:
+- employee code / MNV only, bounded and normalized;
+- no actor/user/permission fields.
 
-- pre-merge clean `34931008972`: SUCCESS;
-- Android foundation `34931008973`: SUCCESS;
-- post-merge clean `34933290109`: SUCCESS;
-- product foundations `34933290105`: Cloud/Web/Android/LAN SUCCESS.
+Authorization/security:
+- valid current authenticated user session required;
+- normal password-change gate still applies;
+- require effective attendance `scan` permission/scope;
+- LAN additionally requires HTTPS, paired-device signed request proof and matching LAN session/device/security epoch;
+- no anonymous enumeration.
 
-Accepted ordering remains `cached healthy endpoint -> LAN discovery -> manual recovery`, HTTPS-only + health-probed, no fabricated endpoint, no automatic authority switch.
+Resolution:
+1. find exactly one ACTIVE employee-code assignment for the normalized MNV;
+2. resolve its employee;
+3. employee must be ACTIVE;
+4. resolve current presence state for that employee, if any;
+5. fail closed on not-found, inactive/released identity, impossible ambiguity or incompatible runtime state.
 
-## E — Android session persistence/expiry — MERGED SOURCE/CI PASS
+Response parity must provide only scan-required current context:
+- `employeeCodeId`;
+- `employeeCode` / MNV;
+- `employeeId`;
+- `fullName`;
+- `currentPortraitMediaId` or null;
+- current presence object or null with `currentState`, `businessDate`, `entityVersion`;
+- runtime/request metadata as appropriate.
 
-PR #34 merged at `ebfb7d238268fb089a34779e2c5d53ae45693608`.
+This route is read-only. It must not create/update events, state, outboxes, Sheets or Drive.
 
-- PR clean baseline `34933869114`: SUCCESS;
-- PR Android foundation `34933869144`: SUCCESS;
-- transport harness `ANDROID_TRANSPORT_BEHAVIOR_PASS checks=66` with `sessionRestore=PASS`;
-- Android `assembleDebug`: SUCCESS;
-- post-merge clean baseline `34933981747`: SUCCESS;
-- post-merge product foundations `34933981735`: Cloud/Web/Android/LAN SUCCESS.
+### Required implementation/evidence sequence
 
-Accepted behavior:
+1. Implement Cloud read store + authenticated scan-context route using existing D1 state and current permission evaluator.
+2. Implement LAN read store against materialized `module_current_state` and wire it into secure signed/session-authenticated routes using the same response semantics.
+3. Add automated Cloud tests for active resolution, inactive/released/not-found, presence-null/versioned presence, permission/password-change gating, and response shape.
+4. Add LAN source/harness coverage for equivalent materialized-state vectors, signed route/session authorization and fail-closed invalid inputs.
+5. Add/extend parity validation so Cloud/LAN route contract cannot silently diverge.
+6. Do not deploy BETA merely to prove source parity unless current deployment policy/workflow calls for it; source/CI PASS and live provider PASS remain distinct evidence levels.
+7. Checkpoint last, open focused PR, require clean baseline and all affected product foundations/harnesses SUCCESS, merge only exact tested head.
+8. Verify post-merge main CI and reconcile governance.
 
-- persist only bearer token + expiry + original runtime mode;
-- Android Keystore AES-GCM + app-private encrypted metadata;
-- no password/OTP/TOTP/provider credential persistence;
-- exact expiry/corruption/missing key/decrypt failure/unknown runtime fail closed and clear local session evidence;
-- restore never creates a replacement key and never discovers/fallbacks/switches runtime authority.
+## NEXT DEPENDENT — Android scanner -> ATTENDANCE_IN/OUT command planning
 
-## F — CURRENT PRIMARY READY: Android scanner -> domain command handoff
+Only after scan-context parity is accepted:
 
-Current Android has `ScannerPayload.normalize(...)` but no current-product command handoff. Implement the smallest Slice-1 attendance command planning layer without UI or direct database writes.
+1. normalize scanner MNV with `ScannerPayload`;
+2. call scan-context route and use returned technical `employeeId` + current presence/version;
+3. human-facing workflow may show returned ACTIVE name + current portrait reference, but no final Pick Pack visual details are invented before authorized reference evidence;
+4. build stable `requestId`, `idempotencyKey`, command code, `entityId=employeeId`, `expectedEntityVersion=presence?.entityVersion ?? null`, payload with employeeId/businessDate/occurredAt/source and monotonic `deviceSeq` where current device identity provides it;
+5. same logical command identity survives Cloud/LAN route choice;
+6. no actor fields and no direct database/Google writes;
+7. unsupported/invalid state fails closed before dispatch;
+8. add pure-Java Android harness vectors and require Android PR foundation before merge.
 
-Exact sequence:
+## Following Android READY queue
 
-1. Re-read live `ScannerPayload`, `PdaRequestPlan`, `PdaSession`, `contracts/commands.slice1.v1.json`, `docs/SERVICE_API_CONTRACT_V3.md`, and current mutation envelope/route source before writing.
-2. Restrict this first scanner slice to the approved attendance commands `ATTENDANCE_IN` and `ATTENDANCE_OUT`; do not generalize into Pick/Pack flows whose current command contract is not yet materialized.
-3. Treat normalized scanner value as business input only. Actor/user/permission identity must come from authenticated Service context; never add client-authoritative actor fields.
-4. Build a stable client command plan containing the command code, normalized scan value and required command identity evidence available to the client (request/idempotency/device sequence/version fields as defined by the current route contract).
-5. Same logical command must retain the same identity if later routed through Cloud or LAN; selecting runtime endpoint must not regenerate command identity.
-6. Do not write SQLite/D1/Sheet/Drive directly from the Android scanner layer. Output is a Service request plan only.
-7. Reject unsupported command codes, blank/control/oversize scan payloads and structurally invalid identity evidence before network dispatch.
-8. Add pure-Java harness vectors for IN/OUT planning, normalization, identity stability across Cloud/LAN request planning, unsupported command rejection and absence of client actor authority.
-9. Checkpoint last; open focused PR; require clean baseline + Android PR foundation SUCCESS; merge only exact tested head.
-10. After merge, verify main clean/product foundations and reconcile governance.
-
-Do not fabricate final Pick Pack UI details.
-
-## G — Following Android READY queue
-
-After scanner handoff:
-
-- reconnect/resync and network lifecycle while retaining same-runtime authority semantics;
+- reconnect/resync and network lifecycle while preserving same-runtime authority semantics;
 - HTTPS/trust fail-closed behavior;
 - foreground/background recovery and stale-session handling;
 - client-local durable queue only for commands explicitly approved for `LOCAL_QUEUE_ONLY`.
 
-## H — LAN/provider proof — PARTLY GATED
+## Other lanes / gates
 
-Still pending and not inferable from CI: intended company Windows host acceptance, company-network/PDA/public-trust path, live LAN->Cloud provider linkage, >=60-minute Internet-cut acceptance, reconnect/host restart/network-change physical regression and capacity/soak/UAT.
-
-## I — Gateway / integrations
-
-Projection is live-PASS. Continue only open bounded provider failure/recovery, broader receipt/idempotency/reconciliation, Drive/media provider paths and operator-visible status. Do not rewrite the proven projection path absent new failure evidence.
-
-## J — Repo/governance
-
-Keep Issue #8, `CURRENT_STATE.md`, this file and `CHECKPOINT.md` synchronized. Progress remains **56.2% exact / 56% displayed** until a weighted threshold is defensibly changed.
-
-## Owner decision / release boundaries
-
+- LAN physical provider proof remains pending: target Windows host, company-network/PDA/public trust, live LAN->Cloud linkage, >=60-minute Internet-cut test, reconnect/network-change regression, capacity/soak/UAT.
+- Projection path is live-PASS; do not rewrite it absent new failing evidence.
+- Web/business work proceeds only where safe current contracts exist.
+- Real ROOT/normal email-OTP provider delivery E2E remains gated.
+- ROOT TOTP verifier parameters must not be invented.
 - Portrait replacement remains `OWNER_DECISION_REQUIRED`.
 - STABLE activation/promotion requires mandatory BETA acceptance and explicit Owner approval.
 
+## Repo/governance
+
+Keep Issue #8, `CURRENT_STATE.md`, this file and `CHECKPOINT.md` synchronized. Progress remains **56.2% exact / 56% displayed** until a weighted threshold is defensibly changed.
+
 ## Current execution line
 
-`Overall 56% displayed / 56.2% exact | Phase 6 65% | Projection PASS | Web employee-create PASS | V6 email-OTP source PASS/provider gated | Android endpoint + secure session persistence PASS | Next READY: scanner -> attendance domain command handoff | Physical Windows/PDA/outage acceptance pending`
+`Overall 56% displayed / 56.2% exact | Phase 6 65% | Android endpoint + secure session PASS | Scanner command blocked on trusted MNV→employee scan-context query | Primary READY: Cloud+LAN scan-context parity | Physical Windows/PDA/outage acceptance pending`
