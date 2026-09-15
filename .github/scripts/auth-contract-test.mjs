@@ -64,8 +64,15 @@ assert(gasSync.includes("'provisionProjectionAuth'"), 'CI must call the verifier
 assert(gasSync.includes("'projectionManagementHealth'"), 'CI must perform management readback');
 assert(gasSync.includes('PROJECTION_AUTH_PROVISION_PASS authConfigured=true enabled=false'), 'CI fail-closed provisioning evidence marker missing');
 
+const managementProbe = await readFile('.github/scripts/gas-management-probe.mjs', 'utf8');
+assert(managementProbe.includes("function: 'projectionManagementHealth'"), 'management E2E probe must call projectionManagementHealth');
+assert(managementProbe.includes("parameters: ['BETA']"), 'management E2E probe must bind BETA environment');
+assert(managementProbe.includes('result?.projection?.enabled === false'), 'management E2E probe must require projection disabled');
+assert(managementProbe.includes('PROJECTION_MANAGEMENT_E2E_PASS'), 'management E2E evidence marker missing');
+
 const gasWorkflow = await readFile('.github/workflows/gas-beta-sync.yml', 'utf8');
 assert(gasWorkflow.includes('VHDCHY_PROJECTION_SHARED_TOKEN: ${{ secrets.VHDCHY_PROJECTION_SHARED_TOKEN }}'), 'projection raw token must come from GitHub secret store');
 assert(gasWorkflow.includes("service/google-gateway/**"), 'Google Gateway source changes must trigger sync/deploy');
+assert(gasWorkflow.includes('node .github/scripts/gas-management-probe.mjs'), 'Google sync workflow must run the owner-only management E2E probe');
 
 console.log('AUTH_CONTRACT_TEST_PASS projectionManagement=PASS');
