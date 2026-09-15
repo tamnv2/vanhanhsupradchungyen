@@ -37,14 +37,24 @@ test('permission catalog has unique resource/action pairs and required permissio
   }
 });
 
-test('BETA Worker deployment manifest includes every local JavaScript dependency', async () => {
+test('BETA Worker deployment manifest includes every local JavaScript dependency and scheduled projection entrypoint', async () => {
   const deploy = await readJson('service/worker/deploy.beta.json');
   assert.equal(deploy.target_worker, 'vhdchy-beta');
-  assert.equal(deploy.source, 'service/worker/src/index.js');
+  assert.equal(deploy.source, 'service/worker/src/worker-entry.js');
   assert.ok(Array.isArray(deploy.modules) && deploy.modules.length > 0);
 
   const modules = new Set(deploy.modules);
-  assert.ok(modules.has('index.js'));
+  for (const requiredModule of [
+    'worker-entry.js',
+    'index.js',
+    'projection.js',
+    'projection-sender.js',
+    'projection-processor.js',
+    'projection-materializer.js'
+  ]) {
+    assert.ok(modules.has(requiredModule), `missing packaged module ${requiredModule}`);
+  }
+
   for (const moduleName of modules) {
     assert.match(moduleName, /^[A-Za-z0-9._-]+\.js$/);
     const source = await readText(`service/worker/src/${moduleName}`);
@@ -52,17 +62,24 @@ test('BETA Worker deployment manifest includes every local JavaScript dependency
       assert.ok(modules.has(match[1]), `${moduleName} imports ${match[1]} but deploy.beta.json does not package it`);
     }
   }
+
+  assert.deepEqual(deploy.cron_schedules, ['*/2 * * * *']);
 });
 
-test('BETA reconciliation machine credential is sourced from secret store and finality stays disabled before E2E', async () => {
+test('BETA machine credentials are sourced from secret store and gated features stay fail-closed before E2E', async () => {
   const deploy = await readJson('service/worker/deploy.beta.json');
   assert.equal(deploy.vars.LAN_RECONCILIATION_KEY_ID, 'vhdchy-beta-lan-reconciliation-01');
   assert.equal(deploy.vars.LAN_RECONCILIATION_FINALITY_V1, 'disabled');
   assert.equal(deploy.inherit_bindings, undefined);
 
   assert.ok(Array.isArray(deploy.secret_env_bindings));
-  const secret = deploy.secret_env_bindings.find(item => item?.name === 'LAN_RECONCILIATION_SHARED_SECRET');
-  assert.ok(secret, 'missing LAN_RECONCILIATION_SHARED_SECRET secret-store binding');
-  assert.equal(secret.env, 'LAN_RECONCILIATION_SHARED_SECRET');
-  assert.ok(Number(secret.min_length) >= 32);
+  const reconciliationSecret = deploy.secret_env_bindings.find(item => item?.name === 'LAN_RECONCILIATION_SHARED_SECRET');
+  assert.ok(reconciliationSecret, 'missing LAN_RECONCILIATION_SHARED_SECRET secret-store binding');
+  assert.equal(reconciliationSecret.env, 'LAN_RECONCILIATION_SHARED_SECRET');
+  assert.ok(Number(reconciliationSecret.min_length) >= 32);
+
+  const projectionSecret = deploy.secret_env_bindings.find(item => item?.name === 'VHDCHY_PROJECTION_SHARED_TOKEN');
+  assert.ok(projectionSecret, 'missing VHDCHY_PROJECTION_SHARED_TOKEN secret-store binding');
+  assert.equal(projectionSecret.env, 'VHDCHY_PROJECTION_SHARED_TOKEN');
+  assert.ok(Number(projectionSecret.min_length) >= 32);
 });

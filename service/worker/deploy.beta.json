@@ -1,7 +1,8 @@
 {
   "target_worker": "vhdchy-beta",
-  "source": "service/worker/src/index.js",
+  "source": "service/worker/src/worker-entry.js",
   "modules": [
+    "worker-entry.js",
     "index.js",
     "auth.js",
     "auth-service.js",
@@ -10,6 +11,9 @@
     "session.js",
     "permission-store.js",
     "projection.js",
+    "projection-sender.js",
+    "projection-processor.js",
+    "projection-materializer.js",
     "runtime-contract.js",
     "reconciliation.js",
     "reconciliation-finality.js",
@@ -22,6 +26,9 @@
   "compatibility_date": "2026-09-13",
   "public_origin": "https://beta.supra.cc.cd",
   "workers_dev_expected": false,
+  "cron_schedules": [
+    "*/2 * * * *"
+  ],
   "d1_binding": {
     "name": "DB",
     "database_name": "vhdchy-data-beta",
@@ -31,6 +38,11 @@
     {
       "name": "LAN_RECONCILIATION_SHARED_SECRET",
       "env": "LAN_RECONCILIATION_SHARED_SECRET",
+      "min_length": 32
+    },
+    {
+      "name": "VHDCHY_PROJECTION_SHARED_TOKEN",
+      "env": "VHDCHY_PROJECTION_SHARED_TOKEN",
       "min_length": 32
     }
   ],

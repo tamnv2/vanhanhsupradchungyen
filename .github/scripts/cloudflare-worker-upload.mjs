@@ -15,6 +15,36 @@ function bindingName(value, context) {
   return normalized;
 }
 
+function cronSchedules(value) {
+  if (value === undefined) return null;
+  if (!Array.isArray(value)) throw new Error('cron_schedules must be an array when provided');
+  const normalized = value.map((entry, index) => {
+    const cron = String(entry || '').trim();
+    if (!cron || cron.length > 128) throw new Error(`Invalid cron_schedules entry at index ${index}`);
+    return cron;
+  });
+  if (new Set(normalized).size !== normalized.length) throw new Error('Duplicate cron_schedules entry');
+  return normalized;
+}
+
+async function cfJson(url, apiToken, init = {}) {
+  const response = await fetch(url, {
+    ...init,
+    headers: {
+      authorization: `Bearer ${apiToken}`,
+      ...(init.body ? { 'content-type': 'application/json' } : {}),
+      ...(init.headers || {})
+    }
+  });
+  let payload;
+  try { payload = await response.json(); }
+  catch { throw new Error(`Cloudflare returned non-JSON HTTP ${response.status}`); }
+  if (!response.ok || payload?.success !== true) {
+    throw new Error(`Cloudflare API failed HTTP ${response.status}: ${JSON.stringify(payload?.errors || []).slice(0, 1500)}`);
+  }
+  return payload;
+}
+
 async function main() {
   const accountId = requiredEnv('CLOUDFLARE_ACCOUNT_ID');
   const apiToken = requiredEnv('CLOUDFLARE_API_TOKEN');
@@ -24,6 +54,7 @@ async function main() {
   if (!spec?.target_worker || !spec?.source || !Array.isArray(spec?.modules) || spec.modules.length < 1) {
     throw new Error('Deployment spec must define target_worker, source and a non-empty modules list');
   }
+  const schedules = cronSchedules(spec.cron_schedules);
 
   const mainModule = path.basename(spec.source);
   const sourceDir = path.dirname(path.resolve(spec.source));
@@ -102,8 +133,8 @@ async function main() {
   }
 
   const strictInheritance = inheritBindings.length ? '?bindings_inherit=strict' : '';
-  const url = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/workers/scripts/${encodeURIComponent(spec.target_worker)}${strictInheritance}`;
-  const response = await fetch(url, {
+  const scriptBaseUrl = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/workers/scripts/${encodeURIComponent(spec.target_worker)}`;
+  const response = await fetch(`${scriptBaseUrl}${strictInheritance}`, {
     method: 'PUT',
     headers: { authorization: `Bearer ${apiToken}` },
     body: form
@@ -117,10 +148,25 @@ async function main() {
     throw new Error(`Worker upload failed HTTP ${response.status}: ${JSON.stringify(payload?.errors || []).slice(0, 1500)}`);
   }
 
+  if (schedules !== null) {
+    const schedulePayload = await cfJson(`${scriptBaseUrl}/schedules`, apiToken, {
+      method: 'PUT',
+      body: JSON.stringify(schedules.map(cron => ({ cron })))
+    });
+    const applied = Array.isArray(schedulePayload?.result?.schedules)
+      ? schedulePayload.result.schedules.map(item => String(item?.cron || '')).filter(Boolean).sort()
+      : [];
+    const expected = [...schedules].sort();
+    if (JSON.stringify(applied) !== JSON.stringify(expected)) {
+      throw new Error(`Worker cron schedule readback mismatch expected=${JSON.stringify(expected)} actual=${JSON.stringify(applied)}`);
+    }
+  }
+
   console.log(`WORKER_MULTI_MODULE_UPLOAD_PASS worker=${spec.target_worker} modules=${modules.length}`);
   for (const moduleName of modules) console.log(`WORKER_MODULE=${moduleName}`);
   for (const item of secretEnvBindings) console.log(`WORKER_SECRET_BINDING_PROVISIONED=${item.name}`);
   for (const name of inheritBindings) console.log(`WORKER_INHERITED_BINDING=${name}`);
+  if (schedules !== null) console.log(`WORKER_CRON_SCHEDULES_PASS count=${schedules.length}`);
 }
 
 main().catch((error) => {
