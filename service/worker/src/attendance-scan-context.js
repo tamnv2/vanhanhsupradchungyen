@@ -1,4 +1,5 @@
 import { authorizePrincipal } from './permission-store.js';
+import { authenticateRequest } from './session.js';
 
 export const ATTENDANCE_SCAN_CONTEXT_PATH = '/api/v1/attendance/scan-context';
 export const ATTENDANCE_SCAN_PERMISSION = Object.freeze({ resourceCode: 'ATTENDANCE', actionCode: 'SCAN' });
@@ -6,7 +7,9 @@ export const ATTENDANCE_SCAN_CLUSTER_ID = 'PICK_PACK_1291';
 export const ATTENDANCE_SCAN_MODULE_ID = 'PICK_PACK';
 
 const MAX_EMPLOYEE_CODE_LENGTH = 120;
+const MAX_REQUEST_BODY_BYTES = 16 * 1024;
 const ALLOWED_FIELDS = new Set(['employeeCode']);
+const encoder = new TextEncoder();
 
 export class AttendanceScanContextError extends Error {
   constructor(code, message, status = 422, details = undefined) {
@@ -20,6 +23,50 @@ export class AttendanceScanContextError extends Error {
 
 function fail(code, message, status = 422, details = undefined) {
   throw new AttendanceScanContextError(code, message, status, details);
+}
+
+function response(payload, status, requestId) {
+  return Response.json({ ...payload, requestId }, {
+    status,
+    headers: {
+      'cache-control': 'no-store',
+      'x-content-type-options': 'nosniff'
+    }
+  });
+}
+
+function routeError(code, message, status, requestId, details = undefined) {
+  const error = { code, message };
+  if (details !== undefined) error.details = details;
+  return response({ ok: false, runtime: 'CLOUD', error }, status, requestId);
+}
+
+async function readJsonObject(request, requestId) {
+  const declaredLength = Number(request.headers.get('content-length') || 0);
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_REQUEST_BODY_BYTES) {
+    return { value: null, response: routeError('REQUEST_BODY_TOO_LARGE', 'Request body is too large.', 413, requestId) };
+  }
+
+  let text;
+  try {
+    text = await request.text();
+  } catch {
+    return { value: null, response: routeError('REQUEST_BODY_INVALID', 'Request body could not be read.', 400, requestId) };
+  }
+  if (encoder.encode(text).byteLength > MAX_REQUEST_BODY_BYTES) {
+    return { value: null, response: routeError('REQUEST_BODY_TOO_LARGE', 'Request body is too large.', 413, requestId) };
+  }
+
+  let value;
+  try {
+    value = JSON.parse(text || '{}');
+  } catch {
+    return { value: null, response: routeError('REQUEST_JSON_INVALID', 'Request body must be valid JSON.', 400, requestId) };
+  }
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return { value: null, response: routeError('INVALID_INPUT', 'Scan context request must be a JSON object.', 422, requestId) };
+  }
+  return { value, response: null };
 }
 
 export function normalizeAttendanceScanContextRequest(value) {
@@ -42,21 +89,25 @@ export function normalizeAttendanceScanContextRequest(value) {
   return { employeeCode };
 }
 
+function nullableString(value) {
+  return value === null || value === undefined ? null : String(value);
+}
+
 function normalizeRow(row) {
   if (!row) return null;
   return {
-    employeeCodeId: String(row.employee_code_id),
-    employeeCode: String(row.employee_code),
-    employeeId: String(row.employee_id),
-    codeStatus: String(row.code_status),
-    fullName: String(row.full_name),
-    employeeStatus: String(row.employee_status),
-    currentPortraitMediaId: row.current_portrait_media_id == null ? null : String(row.current_portrait_media_id),
+    employeeCodeId: nullableString(row.employee_code_id),
+    employeeCode: nullableString(row.employee_code),
+    employeeId: nullableString(row.employee_id),
+    codeStatus: nullableString(row.code_status),
+    fullName: nullableString(row.full_name),
+    employeeStatus: nullableString(row.employee_status),
+    currentPortraitMediaId: nullableString(row.current_portrait_media_id),
     presence: row.presence_entity_version == null
       ? null
       : {
-          currentState: String(row.current_state),
-          businessDate: row.business_date == null ? null : String(row.business_date),
+          currentState: nullableString(row.current_state),
+          businessDate: nullableString(row.business_date),
           entityVersion: Number(row.presence_entity_version)
         }
   };
@@ -139,8 +190,12 @@ export async function resolveAttendanceScanContext({
   if (!match.employeeCodeId || !match.employeeId || !match.fullName || match.employeeCode !== normalized.employeeCode) {
     fail('SCAN_CONTEXT_CONFLICT', 'Resolved scan context is structurally inconsistent.', 409);
   }
+  if (match.currentPortraitMediaId !== null && !match.currentPortraitMediaId) {
+    fail('SCAN_CONTEXT_CONFLICT', 'Resolved portrait reference is invalid.', 409);
+  }
   if (match.presence) {
     if (!['IN', 'OUT'].includes(match.presence.currentState) ||
+        !match.presence.businessDate ||
         !Number.isInteger(match.presence.entityVersion) ||
         match.presence.entityVersion < 1) {
       fail('SCAN_CONTEXT_CONFLICT', 'Resolved presence state is invalid.', 409);
@@ -155,4 +210,37 @@ export async function resolveAttendanceScanContext({
     currentPortraitMediaId: match.currentPortraitMediaId ?? null,
     presence: match.presence ?? null
   };
+}
+
+export async function handleAttendanceScanContextRoute(request, env, requestId = crypto.randomUUID()) {
+  if (request.method !== 'POST') {
+    return routeError('METHOD_NOT_ALLOWED', 'Attendance scan context requires POST.', 405, requestId);
+  }
+  if (!env?.DB) {
+    return routeError('RUNTIME_DEPENDENCY_UNAVAILABLE', 'Attendance scan context is unavailable.', 503, requestId);
+  }
+
+  const auth = await authenticateRequest(request, env);
+  if (!auth.ok) {
+    return routeError(auth.code || 'AUTH_FAILED', 'Authentication failed.', 401, requestId);
+  }
+
+  const body = await readJsonObject(request, requestId);
+  if (body.response) return body.response;
+
+  try {
+    const context = await resolveAttendanceScanContext({
+      store: createD1AttendanceScanContextStore(env.DB),
+      db: env.DB,
+      principal: auth.principal,
+      request: body.value
+    });
+    return response({ ok: true, runtime: 'CLOUD', context }, 200, requestId);
+  } catch (error) {
+    if (error instanceof AttendanceScanContextError) {
+      return routeError(error.code, error.message, error.status, requestId, error.details);
+    }
+    console.error('ATTENDANCE_SCAN_CONTEXT_UNEXPECTED', error?.stack || error);
+    return routeError('RUNTIME_DEPENDENCY_UNAVAILABLE', 'Attendance scan context could not be resolved.', 503, requestId);
+  }
 }
