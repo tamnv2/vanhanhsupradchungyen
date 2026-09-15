@@ -5,6 +5,7 @@ const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
 const token = process.env.CLOUDFLARE_API_TOKEN;
 const worker = 'vhdchy-beta';
 const databaseId = '37eb7d59-05c0-4ba2-8162-cb6a9fe5d492';
+const scriptBaseUrl = `https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/scripts/${worker}`;
 
 async function cf(url, init = {}) {
   const response = await fetch(url, {
@@ -25,8 +26,56 @@ async function cf(url, init = {}) {
   return payload;
 }
 
-const schedules = await cf(`https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/scripts/${worker}/schedules`);
-console.log(`CRON_LIVE_SCHEDULES=${JSON.stringify((schedules.result?.schedules || []).map(x => ({ cron: x.cron, created_on: x.created_on || null, modified_on: x.modified_on || null })))}`);
+const deployments = await cf(`${scriptBaseUrl}/deployments`);
+const activeDeployment = deployments.result?.deployments?.[0] || null;
+if (!activeDeployment?.id) throw new Error('No active Worker deployment was returned');
+const servingVersions = (Array.isArray(activeDeployment.versions) ? activeDeployment.versions : [])
+  .filter(entry => Number(entry?.percentage) > 0 && entry?.version_id);
+if (!servingVersions.length) throw new Error('Active Worker deployment has no serving versions');
+
+const activeVersionEvidence = [];
+for (const serving of servingVersions) {
+  const versionPayload = await cf(`${scriptBaseUrl}/versions/${encodeURIComponent(serving.version_id)}`);
+  const version = versionPayload.result || {};
+  const handlers = Array.isArray(version?.resources?.script?.handlers)
+    ? version.resources.script.handlers.map(String).sort()
+    : [];
+  const safeEvidence = {
+    version_id: String(serving.version_id),
+    percentage: Number(serving.percentage),
+    number: Number.isFinite(Number(version.number)) ? Number(version.number) : null,
+    source: version?.metadata?.source || null,
+    handlers,
+    last_deployed_from: version?.resources?.script?.last_deployed_from || null,
+    compatibility_date: version?.resources?.script_runtime?.compatibility_date || null
+  };
+  activeVersionEvidence.push(safeEvidence);
+  if (!handlers.includes('fetch') || !handlers.includes('scheduled')) {
+    throw new Error(`Active Worker version ${serving.version_id} missing required handlers; handlers=${JSON.stringify(handlers)}`);
+  }
+}
+console.log(`CRON_LIVE_ACTIVE_DEPLOYMENT=${JSON.stringify({
+  id: activeDeployment.id,
+  created_on: activeDeployment.created_on || null,
+  source: activeDeployment.source || null,
+  strategy: activeDeployment.strategy || null,
+  versions: servingVersions.map(entry => ({ version_id: entry.version_id, percentage: Number(entry.percentage) }))
+})}`);
+console.log(`CRON_LIVE_ACTIVE_VERSIONS=${JSON.stringify(activeVersionEvidence)}`);
+console.log('CRON_LIVE_ACTIVE_HANDLERS_PASS');
+
+const schedules = await cf(`${scriptBaseUrl}/schedules`);
+const liveSchedules = (schedules.result?.schedules || []).map(x => ({
+  cron: x.cron,
+  created_on: x.created_on || null,
+  modified_on: x.modified_on || null
+}));
+console.log(`CRON_LIVE_SCHEDULES=${JSON.stringify(liveSchedules)}`);
+const cronValues = liveSchedules.map(item => String(item.cron || '')).sort();
+if (JSON.stringify(cronValues) !== JSON.stringify(['*/2 * * * *'])) {
+  throw new Error(`Unexpected live Cron schedules: ${JSON.stringify(cronValues)}`);
+}
+console.log('CRON_LIVE_SCHEDULE_PASS');
 
 const d1 = await cf(`https://api.cloudflare.com/client/v4/accounts/${accountId}/d1/database/${databaseId}/query`, {
   method: 'POST',
