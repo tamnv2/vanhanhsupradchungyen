@@ -1,0 +1,48 @@
+name: Projection BETA live E2E
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/dispatch/projection-live-e2e.json'
+      - '.github/scripts/projection-live-e2e.mjs'
+      - '.github/workflows/projection-live-e2e.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: projection-beta-live-e2e
+  cancel-in-progress: false
+
+jobs:
+  projection-live-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    environment: beta
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      GOOGLE_SHEETS_PROJECTION_ID: ${{ vars.GOOGLE_SHEETS_PROJECTION_ID }}
+      GOOGLE_OAUTH_CLIENT_ID: ${{ vars.GOOGLE_OAUTH_CLIENT_ID }}
+      GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}
+      GOOGLE_OAUTH_REFRESH_TOKEN: ${{ secrets.GOOGLE_OAUTH_REFRESH_TOKEN }}
+
+    steps:
+      - name: Checkout exact main source
+        uses: actions/checkout@v4
+
+      - name: Validate isolated E2E dispatch
+        id: gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main"
+          jq -e '(.enabled == true or .enabled == false) and .target == "beta" and .operation == "projection_live_e2e" and (.request_id | type == "string" and length > 0)' .github/dispatch/projection-live-e2e.json >/dev/null
+          enabled="$(jq -r '.enabled' .github/dispatch/projection-live-e2e.json)"
+          echo "enabled=$enabled" >> "$GITHUB_OUTPUT"
+          if [ "$enabled" != "true" ]; then echo 'PROJECTION_LIVE_E2E_DISABLED_NOOP'; fi
+
+      - name: Run isolated D1 cron Google Sheet E2E and cleanup
+        if: steps.gate.outputs.enabled == 'true'
+        run: node .github/scripts/projection-live-e2e.mjs
