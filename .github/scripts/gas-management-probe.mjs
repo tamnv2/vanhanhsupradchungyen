@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+
 const required = [
   'APP_ENV',
   'GAS_SCRIPT_ID',
@@ -10,6 +12,9 @@ for (const name of required) {
   if (!process.env[name]) throw new Error(`Missing required environment value: ${name}`);
 }
 if (process.env.APP_ENV !== 'BETA') throw new Error('APP_ENV must be BETA for management probe');
+
+const dispatch = JSON.parse(fs.readFileSync('.github/dispatch/gas-beta-sync.json', 'utf8'));
+const activationRequested = dispatch.activate_projection === true;
 
 async function sleep(ms) {
   await new Promise(resolve => setTimeout(resolve, ms));
@@ -55,14 +60,18 @@ async function runHealth(token) {
 }
 
 function validate(result) {
+  const enabled = result?.projection?.enabled;
+  const stateOk = activationRequested
+    ? typeof enabled === 'boolean'
+    : enabled === (dispatch.projection_expected_enabled === true);
   const ok =
     result?.ok === true &&
     result?.managementVersion === 'VHDCHY_PROJECTION_MANAGEMENT_V1' &&
     String(result?.environment || '').toUpperCase() === 'BETA' &&
     result?.bootstrap?.authorized === true &&
     result?.bootstrap?.configMatch === true &&
-    typeof result?.projection?.authConfigured === 'boolean' &&
-    result?.projection?.enabled === false;
+    result?.projection?.authConfigured === true &&
+    stateOk;
   if (!ok) throw new Error(`Projection management health mismatch: ${JSON.stringify(result).slice(0, 1000)}`);
   return result;
 }
@@ -72,7 +81,8 @@ let lastError = 'unknown';
 for (let attempt = 1; attempt <= 8; attempt += 1) {
   try {
     const result = validate(await runHealth(token));
-    console.log(`PROJECTION_MANAGEMENT_E2E_PASS authConfigured=${result.projection.authConfigured} enabled=false`);
+    const mode = activationRequested ? 'ACTIVATION_RECOVERABLE' : 'STEADY_STATE';
+    console.log(`PROJECTION_MANAGEMENT_E2E_PASS authConfigured=true enabled=${result.projection.enabled} mode=${mode}`);
     process.exit(0);
   } catch (error) {
     lastError = error instanceof Error ? error.message : String(error);
