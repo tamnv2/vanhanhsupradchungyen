@@ -21,6 +21,7 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       LAN_RECONCILIATION_SHARED_SECRET: ${{ secrets.LAN_RECONCILIATION_SHARED_SECRET }}
+      VHDCHY_PROJECTION_SHARED_TOKEN: ${{ secrets.VHDCHY_PROJECTION_SHARED_TOKEN }}
 
     steps:
       - uses: actions/checkout@v4
@@ -45,18 +46,20 @@ jobs:
           set -euo pipefail
           jq -e '
             .target_worker == "vhdchy-beta" and
+            .source == "service/worker/src/worker-entry.js" and
             .public_origin == "https://beta.supra.cc.cd" and
             .workers_dev_expected == false and
+            .cron_schedules == ["*/2 * * * *"] and
             .d1_binding.name == "DB" and
             .d1_binding.database_name == "vhdchy-data-beta" and
             .d1_binding.database_id == "37eb7d59-05c0-4ba2-8162-cb6a9fe5d492" and
             .vars.APP_ENV == "BETA" and
+            .vars.PROJECTION_DELIVERY_ENABLED == "false" and
             .vars.LAN_RECONCILIATION_KEY_ID == "vhdchy-beta-lan-reconciliation-01" and
             .vars.LAN_RECONCILIATION_FINALITY_V1 == "disabled" and
-            (.secret_env_bindings | length) == 1 and
-            .secret_env_bindings[0].name == "LAN_RECONCILIATION_SHARED_SECRET" and
-            .secret_env_bindings[0].env == "LAN_RECONCILIATION_SHARED_SECRET" and
-            .secret_env_bindings[0].min_length >= 32 and
+            (.secret_env_bindings | length) == 2 and
+            ([.secret_env_bindings[] | select(.name == "LAN_RECONCILIATION_SHARED_SECRET" and .env == "LAN_RECONCILIATION_SHARED_SECRET" and .min_length >= 32)] | length) == 1 and
+            ([.secret_env_bindings[] | select(.name == "VHDCHY_PROJECTION_SHARED_TOKEN" and .env == "VHDCHY_PROJECTION_SHARED_TOKEN" and .min_length >= 32)] | length) == 1 and
             .expected_runtime.schema_version == "business_core_v3" and
             .expected_runtime.runtime_state == "BUSINESS_CORE_V3"
           ' service/worker/deploy.beta.json >/dev/null
@@ -76,20 +79,22 @@ jobs:
           NODE
           for source in service/worker/src/*.js; do node --input-type=module --check < "$source"; done
 
-      - name: Require reconciliation secret-store input
+      - name: Require secret-store inputs
         if: steps.dispatch.outputs.enabled == 'true'
         shell: bash
         run: |
           set -euo pipefail
           test "${#LAN_RECONCILIATION_SHARED_SECRET}" -ge 32
+          test "${#VHDCHY_PROJECTION_SHARED_TOKEN}" -ge 32
           echo 'RECONCILIATION_SECRET_STORE_INPUT_PASS'
+          echo 'PROJECTION_SECRET_STORE_INPUT_PASS'
 
-      - name: Read-only provider preflight before first credential provisioning
+      - name: Read-only provider preflight before credential provisioning
         if: steps.dispatch.outputs.enabled == 'true'
         shell: bash
         run: node .github/scripts/cloudflare-worker-predeploy.mjs
 
-      - name: Upload reviewed Worker modules and machine credential
+      - name: Upload reviewed Worker modules credentials and cron
         if: steps.dispatch.outputs.enabled == 'true'
         shell: bash
         run: node .github/scripts/cloudflare-worker-upload.mjs service/worker/deploy.beta.json
@@ -117,7 +122,10 @@ jobs:
           if (value('WORKERS_DEV_ENABLED=') !== 'no') throw new Error('workers.dev changed');
           const domains = JSON.parse(value('WORKER_CUSTOM_DOMAINS='));
           if (domains.length !== 1 || domains[0]?.hostname !== 'beta.supra.cc.cd') throw new Error('custom domain changed');
-          if (!log.includes('WORKER_RECONCILIATION_BINDINGS_PASS')) throw new Error('reconciliation bindings did not pass postflight');
+          if (!log.includes('WORKER_RUNTIME_BINDINGS_PASS')) throw new Error('runtime bindings did not pass postflight');
+          if (value('WORKER_PROJECTION_DELIVERY_ENABLED=') !== 'false') throw new Error('projection delivery gate is not fail-closed');
+          const schedules = JSON.parse(value('WORKER_CRON_SCHEDULES='));
+          if (JSON.stringify(schedules) !== JSON.stringify(['*/2 * * * *'])) throw new Error('projection cron schedule mismatch');
           if (!log.includes('D1_RECONCILIATION_TABLES_PASS')) throw new Error('reconciliation tables did not pass postflight');
           if (!log.includes('D1_EDGE_INGEST_COLUMNS_PASS')) throw new Error('reconciliation columns did not pass postflight');
           console.log('WORKER_MULTI_MODULE_POSTCHECK_PASS');
