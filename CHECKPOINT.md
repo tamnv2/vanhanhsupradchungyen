@@ -1,10 +1,10 @@
 # CHECKPOINT — VHDCHY
 
-checkpoint_version: 58
+checkpoint_version: 59
 protocol: AI_AUTHORITY_RESUME_V2
 status: EXECUTING_PRODUCT_V7_BETA
 action_mode: AUTONOMOUS_PARALLEL
-reconciled_through_commit: 12b9d7904106289af5b611d921e336e464022e9d
+reconciled_through_commit: 14715e55ee6996422b3aeeb3ca1849d7d2733e55
 active_lanes: REPO_GOVERNANCE / SHARED_DOMAIN / CLOUD_SERVICE / LAN_FULL_SERVICE / AUTH / GOOGLE_SYNC / WEB_ONLINE_LAN / ANDROID_PDA / RECONCILIATION / STABLE_PREPARATION
 paused_lanes: PHYSICAL_CORPORATE_LAN_REGRESSION
 
@@ -23,58 +23,82 @@ context_index_ref: CONTEXT_INDEX.md
 
 - Evidence-weighted total remains **56.2% exact / 56% displayed**.
 - Phase 6 LAN continuity/offline/reconcile remains **65%**.
-- Android endpoint acquisition is accepted source/CI PASS; session persistence is IN PROGRESS and unverified until PR CI/build evidence succeeds.
+- Android endpoint acquisition + secure session persistence are accepted source/CI PASS, but broader App workflow/UI/physical gates remain open, so no weighted phase threshold moves.
 
 ## Fresh-chat resume anchor
 
 1. Live-fetch `AI_ENTRYPOINT.md` from GitHub `main` and execute its bootstrap.
-2. Compare main HEAD against this checkpoint reconciliation point.
-3. Read changed authority/current-state/source paths after `12b9d7904106289af5b611d921e336e464022e9d` before mutation.
-4. If the Android session-persistence PR remains open, continue it; otherwise follow current `NEXT_ACTIONS.md`.
+2. Compare current main HEAD with this checkpoint reconciliation point.
+3. Read changed authority/current-state/source paths after `14715e55ee6996422b3aeeb3ca1849d7d2733e55` before mutation.
+4. Follow current `NEXT_ACTIONS.md`; primary ready source lane is Android scanner -> attendance domain command handoff unless later main evidence supersedes it.
 
 Memory/chat summaries are NON_AUTHORITY.
 
 ## Latest accepted main evidence
 
-- Governance PR #33 merged at `54d623ad50be7f930255d41a618f6da7cecf6298`; checkpoint v57/current state reflect Android endpoint acquisition PASS.
-- Issue #8 is synchronized to main `54d623ad50be7f930255d41a618f6da7cecf6298`.
-- Android endpoint PR #32 merged at `00ac446a6bb3d93f1c69c1bce8ab2571ec5f11a3`; pre-merge clean `34931008972`, Android foundation `34931008973`, post-merge clean `34933290109`, product foundations `34933290105`: SUCCESS.
+### Android secure session persistence — MERGED SOURCE/CI PASS
+
+PR #34 merged at `ebfb7d238268fb089a34779e2c5d53ae45693608`.
+
+- PR clean baseline `34933869114`: SUCCESS;
+- PR Android foundation `34933869144`: SUCCESS;
+- transport harness `ANDROID_TRANSPORT_BEHAVIOR_PASS checks=66` with `sessionRestore=PASS`;
+- Android `assembleDebug`: SUCCESS;
+- post-merge clean baseline `34933981747`: SUCCESS;
+- post-merge product foundations `34933981735`: Cloud/Web/Android/LAN SUCCESS.
+
+Accepted semantics:
+
+- persistence snapshot carries only bearer token, expiry and original runtime mode;
+- snapshot text output redacts bearer material;
+- exact-expiry/null/invalid restore clears prior state and fails closed;
+- Android Keystore AES-GCM encrypts persisted session evidence;
+- app-private storage contains format version, IV and ciphertext only;
+- replacement save clears old persisted state first;
+- missing/invalid original key is never silently replaced during restore;
+- corruption/decrypt failure/unknown runtime/expiry clears state and fails closed;
+- raw password, email OTP, TOTP secret/code and provider credentials are never persisted;
+- restore preserves original runtime authority and performs no discovery/fallback.
+
+### Android endpoint acquisition — MERGED SOURCE/CI PASS
+
+PR #32 merged at `00ac446a6bb3d93f1c69c1bce8ab2571ec5f11a3`; pre/post-merge clean baselines and Android/product foundations are SUCCESS.
+
+### Retained accepted evidence
+
 - Projection live E2E `34927511443`, cleaned deploy `34927869845`, observer `34927996370`: SUCCESS.
-- V6 email-OTP PR #30 merged/source-CI PASS; live provider delivery remains gated.
+- Web employee-create PR #19 merged; post-merge clean/product foundations: SUCCESS.
+- V6 email-OTP PR #30 source/CI PASS; provider live delivery remains gated.
+- LAN refresh/rebase integration `34851773729` and clean baseline `34851772963`: SUCCESS.
 
-## Active Android session persistence lane — IN PROGRESS / NOT YET PASS
+## Current primary READY — Android scanner -> attendance domain command handoff
 
-Branch: `ai/android-session-persistence-20260915`, based on accepted/reconciled main `54d623ad50be7f930255d41a618f6da7cecf6298`.
+Current Android only normalizes scanner text; there is no current-product command handoff.
 
-Implemented through `12b9d7904106289af5b611d921e336e464022e9d`:
+Authority boundary:
 
-- `PdaSession` now has a persistence-safe in-memory `Snapshot` carrying only bearer token, expiry and original runtime mode;
-- snapshot is allowed only for a currently usable session;
-- snapshot `toString()` redacts the bearer token;
-- restore clears any existing in-memory session first, rejects null/expired/invalid snapshots and preserves the original runtime mode only on valid restore;
-- exact expiry boundary is rejected (`expiresAt <= now`);
-- transport harness now tests restore-before-expiry, exact-expiry rejection, prior-session clearing on failed restore, null snapshot behavior, runtime preservation and snapshot redaction;
-- Android-specific `AndroidPdaSessionStore` persists only encrypted bearer-session evidence using Android Keystore AES-GCM;
-- app-private `SharedPreferences` stores only format version, IV and ciphertext;
-- save removes any previous persisted session first so a failed replacement cannot leave an older bearer blob behind;
-- restore never creates a replacement key when the prior Keystore key is missing;
-- missing key, malformed format, corruption, decrypt failure, unknown runtime mode, invalid token or expiry causes persisted state + target session to clear and fail closed;
-- passwords, email OTPs, TOTP secrets/codes and provider credentials are outside the store contract;
-- Android manifest already has `android:allowBackup="false"`, so the private ciphertext prefs are not exported through app backup;
-- restore has no endpoint discovery/fallback logic and cannot switch Cloud/LAN authority.
+- first slice is only `ATTENDANCE_IN` / `ATTENDANCE_OUT`, because they exist in the active Slice-1 command contract;
+- normalized scanner value is business input, not actor authority;
+- actor/permission identity comes from authenticated Service context only;
+- same logical command identity must survive Cloud/LAN route selection;
+- Android scanner layer must never write D1/SQLite/Sheet/Drive directly;
+- command planner must reject unsupported command codes, invalid scan values and malformed client command identity before dispatch.
 
-This source has not yet passed clean baseline or Android PR foundation build. Do not report it PASS before both succeed.
+Next implementation sequence:
 
-## Current READY queue
+1. identify the exact current Service/LAN command envelope/route source used by Slice-1;
+2. build a pure-Java attendance scan command plan compatible with that envelope;
+3. add harness vectors for IN/OUT, normalization, stable identity across route planning, invalid command rejection and no client actor fields;
+4. checkpoint last;
+5. require clean baseline + Android PR foundation before exact-head merge;
+6. post-merge evidence + governance reconciliation.
 
-1. Open a focused PR from `ai/android-session-persistence-20260915`.
-2. Require clean baseline + Android PR foundation SUCCESS on the exact head.
-3. Diagnose/fix source/harness/Android compile failures until green.
-4. Merge only the exact tested head if clean.
-5. Verify post-merge clean baseline + product foundations on main.
-6. Reconcile `CURRENT_STATE.md`, `NEXT_ACTIONS.md`, `CHECKPOINT.md`, Issue #8.
-7. Continue Android scanner command handoff, then reconnect/resync/network lifecycle, HTTPS/trust and foreground/background recovery as dependencies permit.
-8. Continue independent safe Web/integration work where authority is sufficient; keep provider/physical/STABLE/portrait gates isolated.
+## Following READY queue
+
+- reconnect/resync/network lifecycle;
+- HTTPS/trust fail-closed behavior;
+- foreground/background recovery/stale-session handling;
+- independent safe Web/integration work where current contracts are sufficient.
 
 ## Current blockers / gates
 
@@ -88,4 +112,4 @@ This source has not yet passed clean baseline or Android PR foundation build. Do
 ## do_not_repeat
 
 do_not_repeat:
-Do not treat memory as authority. Do not replay migrations 0009 or 0014. Do not expose or infer secret values. Do not invent TOTP verifier parameters or OTP failure-attempt limits. Do not persist raw password/OTP/TOTP/provider secrets. Do not generate a new key during restore when the original session key is unavailable. Do not restore expired/corrupt session state. Do not auto-switch Android runtime authority. Do not accept non-HTTPS LAN endpoints. Do not call the session persistence slice PASS before clean baseline + Android PR foundation evidence. Do not invent Pick Pack UI details. Do not inflate progress without weighted acceptance evidence. Do not promote STABLE without explicit Owner approval. Do not voluntarily final while approved READY work remains; run `PRE_FINAL_TERMINATION_GUARD` first.
+Do not treat memory as authority. Do not replay migrations 0009 or 0014. Do not expose or infer secret values. Do not invent TOTP verifier parameters or OTP failure-attempt limits. Do not persist raw password/OTP/TOTP/provider secrets. Do not restore expired/corrupt session state. Do not regenerate command identity merely because Cloud/LAN route changes. Do not put actor authority in scanner payloads. Do not write directly from Android scanner code to database/Google. Do not invent unsupported Pick/Pack command contracts or final Pick Pack UI details. Do not inflate progress without weighted acceptance evidence. Do not promote STABLE without explicit Owner approval. Do not voluntarily final while approved READY work remains; run `PRE_FINAL_TERMINATION_GUARD` first.
