@@ -1,9 +1,9 @@
 # CHECKPOINT — VHDCHY
 
-checkpoint_version: 53
+checkpoint_version: 54
 protocol: AI_AUTHORITY_RESUME_V2
 status: EXECUTING_PRODUCT_V7_BETA
-reconciled_through_commit: 11a2d229c0679610455fc281bf241a9e5b36d40c
+reconciled_through_commit: 75b4c467ff4bfe41e883beefe405521f32fd1567
 action_mode: AUTONOMOUS_PARALLEL
 active_lanes: REPO_GOVERNANCE / SHARED_DOMAIN / CLOUD_SERVICE / LAN_FULL_SERVICE / AUTH / GOOGLE_SYNC / WEB_ONLINE_LAN / ANDROID_PDA / RECONCILIATION / STABLE_PREPARATION
 paused_lanes: PHYSICAL_CORPORATE_LAN_REGRESSION
@@ -23,88 +23,67 @@ context_index_ref: CONTEXT_INDEX.md
 
 - Evidence-weighted total: **56.2% exact / 56% displayed**.
 - Phase 6 LAN continuity/offline/reconcile: **65%**.
-- Projection live PASS and first authenticated Web employee-create closure are recorded without inflating the weighted baseline.
+- No progress increase is claimed from the current auth source slice before CI/provider/acceptance evidence.
 
 ## Fresh-chat resume anchor
 
-At the start of the next chat:
-
-1. live-fetch `AI_ENTRYPOINT.md` from GitHub `main`;
-2. execute its bootstrap exactly;
-3. compare current main HEAD with this checkpoint reconciliation point;
-4. read changed authority/current-state/source paths after `11a2d229c0679610455fc281bf241a9e5b36d40c` before mutation;
-5. then continue `NEXT_ACTIONS.md`, prioritizing provider-independent V6 account/security source/contract work and Android mechanics in parallel.
+1. Live-fetch `AI_ENTRYPOINT.md` from GitHub `main` and execute its bootstrap.
+2. Compare main HEAD with this checkpoint reconciliation point.
+3. Read changed authority/current-state/source paths after `75b4c467ff4bfe41e883beefe405521f32fd1567` before mutation.
+4. Continue the V6 email-OTP HTTP slice if it remains open; otherwise follow current `NEXT_ACTIONS.md`.
 
 Memory/chat summaries are NON_AUTHORITY.
 
-## Latest accepted live projection evidence — PASS
+## Latest accepted main evidence
 
-The former Cloudflare scheduled-event incident is closed unless new evidence reopens it.
+- Governance PR #29 merged at `e46325d762ce792200e574aace824bb865b9c94b`; post-merge clean baseline `34929584409`: SUCCESS.
+- Projection live E2E `34927511443`: SUCCESS; cleaned BETA deploy `34927869845`: SUCCESS; post-deploy Cron observer `34927996370`: SUCCESS.
+- Web employee-create PR #19 merged at `db746a71ed80dafd288218f599ab3e990f87e439`; post-merge clean baseline `34928090928` and product foundations `34928090885`: SUCCESS.
+- Issue #8 has been synchronized to main `e46325d762ce792200e574aace824bb865b9c94b`.
 
-- observer `34926987360`: real scheduled invocation observed; active Worker exported `fetch` + `scheduled`; Cron `*/2 * * * *`;
-- isolated projection live E2E `34927511443`: SUCCESS;
-- chain proven: canonical D1 marker/outbox -> ACK -> real Google Sheet readback -> replay -> exactly one logical Sheet row -> full cleanup;
-- successful ACK `attempts=0` is correct because attempts increment only on failure;
-- temporary scheduler-probe runtime/config was removed in PR #26;
-- cleaned BETA deploy `34927869845`: SUCCESS;
-- public BETA build `a501e4b7ae551cf1cd86f15786f4ca994032b522`, runtime `BUSINESS_CORE_V3`, authority D1, Google not degraded;
-- post-deploy observer `34927996370`: SUCCESS;
-- active Cloudflare deployment `ec6e1418-7e78-4db0-a8c8-2f6ff17d6e1b`, version 14 `945436c5-3fdf-477c-baa9-f0c6b87e08ab`, 100%, handlers `fetch` + `scheduled`;
-- Cron remains exactly `*/2 * * * *`;
-- projection outbox empty, pending count 0;
-- historical `projection_scheduler_probe` D1 row was written by the prior diagnostic build and is not produced by the current Worker.
+## Active AUTH V6 source slice — IN PROGRESS / NOT YET PASS
 
-PR #28 added manual dispatch capability to the read-only Cron observer.
+Branch: `ai/auth-v6-email-otp-http-20260915`.
 
-## Web Slice-1 lane — MERGED PASS
+Authority correction already made in `NEXT_ACTIONS.md`:
 
-PR #19 `Add authenticated Web employee-create interaction` is merged at `db746a71ed80dafd288218f599ab3e990f87e439`.
+- do not invent an OTP failure-attempt limit; V6 does not define one;
+- ROOT TOTP is optional, but when an active verified TOTP is enrolled, ROOT authentication must satisfy TOTP in addition to the email OTP.
 
-Before merge:
+Implemented on the branch through `75b4c467ff4bfe41e883beefe405521f32fd1567`:
 
-- branch was reconciled to current main with a true two-parent merge;
-- diff against main contained only `web/slice1-ui.css`, `web/slice1-ui.js`, `web/slice1-ui.test.mjs`;
-- fresh clean-baseline `34928060646`: SUCCESS.
+- new `service/worker/src/email-otp-auth.js` composition service;
+- normal-account recovery uses the registered `auth_users.email`;
+- ROOT actual recovery email remains runtime-only and must hash-match an ACTIVE `root_recovery_allowlist` entry before issuance;
+- fixed OTP request/use HTTP paths are defined;
+- runtime email delivery is an injected binding and fails closed when absent;
+- OTP remains four digits, 5-minute validity, 5-minute resend cooldown and single-use through the existing V6 OTP core;
+- normal OTP login creates `MUST_CHANGE_PASSWORD` session state;
+- ROOT without active TOTP may use email OTP alone;
+- ROOT with active verified TOTP returns `ROOT_TOTP_REQUIRED` before OTP consumption unless trusted server-side TOTP verification has already succeeded;
+- HTTP request body cannot assert its own TOTP success;
+- deploy module manifest packages `email-otp-auth.js` but does not provision OTP secrets/provider bindings;
+- new unit tests cover normal request, ROOT allowlist, normal/ROOT use, TOTP gate and delivery adapter behavior.
 
-After merge:
-
-- clean-baseline `34928090928`: SUCCESS;
-- product foundations `34928090885`: Cloud Service / Web contract / Android APK / LAN Service all SUCCESS.
-
-Employee create is now the first authenticated real Web business mutation through the shared Cloud/LAN client. Update/status/MNV/attendance UI remains fail-closed until safe current-state/version UX exists.
-
-## Retained accepted evidence
-
-- LAN operational snapshot/rebase integration `34851773729`: SUCCESS; clean baseline `34851772963`: SUCCESS.
-- Integration receipt/conflict/recovery `34853854932`, `34853938581`, `34879543693`; clean baselines `34853938669`, `34879543810`: SUCCESS at source/HOSTED CI level.
-- BETA D1 employee-code parity migration 0014: LIVE BETA PASS via `34844597357`, `34844821406`, `34844932823`; **do not replay 0014**.
+This branch has not yet passed CI and has not been merged or deployed. Real email provider delivery remains a separate gate.
 
 ## Current READY queue
 
-1. Account/security V6 provider-independent source/contract audit and smallest missing implementation/test slice.
-2. Android/PDA endpoint/session/scanner/retry/HTTPS/reconnect mechanics independent of final visual assets.
-3. Web interactions only where current-state/version contracts support safe mutation UX.
-4. Broader gateway/integration receipt/failure/recovery/provider coverage without disturbing the proven projection path.
-5. Repo/governance synchronization as evidence changes.
+1. Open/auth PR from `ai/auth-v6-email-otp-http-20260915`, run clean baseline, diagnose/fix until green, then merge exact tested head if clean.
+2. Verify post-merge main CI/product foundations as triggered.
+3. Reconcile auth state/governance and identify the next provider-independent V6 gap, including the trusted TOTP verification path.
+4. Continue Android endpoint/session/scanner/retry/HTTPS/reconnect mechanics in parallel where independent.
+5. Keep physical/STABLE/portrait gates isolated.
 
 ## Current blockers / gates
 
-BLOCKED / PENDING:
-
-- physical company-network/PDA/public-trust and >=60-minute Internet-cut acceptance: physical environment required;
-- ROOT real email-OTP provider delivery/recovery E2E: incomplete;
-- Android/PDA final visual fidelity: authorized current-product Pick Pack references required;
-- portrait replacement semantics: `OWNER_DECISION_REQUIRED`;
-- STABLE promotion: explicit Owner approval after mandatory BETA acceptance.
-
-OPEN but not global blockers:
-
-- provider-independent V6 ROOT recovery/auth implementation and tests;
-- Android mechanics that do not depend on final visual assets;
-- broader Web/business modules with safe contract-backed UX;
-- broader Drive/media/provider integration acceptance.
+- Real ROOT/normal email-OTP delivery E2E requires approved runtime delivery provider/bindings and secrets; do not fake provider PASS.
+- Physical company-network/PDA/public-trust and >=60-minute Internet-cut acceptance require the physical environment.
+- Android/PDA final visual fidelity requires authorized Pick Pack reference evidence.
+- Portrait replacement semantics remain `OWNER_DECISION_REQUIRED`.
+- STABLE promotion requires explicit Owner approval after mandatory BETA acceptance.
 
 ## do_not_repeat
 
 do_not_repeat:
-Do not treat memory as authority. Do not replay migrations 0009 or 0014. Do not expose or infer secret values. Do not repeatedly retry equivalent tool-blocked secret/account mutations. Do not reopen the solved Cron incident without new failing evidence. Do not rewrite the proven projection processor/GAS path without evidence. Do not fabricate provider PASS. Do not leave E2E markers behind. Do not inflate progress without acceptance-backed weighted evidence. Do not invent Pick Pack UI details without authorized source/artifact evidence. Do not promote STABLE without explicit Owner approval. Do not voluntarily final while approved READY work remains; run `PRE_FINAL_TERMINATION_GUARD` first.
+Do not treat memory as authority. Do not replay migrations 0009 or 0014. Do not expose or infer secret values. Do not invent OTP failure-attempt limits. Do not treat TOTP as an alternative to email OTP when TOTP is actively enrolled for ROOT. Do not let a client-supplied flag bypass TOTP verification. Do not provision or deploy unverified OTP provider secrets as part of this source-only slice. Do not reopen the solved Cron incident without new failing evidence. Do not inflate progress without acceptance-backed weighted evidence. Do not invent Pick Pack UI details. Do not promote STABLE without explicit Owner approval. Do not voluntarily final while approved READY work remains; run `PRE_FINAL_TERMINATION_GUARD` first.
