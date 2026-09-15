@@ -1,5 +1,10 @@
 import assert from 'node:assert/strict';
-import { deriveSliceSurfaceState, describeSliceView } from './slice1-ui.js';
+import {
+  buildEmployeeCreateInput,
+  deriveSliceSurfaceState,
+  describeSliceView,
+  employeeCreateResultText
+} from './slice1-ui.js';
 
 const loading = deriveSliceSurfaceState({ authenticated: false });
 assert.equal(loading.phase, 'loading');
@@ -46,4 +51,39 @@ assert.equal(attendance.title, 'Ra / Vào');
 assert.ok(attendance.commands.includes('Ghi nhận Ra'));
 assert.match(attendance.description, /Công nhật chưa thuộc Slice-1/);
 
-console.log('WEB_SLICE1_SURFACE_PASS onlineLanParity=PASS loading=PASS blocked=PASS conflict=PASS ownerGate=PASS noFakeMutation=PASS');
+const createInput = buildEmployeeCreateInput({
+  fullName: '  Nguyễn Văn A  ',
+  phone: ' 0900000000 ',
+  status: 'active',
+  mainPosition: ' Picker ',
+  vendor: '',
+  department: ' Pick Pack ',
+  startDate: '2026-09-15',
+  note: ' Test '
+}, () => 'employee-test-001');
+assert.equal(createInput.commandCode, 'EMPLOYEE_CREATE');
+assert.equal(createInput.entityId, 'employee-test-001');
+assert.equal(createInput.expectedEntityVersion, null);
+assert.deepEqual(createInput.payload, {
+  employeeId: 'employee-test-001',
+  fullName: 'Nguyễn Văn A',
+  status: 'ACTIVE',
+  phone: '0900000000',
+  mainPosition: 'Picker',
+  department: 'Pick Pack',
+  startDate: '2026-09-15',
+  note: 'Test'
+});
+assert.throws(() => buildEmployeeCreateInput({ fullName: '   ' }, () => 'id'), /EMPLOYEE_FULL_NAME_REQUIRED/);
+assert.throws(() => buildEmployeeCreateInput({ fullName: 'A', status: 'INVALID' }, () => 'id'), /EMPLOYEE_STATUS_INVALID/);
+
+assert.equal(
+  employeeCreateResultText({ ok: true, commitStatus: 'CLOUD_COMMITTED', googleOutputStatus: 'PENDING' }),
+  'Đã chốt Cloud · Google: đang chờ'
+);
+assert.equal(
+  employeeCreateResultText({ ok: true, commitStatus: 'LAN_ACCEPTED_PENDING_SYNC', googleOutputStatus: 'COMPLETED' }),
+  'LAN đã nhận, chờ Cloud · Google: hoàn tất'
+);
+
+console.log('WEB_SLICE1_SURFACE_PASS onlineLanParity=PASS loading=PASS blocked=PASS conflict=PASS ownerGate=PASS employeeCreate=PASS noFakeMutation=PASS');
