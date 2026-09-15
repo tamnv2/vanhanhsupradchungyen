@@ -23,6 +23,7 @@ jobs:
           for file in \
             AI_ENTRYPOINT.md \
             AI_OPERATING_CONTRACT.md \
+            AI_TERMINATION_GUARD.md \
             CHECKPOINT.md \
             CONTEXT_INDEX.md \
             PROJECT_SCOPE.md \
@@ -35,6 +36,7 @@ jobs:
             DECISIONS_V5.md \
             DECISIONS_V6.md \
             DECISIONS_V7.md \
+            DECISIONS_V9.md \
             SECURITY.md \
             CHANGELOG.md \
             docs/OWNER_BUSINESS_RULES_V1.md \
@@ -44,8 +46,9 @@ jobs:
             docs/DATA_MODEL_GUIDE_V2.md \
             docs/NON_FUNCTIONAL_BASELINE_V1.md \
             docs/BETA_ACCEPTANCE_MATRIX.md \
-            docs/DELIVERY_PLAN_V5.md \
-            docs/PROGRESS_TRACKING_V1.md \
+            docs/DELIVERY_PLAN_V6.md \
+            docs/EXECUTION_MODEL_V1.md \
+            docs/PROGRESS_TRACKING_V2.md \
             docs/LAN_HOST_DOMAIN_V1.md \
             docs/RELEASE_PROMOTION_V1.md
           do
@@ -66,32 +69,40 @@ jobs:
           grep -Fq 'Fail closed' AI_OPERATING_CONTRACT.md
           grep -Fq 'OWNER_PERMISSION_REQUIRED' AI_OPERATING_CONTRACT.md
           grep -Fq 'OWNER_DECISION_REQUIRED' AI_OPERATING_CONTRACT.md
+          grep -Fq 'DECISIONS_V9.md' AI_OPERATING_CONTRACT.md
+          grep -Fq 'WIP limit' AI_OPERATING_CONTRACT.md
           grep -Fq 'D-041' DECISIONS.md
 
-          for decision in DECISIONS.md DECISIONS_V3.md DECISIONS_V4.md DECISIONS_V5.md DECISIONS_V6.md DECISIONS_V7.md; do
+          for decision in DECISIONS.md DECISIONS_V3.md DECISIONS_V4.md DECISIONS_V5.md DECISIONS_V6.md DECISIONS_V7.md DECISIONS_V9.md; do
             grep -Fq "$decision" CONTEXT_INDEX.md
           done
           grep -Fq 'All active decision layers above are mandatory resume reads.' CONTEXT_INDEX.md
-          grep -Fq 'docs/PROGRESS_TRACKING_V1.md' CONTEXT_INDEX.md
-          grep -Fq 'docs/DELIVERY_PLAN_V5.md' CONTEXT_INDEX.md
+          grep -Fq 'docs/EXECUTION_MODEL_V1.md' CONTEXT_INDEX.md
+          grep -Fq 'docs/PROGRESS_TRACKING_V2.md' CONTEXT_INDEX.md
+          grep -Fq 'docs/DELIVERY_PLAN_V6.md' CONTEXT_INDEX.md
 
           grep -Eq '^checkpoint_version: [1-9][0-9]*$' CHECKPOINT.md
           grep -Fq 'reconciled_through_commit:' CHECKPOINT.md
           grep -Fq 'authority_v5_ref: DECISIONS_V5.md' CHECKPOINT.md
           grep -Fq 'authority_v6_ref: DECISIONS_V6.md' CHECKPOINT.md
           grep -Fq 'authority_v7_ref: DECISIONS_V7.md' CHECKPOINT.md
-          grep -Fq 'delivery_plan_ref: docs/DELIVERY_PLAN_V5.md' CHECKPOINT.md
-          grep -Fq 'progress_ref: docs/PROGRESS_TRACKING_V1.md' CHECKPOINT.md
+          grep -Fq 'authority_v9_ref: DECISIONS_V9.md' CHECKPOINT.md
+          grep -Fq 'delivery_plan_ref: docs/DELIVERY_PLAN_V6.md' CHECKPOINT.md
+          grep -Fq 'execution_model_ref: docs/EXECUTION_MODEL_V1.md' CHECKPOINT.md
+          grep -Fq 'progress_ref: docs/PROGRESS_TRACKING_V2.md' CHECKPOINT.md
           grep -Fq 'service_contract_ref: docs/SERVICE_API_CONTRACT_V3.md' CHECKPOINT.md
           grep -Fq 'do_not_repeat:' CHECKPOINT.md
 
-          grep -Fq 'Current delivery plan: `docs/DELIVERY_PLAN_V5.md`' CURRENT_STATE.md
-          grep -Fq 'Progress model: `docs/PROGRESS_TRACKING_V1.md`' CURRENT_STATE.md
-          grep -Fq 'DECISIONS_V7.md' CURRENT_STATE.md
+          grep -Fq 'Current delivery plan: `docs/DELIVERY_PLAN_V6.md`' CURRENT_STATE.md
+          grep -Fq 'Current execution model: `docs/EXECUTION_MODEL_V1.md`' CURRENT_STATE.md
+          grep -Fq 'Progress model: `docs/PROGRESS_TRACKING_V2.md`' CURRENT_STATE.md
+          grep -Fq 'DECISIONS_V9.md' CURRENT_STATE.md
           grep -Fq 'Authority: effective Owner decisions through V6' docs/SERVICE_API_CONTRACT_V3.md
-          grep -Fq 'Status: ACTIVE DELIVERY PLAN' docs/DELIVERY_PLAN_V5.md
-          grep -Fq 'TOTAL_PRODUCT_COMPLETION' docs/PROGRESS_TRACKING_V1.md
-          grep -Fq '53.3%' docs/PROGRESS_TRACKING_V1.md
+          grep -Fq 'Status: ACTIVE DELIVERY PLAN' docs/DELIVERY_PLAN_V6.md
+          grep -Fq 'TOTAL_PRODUCT_COMPLETION' docs/PROGRESS_TRACKING_V2.md
+          grep -Fq '57.7% exact / 58% displayed' docs/PROGRESS_TRACKING_V2.md
+          grep -Fq 'This file intentionally does **not** copy the current percentage' PROJECT_SCOPE.md
+          grep -Fq 'Operational/live status: **see `CURRENT_STATE.md`**' SERVICE_AUTHORITY.md
 
           if grep -Eq 'BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|Bearer [A-Za-z0-9._-]{12,}' CHECKPOINT.md; then
             echo 'Sensitive-looking value found in CHECKPOINT.md'
@@ -109,7 +120,7 @@ jobs:
           changed="$(git diff --name-only "${reconciled}..HEAD")"
           printf '%s\n' "$changed"
 
-          stale_authority="$(printf '%s\n' "$changed" | grep -E '^(AI_ENTRYPOINT\.md|AI_OPERATING_CONTRACT\.md|CONTEXT_INDEX\.md|CURRENT_STATE\.md|NEXT_ACTIONS\.md|SERVICE_AUTHORITY\.md|PROJECT_SCOPE\.md|DECISIONS(_V[0-9]+)?\.md|docs/(OWNER_BUSINESS_RULES_V1|TARGET_PRODUCT_ARCHITECTURE_V3|SERVICE_API_CONTRACT_V3|LAN_EDGE_STATE_V2|DATA_MODEL_GUIDE_V2|NON_FUNCTIONAL_BASELINE_V1|BETA_ACCEPTANCE_MATRIX|DELIVERY_PLAN_V5|PROGRESS_TRACKING_V1|LAN_HOST_DOMAIN_V1|RELEASE_PROMOTION_V1)\.md)$' || true)"
+          stale_authority="$(printf '%s\n' "$changed" | grep -E '^(AI_ENTRYPOINT\.md|AI_OPERATING_CONTRACT\.md|AI_TERMINATION_GUARD\.md|CONTEXT_INDEX\.md|CURRENT_STATE\.md|NEXT_ACTIONS\.md|SERVICE_AUTHORITY\.md|PROJECT_SCOPE\.md|DECISIONS(_V[0-9]+)?\.md|docs/(OWNER_BUSINESS_RULES_V1|TARGET_PRODUCT_ARCHITECTURE_V3|SERVICE_API_CONTRACT_V3|LAN_EDGE_STATE_V2|DATA_MODEL_GUIDE_V2|NON_FUNCTIONAL_BASELINE_V1|BETA_ACCEPTANCE_MATRIX|DELIVERY_PLAN_V6|EXECUTION_MODEL_V1|PROGRESS_TRACKING_V2|LAN_HOST_DOMAIN_V1|RELEASE_PROMOTION_V1)\.md)$' || true)"
           if [ -n "$stale_authority" ]; then
             echo 'Checkpoint is stale relative to active authority/current-guide changes:'
             printf '%s\n' "$stale_authority"
