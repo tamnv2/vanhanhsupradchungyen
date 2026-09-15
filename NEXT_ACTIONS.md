@@ -46,16 +46,16 @@ Provider-independent work may proceed now.
 Exact next sequence:
 
 1. Inspect current Cloud + LAN auth routes/services/tests against `DECISIONS_V6.md`.
-2. Map which V6 ROOT recovery requirements already exist in source and which are missing:
-   - email OTP is primary recovery;
-   - OTP validity 5 minutes;
-   - resend cooldown and failure-attempt limits;
-   - optional TOTP only after explicit enrollment;
-   - if enrolled, email OTP or TOTP may recover;
-   - no OTP plaintext in logs/audit; only safe challenge metadata/state.
+2. Map which V6 requirements already exist in source and which are missing:
+   - ROOT normal login uses the fixed approved email one-time-password channel;
+   - email OTP validity is 5 minutes and resend cooldown is 5 minutes;
+   - normal-account forgot-password uses the registered recovery email and enters `MUST_CHANGE_PASSWORD` after successful OTP login;
+   - ROOT TOTP is optional, but when it is enabled ROOT authentication must satisfy the TOTP factor in addition to the valid email OTP according to the current ROOT auth state machine;
+   - request/use/failure/security events are auditable without OTP plaintext or provider secrets in logs/audit/source.
 3. Implement the smallest contract-backed missing source slice that does **not** require secret/provider mutation.
-4. Add/extend automated tests for request/verify, expiry, cooldown, attempt limit, replay/consumption and audit redaction as applicable.
-5. Keep real email delivery/provider E2E separate until the required account/provider capability is available. Do not fake provider PASS and do not repeatedly retry equivalent blocked secret mutations.
+4. Add/extend automated tests for request/use, expiry, cooldown, replay/consumption, audit redaction and ROOT TOTP gate semantics as applicable to the implemented slice.
+5. Do **not** invent an OTP failure-attempt limit unless a later Owner decision or current authoritative security contract explicitly defines one.
+6. Keep real email delivery/provider E2E separate until the required account/provider capability is available. Do not fake provider PASS and do not repeatedly retry equivalent blocked secret mutations.
 
 ## D — PARALLEL READY: Android/PDA mechanics
 
