@@ -1,9 +1,9 @@
 # CHECKPOINT — VHDCHY
 
-checkpoint_version: 52
+checkpoint_version: 53
 protocol: AI_AUTHORITY_RESUME_V2
 status: EXECUTING_PRODUCT_V7_BETA
-reconciled_through_commit: 672b086d3773dba93760e4ca9c46e64d6f30544c
+reconciled_through_commit: 11a2d229c0679610455fc281bf241a9e5b36d40c
 action_mode: AUTONOMOUS_PARALLEL
 active_lanes: REPO_GOVERNANCE / SHARED_DOMAIN / CLOUD_SERVICE / LAN_FULL_SERVICE / AUTH / GOOGLE_SYNC / WEB_ONLINE_LAN / ANDROID_PDA / RECONCILIATION / STABLE_PREPARATION
 paused_lanes: PHYSICAL_CORPORATE_LAN_REGRESSION
@@ -23,7 +23,7 @@ context_index_ref: CONTEXT_INDEX.md
 
 - Evidence-weighted total: **56.2% exact / 56% displayed**.
 - Phase 6 LAN continuity/offline/reconcile: **65%**.
-- Do not increase progress from diagnostic/source work alone.
+- Projection live PASS and first authenticated Web employee-create closure are recorded without inflating the weighted baseline.
 
 ## Fresh-chat resume anchor
 
@@ -32,113 +32,79 @@ At the start of the next chat:
 1. live-fetch `AI_ENTRYPOINT.md` from GitHub `main`;
 2. execute its bootstrap exactly;
 3. compare current main HEAD with this checkpoint reconciliation point;
-4. read changed paths after `672b086d3773dba93760e4ca9c46e64d6f30544c` before mutation;
-5. then continue the projection Cron root-cause lane from `NEXT_ACTIONS.md`.
+4. read changed authority/current-state/source paths after `11a2d229c0679610455fc281bf241a9e5b36d40c` before mutation;
+5. then continue `NEXT_ACTIONS.md`, prioritizing provider-independent V6 account/security source/contract work and Android mechanics in parallel.
 
 Memory/chat summaries are NON_AUTHORITY.
 
-## Latest accepted source/provider evidence
+## Latest accepted live projection evidence — PASS
 
-### Cloud Slice-1 / Worker deployment foundations — PASS where evidenced
+The former Cloudflare scheduled-event incident is closed unless new evidence reopens it.
 
-- Cloud Slice-1 reviewed mutation source and current projection source foundations are implemented.
-- `EMPLOYEE_PORTRAIT_REPLACE` remains fail-closed.
-- Google Gateway management/E2E helper activation readback run `34923668193`: PASS.
-- Worker deploy run `34924438089`: SUCCESS.
-- Deploy uploader no longer rewrites Cron Trigger schedules when unchanged; evidence recorded `WORKER_CRON_SCHEDULES_UNCHANGED schedules=["*/2 * * * *"]`.
-- Main clean baseline `34924438117`: SUCCESS.
-- Build product foundations `34924438250`: Web/Cloud/Android/LAN SUCCESS.
+- observer `34926987360`: real scheduled invocation observed; active Worker exported `fetch` + `scheduled`; Cron `*/2 * * * *`;
+- isolated projection live E2E `34927511443`: SUCCESS;
+- chain proven: canonical D1 marker/outbox -> ACK -> real Google Sheet readback -> replay -> exactly one logical Sheet row -> full cleanup;
+- successful ACK `attempts=0` is correct because attempts increment only on failure;
+- temporary scheduler-probe runtime/config was removed in PR #26;
+- cleaned BETA deploy `34927869845`: SUCCESS;
+- public BETA build `a501e4b7ae551cf1cd86f15786f4ca994032b522`, runtime `BUSINESS_CORE_V3`, authority D1, Google not degraded;
+- post-deploy observer `34927996370`: SUCCESS;
+- active Cloudflare deployment `ec6e1418-7e78-4db0-a8c8-2f6ff17d6e1b`, version 14 `945436c5-3fdf-477c-baa9-f0c6b87e08ab`, 100%, handlers `fetch` + `scheduled`;
+- Cron remains exactly `*/2 * * * *`;
+- projection outbox empty, pending count 0;
+- historical `projection_scheduler_probe` D1 row was written by the prior diagnostic build and is not produced by the current Worker.
 
-### Live projection E2E — FAIL isolated before processor/GAS
+PR #28 added manual dispatch capability to the read-only Cron observer.
 
-Run `34924438129`:
+## Web Slice-1 lane — MERGED PASS
 
-- Worker build verification PASS;
-- Google management helper/readback PASS;
-- isolated D1 marker insert PASS;
-- projection outbox stayed `PENDING`, `attempts=0`, `next_attempt_at=null` for the full wait;
-- scheduler diagnostic remained `null`;
-- conclusion: no evidence Cloudflare invoked Worker `scheduled()` during the test window;
-- do **not** classify this as a projection processor or Google Gateway failure without new evidence.
+PR #19 `Add authenticated Web employee-create interaction` is merged at `db746a71ed80dafd288218f599ab3e990f87e439`.
 
-Cleanup from the same run: PASS.
+Before merge:
 
-- Sheet E2E marker remaining: 0;
-- D1 E2E marker/outbox remaining: 0;
-- scheduler probe remaining: 0;
-- immutable domain-event delete trigger restored and verified PASS.
+- branch was reconciled to current main with a true two-parent merge;
+- diff against main contained only `web/slice1-ui.css`, `web/slice1-ui.js`, `web/slice1-ui.test.mjs`;
+- fresh clean-baseline `34928060646`: SUCCESS.
 
-### Independent Cloudflare Cron observer — PASS
+After merge:
 
-PR #21 merged to main as `c6dba66b00723baba65c78327b167227f606ef40`.
-Observer run `34924945395`: SUCCESS.
+- clean-baseline `34928090928`: SUCCESS;
+- product foundations `34928090885`: Cloud Service / Web contract / Android APK / LAN Service all SUCCESS.
 
-Read-only live evidence:
-
-- Cron schedule `*/2 * * * *` exists;
-- `created_on=2026-09-15T02:32:41.788727Z`;
-- `modified_on=2026-09-15T02:49:45.112867Z`;
-- after E2E cleanup: scheduler probe empty, projection outbox empty, pending count 0.
-
-The Cron Trigger existed well beyond the expected propagation window before the `03:17–03:24Z` E2E but no scheduled-handler entry was recorded.
-
-## Exact active root-cause lane
-
-`Cloudflare Cron Trigger exists but Worker scheduled() was not observed.`
-
-Next work must verify exact Scheduled Event delivery/entrypoint/provider behavior before touching already-proven projection business logic.
-
-Required next evidence path:
-
-1. read-only inspect Worker module/entrypoint/provider state;
-2. verify uploaded ES-module Worker exposes the scheduled handler in the exact form Cloudflare executes;
-3. verify Cron Trigger is attached to the exact live script/version expected;
-4. make only a minimal evidence-backed correction if required;
-5. rerun isolated E2E and require scheduler entry -> outbox claim/attempt -> ACK -> real GAS/Sheet readback -> replay dedupe -> complete cleanup;
-6. after PASS, remove temporary diagnostics if no longer needed and rerun clean baseline/product foundations.
-
-## Web Slice-1 lane
-
-PR #19 remains OPEN and intentionally unmerged while the projection incident is isolated.
-
-- head `50d4be6bde5927eb8cc64ef3a851b7997c2886b0`;
-- clean baseline `34924120821`: SUCCESS;
-- first authenticated employee-create interaction exists through the shared Cloud/LAN business client;
-- update/status/MNV/attendance UI remains fail-closed until safe current-state/version UX exists.
-
-Before merge: rebase/reconcile against latest main, rerun CI, and verify no interference with projection changes.
+Employee create is now the first authenticated real Web business mutation through the shared Cloud/LAN client. Update/status/MNV/attendance UI remains fail-closed until safe current-state/version UX exists.
 
 ## Retained accepted evidence
 
-- LAN operational snapshot/rebase integration run `34851773729`: SUCCESS; clean baseline `34851772963`: SUCCESS.
-- Integration receipt/conflict/recovery runs `34853854932`, `34853938581`, `34879543693` and clean baselines `34853938669`, `34879543810`: SUCCESS at source/HOSTED CI level.
-- BETA D1 employee-code version parity migration 0014: LIVE BETA PASS via `34844597357`, `34844821406`, `34844932823`; **do not replay 0014**.
+- LAN operational snapshot/rebase integration `34851773729`: SUCCESS; clean baseline `34851772963`: SUCCESS.
+- Integration receipt/conflict/recovery `34853854932`, `34853938581`, `34879543693`; clean baselines `34853938669`, `34879543810`: SUCCESS at source/HOSTED CI level.
+- BETA D1 employee-code parity migration 0014: LIVE BETA PASS via `34844597357`, `34844821406`, `34844932823`; **do not replay 0014**.
+
+## Current READY queue
+
+1. Account/security V6 provider-independent source/contract audit and smallest missing implementation/test slice.
+2. Android/PDA endpoint/session/scanner/retry/HTTPS/reconnect mechanics independent of final visual assets.
+3. Web interactions only where current-state/version contracts support safe mutation UX.
+4. Broader gateway/integration receipt/failure/recovery/provider coverage without disturbing the proven projection path.
+5. Repo/governance synchronization as evidence changes.
 
 ## Current blockers / gates
 
 BLOCKED / PENDING:
 
-- Cloudflare scheduled-event invocation: active root-cause investigation;
 - physical company-network/PDA/public-trust and >=60-minute Internet-cut acceptance: physical environment required;
+- ROOT real email-OTP provider delivery/recovery E2E: incomplete;
+- Android/PDA final visual fidelity: authorized current-product Pick Pack references required;
 - portrait replacement semantics: `OWNER_DECISION_REQUIRED`;
 - STABLE promotion: explicit Owner approval after mandatory BETA acceptance.
 
 OPEN but not global blockers:
 
-- ROOT OTP real delivery/recovery E2E;
-- account/security provider mutation actions limited by current tool capability/safety boundaries; do not hammer equivalent blocked secret mutations;
-- Android/PDA final visual fidelity waits for authorized current-product reference assets; do not invent visuals;
-- Web PR #19 ready for fresh rebase/CI after or alongside isolated Cron work.
-
-## READY queue
-
-1. Cloudflare Scheduled Event root-cause investigation and minimal correction if evidenced.
-2. Re-run isolated projection E2E only after a concrete correction/provider-state change.
-3. Rebase/test Web PR #19 against current main, then merge if clean.
-4. Continue provider-independent account/security and Android mechanics in parallel where safe.
-5. Keep physical/STABLE/portrait gates isolated.
+- provider-independent V6 ROOT recovery/auth implementation and tests;
+- Android mechanics that do not depend on final visual assets;
+- broader Web/business modules with safe contract-backed UX;
+- broader Drive/media/provider integration acceptance.
 
 ## do_not_repeat
 
 do_not_repeat:
-Do not treat memory as authority. Do not replay migrations 0009 or 0014. Do not expose or infer secret values. Do not repeatedly retry equivalent tool-blocked secret/account mutations. Do not rewrite projection processor/GAS logic just because Cron invocation failed. Do not fabricate scheduled-handler PASS. Do not leave E2E markers behind. Do not inflate progress without acceptance-backed evidence. Do not invent Pick Pack UI details without authorized source/artifact evidence. Do not promote STABLE without explicit Owner approval. Do not voluntarily final while approved READY work remains; run `PRE_FINAL_TERMINATION_GUARD` first.
+Do not treat memory as authority. Do not replay migrations 0009 or 0014. Do not expose or infer secret values. Do not repeatedly retry equivalent tool-blocked secret/account mutations. Do not reopen the solved Cron incident without new failing evidence. Do not rewrite the proven projection processor/GAS path without evidence. Do not fabricate provider PASS. Do not leave E2E markers behind. Do not inflate progress without acceptance-backed weighted evidence. Do not invent Pick Pack UI details without authorized source/artifact evidence. Do not promote STABLE without explicit Owner approval. Do not voluntarily final while approved READY work remains; run `PRE_FINAL_TERMINATION_GUARD` first.

@@ -5,101 +5,84 @@ Protocol: `AI_AUTHORITY_RESUME_V2`
 Current delivery plan: `docs/DELIVERY_PLAN_V5.md`
 Progress model: `docs/PROGRESS_TRACKING_V1.md`
 Active authority: `DECISIONS.md` + `DECISIONS_V3.md` + `DECISIONS_V4.md` + `DECISIONS_V5.md` + `DECISIONS_V6.md` + `DECISIONS_V7.md`
-Evidence reconciled through live main before handoff: `c6dba66b00723baba65c78327b167227f606ef40`
+Evidence reconciled through live main before this state update: `db746a71ed80dafd288218f599ab3e990f87e439`
 
 ## Progress
 
 `Overall: 56% displayed | Exact weighted baseline: 56.2% | Primary phase: Phase 6 — LAN continuity/offline/reconcile`
 
-Do not increase the percentage from source-only work, diagnostic tooling, provider polling, or unaccepted live tests. Phase 6 remains 65% until acceptance-backed evidence closes additional weighted scope.
+The percentage remains unchanged. The projection live E2E and first authenticated Web employee-create interaction close important sub-slices, but they do not by themselves justify moving a weighted phase threshold. Physical LAN/PDA/outage acceptance, broader provider/business coverage, ROOT recovery E2E and final Web/App coverage remain open.
 
-## Current critical lane — Google projection / Cloudflare Cron Trigger
+## Projection / Cloudflare Cron / Google Sheet — LIVE BETA PASS
 
-### Source and provider state already proven
+The earlier scheduled-event incident is closed by direct live evidence; do not continue treating it as an active root-cause lane.
 
-- Cloud Slice-1 canonical mutation source is implemented and hosted-CI PASS for the reviewed employee/attendance commands; `EMPLOYEE_PORTRAIT_REPLACE` remains fail-closed.
-- Projection outbox processor includes bounded retry, stale `PROCESSING` recovery, materialization isolation, sender/readback behavior and no fabricated employee-code identity.
-- Google Gateway management/E2E helpers were deployed; activation/readback run `34923668193` passed.
-- Cloudflare Worker deploy run `34924438089` passed on build `6c4313aeb9539a1b99bbe751e24b24179f6a1fd7`.
-- Deploy evidence proves `PROJECTION_DELIVERY_ENABLED=true`, the projection secret binding exists without exposing its value, Worker runtime is `BUSINESS_CORE_V3`, custom domain remains `beta.supra.cc.cd`, and Worker health/postflight passed.
-- Uploader now reads current Cron Triggers first and does not rewrite the schedule when unchanged. The deploy log recorded `WORKER_CRON_SCHEDULES_UNCHANGED schedules=["*/2 * * * *"]`.
-- Build product foundations run `34924438250`: Web/Cloud/Android/LAN all SUCCESS.
-- Clean baseline run `34924438117`: SUCCESS.
+Accepted chain:
 
-### Live E2E result — FAIL isolated to scheduler invocation
+- read-only observer run `34926987360` proved the active Worker version exported both `fetch` and `scheduled`, live Cron was `*/2 * * * *`, and a real scheduled execution recorded `PROJECTION_IDLE`;
+- isolated projection E2E harness was corrected so dispatch-only commits no longer create a false build-mismatch failure when the deployed Worker source is Git-equivalent;
+- isolated live E2E run `34927511443`: `SUCCESS`;
+- the E2E inserted an isolated canonical D1 marker/outbox item, received ACK, read the real Google Sheet row back, replayed the same outbox item, retained exactly one logical Sheet row, and completed D1/Sheet cleanup;
+- successful ACK rows correctly retain `attempts=0`; attempts increment only on failure and are not a claim counter;
+- temporary scheduler-probe code/config was removed in PR #26;
+- cleaned Worker was deployed by run `34927869845`: `SUCCESS`;
+- public BETA health converged to build `a501e4b7ae551cf1cd86f15786f4ca994032b522`, runtime `BUSINESS_CORE_V3`, authority `D1`, Google not degraded;
+- post-deploy live observer run `34927996370`: `SUCCESS`;
+- active deployment `ec6e1418-7e78-4db0-a8c8-2f6ff17d6e1b`, version 14 `945436c5-3fdf-477c-baa9-f0c6b87e08ab`, 100% serving, handlers `fetch` + `scheduled`;
+- Cron remains exactly `*/2 * * * *`, projection outbox is empty, pending count is 0;
+- the remaining `projection_scheduler_probe` row observed in D1 is historical evidence written by the prior diagnostic build at `2026-09-15T04:10:47Z`; the current Worker no longer writes that diagnostic.
 
-Run `34924438129` tested the real chain with a synthetic, isolated marker and mandatory cleanup.
+PR #28 added `workflow_dispatch` to the read-only Cron observer so this provider evidence can be requested again without mutating runtime/provider state.
 
-Evidence:
+## Web Slice-1 — FIRST AUTHENTICATED MUTATION MERGED
 
-- exact Worker build check passed;
-- Google management helper/readback passed;
-- marker inserted into canonical D1 `domain_events` + `projection_outbox`;
-- after the full wait, outbox remained `PENDING`, `attempts=0`, `next_attempt_at=null`;
-- diagnostic scheduler probe remained `null`;
-- therefore no evidence exists that Cloudflare invoked the Worker's `scheduled()` handler during the test window;
-- the failure occurred before projection processor/GAS/Sheet delivery, so do not misclassify this as a Google Gateway or outbox-processor failure.
+PR #19 `Add authenticated Web employee-create interaction` is merged to main at `db746a71ed80dafd288218f599ab3e990f87e439`.
 
-Cleanup evidence from the same failed run:
+Before merge it was reconciled onto current main with a true two-parent merge and verified to differ from main only in:
 
-- `PROJECTION_E2E_CLEANUP_PASS`;
-- Sheet marker rows remaining: 0;
-- D1 E2E marker rows remaining: 0;
-- scheduler probe rows remaining: 0;
-- immutable domain-event delete trigger restored and verified PASS.
+- `web/slice1-ui.css`;
+- `web/slice1-ui.js`;
+- `web/slice1-ui.test.mjs`.
 
-### Independent read-only Cron observer
+Fresh PR clean-baseline run `34928060646`: `SUCCESS`.
+Post-merge clean-baseline run `34928090928`: `SUCCESS`.
+Post-merge product foundations run `34928090885`: Cloud Service / Web contract / Android APK / LAN Service all `SUCCESS`.
 
-PR #21 merged read-only diagnostic workflow at main `c6dba66b00723baba65c78327b167227f606ef40`.
+The personnel screen can now create an employee through the authenticated shared Cloud/LAN business client, while technical employee identity is generated internally and mutation remains gated by authenticated/business-mutation capability. Update/status/MNV/attendance interactions remain fail-closed until safe current-state/version-backed UX exists; do not invent a read/version contract merely to expose buttons.
 
-Observer run `34924945395`: SUCCESS and recorded:
+## LAN continuity / reconciliation — SOURCE/HOSTED CI PASS, PHYSICAL ACCEPTANCE PENDING
 
-- schedule: `*/2 * * * *`;
-- trigger `created_on=2026-09-15T02:32:41.788727Z`;
-- trigger `modified_on=2026-09-15T02:49:45.112867Z`;
-- at observation time after E2E cleanup: scheduler probe empty, projection outbox empty, pending count 0.
+Retained accepted evidence:
 
-The trigger had therefore existed well beyond the expected propagation window before the `03:17–03:24Z` E2E, yet the Worker scheduler probe never recorded entry. The next root-cause work must focus on Cloudflare Cron Trigger delivery/entrypoint/provider behavior, not on rewriting projection business logic blindly.
+- signed Cloud operational snapshot/coverage route;
+- LAN signed snapshot client, authoritative import, refresh/rebase coordinator and fail-closed readiness while canonical events remain unre-based;
+- durable reconciliation queue/retry/restart/conflict mechanics;
+- integration run `34851773729`: `SUCCESS`;
+- clean baseline `34851772963`: `SUCCESS`;
+- Google/Drive integration receipt conflict/recovery source/HOSTED CI runs `34853854932`, `34853938581`, `34879543693` and clean baselines `34853938669`, `34879543810`: `SUCCESS`.
 
-## Web Slice-1 parallel lane
+Physical company-network/PDA/public-trust, intended Windows host acceptance, live LAN->Cloud machine/provider linkage and >=60-minute Internet-cut acceptance remain separate gates. Do not infer them from GitHub CI or the Cloud projection E2E.
 
-PR #19 `Add authenticated Web employee-create interaction` remains OPEN and intentionally unmerged while the projection Cron incident is being isolated.
+## Cloud schema parity — LIVE BETA PASS
 
-- PR head: `50d4be6bde5927eb8cc64ef3a851b7997c2886b0`.
-- Clean-baseline run `34924120821`: SUCCESS.
-- It adds the first real authenticated employee-create interaction through the shared Cloud/LAN business client without inventing a read/version contract.
-- Update/status/MNV/attendance interactions remain fail-closed until safe current-state/version UX exists.
-- Before merging PR #19, rebase/reconcile it against latest `main` and rerun CI; do not merge solely to make progress while the provider diagnostic lane is unresolved.
+Migration `0014_employee_code_entity_version.sql` remains accepted via `34844597357`, `34844821406`, `34844932823`. Do not replay migration 0014.
 
-## Retained accepted evidence
+## Current ready lanes
 
-### LAN reconciliation / operational refresh — SOURCE/HOSTED CI PASS
+1. **Account/security:** continue provider-independent V6 ROOT recovery/auth source + contract work. ROOT real email-OTP delivery/recovery E2E remains incomplete. Do not repeatedly retry equivalent connector-secret mutations that already hit tool/safety capability limits.
+2. **Android/PDA mechanics:** continue endpoint/session/scanner/retry/HTTPS/reconnect behavior independent of unavailable final visual references. Current APK build is green; visual fidelity is not accepted.
+3. **Web/business UI:** continue only interactions supported by current state/version contracts; employee-create is merged, broader mutations remain fail-closed where safe read/version UX is absent.
+4. **Gateway/integrations:** broader bounded failure/recovery/receipt/provider coverage may continue, but do not disturb the now-proven projection path without evidence.
+5. **Repo/governance:** keep Issue #8, this file, `NEXT_ACTIONS.md` and `CHECKPOINT.md` synchronized with live evidence.
 
-- Durable LAN reconciliation queue, retry/restart/conflict mechanics and signed Cloud ingest foundations remain PASS.
-- Post-reconciliation rebase tracker, canonical coverage rules, authoritative snapshot import and readiness recovery remain PASS.
-- Dedicated integration run `34851773729`: SUCCESS.
-- Same-source clean baseline `34851772963`: SUCCESS.
+## Current blockers / owner gates
 
-### Google/Drive integration receipt conflict + recovery — SOURCE/HOSTED CI PASS
-
-- Durable local Google/Drive work + receipts, idempotent matching receipt replay, conflict to `REVIEW_REQUIRED`, interrupted-claim restart recovery and production status visibility remain PASS at source/hosted-CI level.
-- Dedicated runs `34853854932`, `34853938581`, `34879543693` and clean baselines `34853938669`, `34879543810`: SUCCESS.
-- This does not by itself prove live Google provider projection delivery.
-
-### Cloud schema parity — BETA live PASS
-
-Migration `0014_employee_code_entity_version.sql` remains accepted. Evidence `34844597357`, `34844821406`, `34844932823` PASS. Do not replay migration 0014.
-
-## Current blockers / gates
-
-- Cloudflare projection Cron Trigger delivery: ACTIVE ROOT-CAUSE INVESTIGATION; trigger exists but scheduled handler invocation was not observed.
-- Physical company-network/PDA acceptance and >=60-minute Internet-cut acceptance remain pending.
-- ROOT OTP real delivery/recovery E2E remains incomplete.
-- Account/security connector-secret mutation attempts previously hit tool capability/safety limits; do not repeatedly hammer equivalent blocked mutations.
-- Android/PDA final visual/workflow fidelity remains blocked on authorized current-product reference assets; do not fabricate visuals.
-- Portrait replacement behavior remains an Owner decision gate.
-- STABLE activation/promotion still requires mandatory BETA acceptance plus explicit Owner approval.
+- physical company-network/PDA/public-trust and >=60-minute Internet-cut acceptance: physical environment required;
+- ROOT OTP real provider delivery/recovery E2E: incomplete;
+- final Android/PDA visual fidelity: requires authorized current-product Pick Pack reference assets; do not fabricate visuals;
+- portrait replacement behavior: `OWNER_DECISION_REQUIRED`;
+- STABLE activation/promotion: explicit Owner approval only after mandatory BETA acceptance.
 
 ## Resume instruction
 
-A fresh chat must live-read `AI_ENTRYPOINT.md` from GitHub `main`, execute the required bootstrap, reconcile HEAD against `CHECKPOINT.md`, then continue the exact next actions in `NEXT_ACTIONS.md`. Memory/chat summaries are locators only, not authority.
+A fresh chat must live-read `AI_ENTRYPOINT.md` from GitHub `main`, execute its bootstrap, reconcile HEAD against `CHECKPOINT.md`, then continue `NEXT_ACTIONS.md`. Memory/chat summaries are locators only, not authority.
