@@ -24,12 +24,30 @@
 .slice1-note { padding: 13px 15px; border-radius: 12px; border: 1px solid #d7e5fb; background: #f8fbff; color: #3c506d; font-size: .82rem; line-height: 1.45; }
 .slice1-note.error { border-color: #f2c6c2; background: #fff7f6; color: var(--danger); }
 .slice1-note.warn { border-color: #f2ddb0; background: #fffaf0; color: #805000; }
+.slice1-form-card { display: grid; gap: 16px; }
+.slice1-form-heading { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }
+.slice1-form-heading h3 { margin: 2px 0 7px; }
+.slice1-form-gate { display: inline-flex; padding: 6px 10px; border-radius: 999px; font-size: .72rem; font-weight: 800; white-space: nowrap; }
+.slice1-form-gate.ready { background: #e5f7f1; color: var(--ok); }
+.slice1-form-gate.blocked { background: #fff5df; color: var(--warn); }
+.slice1-form { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px 14px; }
+.slice1-form label { display: grid; gap: 6px; color: #34445d; font-size: .76rem; font-weight: 750; }
+.slice1-form input, .slice1-form select, .slice1-form textarea { width: 100%; min-width: 0; box-sizing: border-box; border: 1px solid var(--line); border-radius: 10px; background: #fff; color: #1e2e45; padding: 10px 11px; font: inherit; font-weight: 500; }
+.slice1-form textarea { resize: vertical; line-height: 1.45; }
+.slice1-form input:focus, .slice1-form select:focus, .slice1-form textarea:focus { outline: 2px solid rgba(46,112,219,.16); border-color: #7fa9eb; }
+.slice1-form input:disabled, .slice1-form select:disabled, .slice1-form textarea:disabled { background: #f4f6f9; color: #7b8798; }
+.slice1-form-wide { grid-column: 1 / -1; }
+.slice1-form-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding-top: 2px; }
+.slice1-form-message { color: var(--muted); font-size: .79rem; line-height: 1.4; }
+.slice1-form-message.ok { color: var(--ok); font-weight: 700; }
+.slice1-form-message.error { color: var(--danger); font-weight: 700; }
 body.slice1-view .hero-card,
 body.slice1-view .stat-grid,
 body.slice1-view .content-grid,
 body.slice1-view #message { display: none; }
 @media (max-width: 900px) {
-  .slice1-grid, .slice1-state-grid { grid-template-columns: 1fr; }
-  .slice1-heading { display: block; }
-  .slice1-runtime { margin-top: 12px; }
+  .slice1-grid, .slice1-state-grid, .slice1-form { grid-template-columns: 1fr; }
+  .slice1-heading, .slice1-form-heading { display: block; }
+  .slice1-runtime, .slice1-form-gate { margin-top: 12px; }
+  .slice1-form-wide { grid-column: auto; }
 }
