@@ -7,6 +7,7 @@ on:
     paths:
       - '.github/dispatch/gas-beta-sync.json'
       - '.github/scripts/gas-sync.mjs'
+      - '.github/scripts/gas-management-probe.mjs'
       - '.github/workflows/gas-beta-sync.yml'
       - 'service/google-gateway/**'
 
@@ -58,3 +59,6 @@ jobs:
 
       - name: Sync and verify Google Gateway HEAD
         run: node .github/scripts/gas-sync.mjs
+
+      - name: Verify owner-only Google management plane
+        run: node .github/scripts/gas-management-probe.mjs
