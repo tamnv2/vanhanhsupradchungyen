@@ -7,6 +7,7 @@
     "auth.js",
     "auth-service.js",
     "email-otp.js",
+    "email-otp-auth.js",
     "authorization.js",
     "session.js",
     "permission-store.js",
