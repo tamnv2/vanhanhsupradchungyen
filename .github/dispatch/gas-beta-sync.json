@@ -1,7 +1,8 @@
 {
   "enabled": true,
   "target": "beta",
-  "operation": "provision_projection",
+  "operation": "deploy",
   "deploy": true,
-  "request_id": "projection-provision-20260915-owner-grants-complete"
+  "activate_projection": true,
+  "request_id": "projection-activate-20260915-auth-e2e-pass"
 }

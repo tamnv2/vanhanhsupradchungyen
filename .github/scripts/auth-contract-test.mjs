@@ -44,7 +44,8 @@ assert(
   'invalid TOTP must fail'
 );
 
-// Google projection management plane stays owner-only and fail-closed.
+// Google projection management plane stays owner-only. Provisioning is fail-closed;
+// activation is a separate reviewed operation and must not bypass auth/environment guards.
 const gatewayManifest = JSON.parse(await readFile('service/google-gateway/appsscript.json', 'utf8'));
 assert(gatewayManifest?.webapp?.access === 'ANYONE_ANONYMOUS', 'Google Gateway data-plane Web App access drifted');
 assert(gatewayManifest?.webapp?.executeAs === 'USER_DEPLOYING', 'Google Gateway Web App execution identity drifted');
@@ -56,7 +57,10 @@ assert(gatewayCode.includes('function provisionProjectionAuth('), 'projection au
 assert(gatewayCode.includes('function projectionManagementHealth('), 'projection management readback function missing');
 assert(gatewayCode.includes('VHDCHY_PROJECTION_SHARED_TOKEN_SHA256: verifierSha256'), 'GAS must store only projection verifier');
 assert(gatewayCode.includes('VHDCHY_PROJECTION_ENABLED: "false"'), 'provisioning must force projection disabled');
-assert(!gatewayCode.includes('function setProjectionEnabled('), 'projection activation must remain a separate not-yet-implemented gate');
+assert(gatewayCode.includes('function setProjectionEnabled(enabled, expectedEnvironment)'), 'reviewed projection activation function missing');
+assert(gatewayCode.includes('projectionManagementContext_(expectedEnvironment)'), 'projection activation must use owner/environment management context');
+assert(gatewayCode.includes('if (enabled && !before.authConfigured) throw new Error("PROJECTION_AUTH_NOT_CONFIGURED")'), 'projection activation must require configured auth');
+assert(gatewayCode.includes('PROJECTION_ENABLE_READBACK_FAILED'), 'projection activation must verify readback');
 
 const gasSync = await readFile('.github/scripts/gas-sync.mjs', 'utf8');
 assert(gasSync.includes("'provision_projection'"), 'CI projection provisioning operation missing');
@@ -67,12 +71,27 @@ assert(gasSync.includes('PROJECTION_AUTH_PROVISION_PASS authConfigured=true enab
 const managementProbe = await readFile('.github/scripts/gas-management-probe.mjs', 'utf8');
 assert(managementProbe.includes("function: 'projectionManagementHealth'"), 'management E2E probe must call projectionManagementHealth');
 assert(managementProbe.includes("parameters: ['BETA']"), 'management E2E probe must bind BETA environment');
-assert(managementProbe.includes('result?.projection?.enabled === false'), 'management E2E probe must require projection disabled');
+assert(managementProbe.includes('result?.projection?.enabled === false'), 'pre-activation management E2E probe must require projection disabled');
 assert(managementProbe.includes('PROJECTION_MANAGEMENT_E2E_PASS'), 'management E2E evidence marker missing');
+
+const activationProbe = await readFile('.github/scripts/gas-projection-activation.mjs', 'utf8');
+assert(activationProbe.includes("'setProjectionEnabled'"), 'activation CI must invoke owner-only activation function');
+assert(activationProbe.includes("[true, 'BETA']"), 'activation CI must bind exact BETA environment');
+assert(activationProbe.includes("wrong?.code !== 'PROJECTION_AUTH_FAILED'"), 'activation probe must reject wrong token');
+assert(activationProbe.includes("correct?.code !== 'INVALID_PROJECTION_BATCH'"), 'activation probe must authenticate correct token without a valid write batch');
+assert(activationProbe.includes('PROJECTION_ACTIVATION_E2E_PASS'), 'activation evidence marker missing');
 
 const gasWorkflow = await readFile('.github/workflows/gas-beta-sync.yml', 'utf8');
 assert(gasWorkflow.includes('VHDCHY_PROJECTION_SHARED_TOKEN: ${{ secrets.VHDCHY_PROJECTION_SHARED_TOKEN }}'), 'projection raw token must come from GitHub secret store');
 assert(gasWorkflow.includes("service/google-gateway/**"), 'Google Gateway source changes must trigger sync/deploy');
 assert(gasWorkflow.includes('node .github/scripts/gas-management-probe.mjs'), 'Google sync workflow must run the owner-only management E2E probe');
+assert(gasWorkflow.includes('node .github/scripts/gas-projection-activation.mjs'), 'Google sync workflow must run the separate activation gate');
+assert(gasWorkflow.includes("cmd.activate_projection === true && (cmd.operation !== 'deploy' || cmd.deploy !== true)"), 'activation dispatch must be restricted to reviewed deploy operation');
 
-console.log('AUTH_CONTRACT_TEST_PASS projectionManagement=PASS');
+const activationDispatch = JSON.parse(await readFile('.github/dispatch/gas-beta-sync.json', 'utf8'));
+assert(activationDispatch.target === 'beta', 'activation dispatch must target beta');
+assert(activationDispatch.operation === 'deploy', 'activation dispatch must use deploy operation');
+assert(activationDispatch.deploy === true, 'activation dispatch must require deployment');
+assert(activationDispatch.activate_projection === true, 'activation dispatch flag must be explicit');
+
+console.log('AUTH_CONTRACT_TEST_PASS projectionManagement=PASS projectionActivation=PASS');
