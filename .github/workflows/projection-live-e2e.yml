@@ -7,6 +7,7 @@ on:
       - '.github/dispatch/projection-live-e2e.json'
       - '.github/scripts/projection-live-e2e.mjs'
       - '.github/workflows/projection-live-e2e.yml'
+      - 'service/google-gateway/**'
 
 permissions:
   contents: read
@@ -23,7 +24,7 @@ jobs:
     env:
       CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      GOOGLE_SHEETS_PROJECTION_ID: ${{ vars.GOOGLE_SHEETS_PROJECTION_ID }}
+      GAS_SCRIPT_ID: ${{ vars.GAS_SCRIPT_ID }}
       GOOGLE_OAUTH_CLIENT_ID: ${{ vars.GOOGLE_OAUTH_CLIENT_ID }}
       GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}
       GOOGLE_OAUTH_REFRESH_TOKEN: ${{ secrets.GOOGLE_OAUTH_REFRESH_TOKEN }}

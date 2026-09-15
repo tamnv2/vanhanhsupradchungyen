@@ -58,6 +58,11 @@ assert(gatewayCode.includes('function setProjectionEnabled(enabled, expectedEnvi
 assert(gatewayCode.includes('projectionManagementContext_(expectedEnvironment)'), 'projection activation must use owner/environment management context');
 assert(gatewayCode.includes('if (enabled && !before.authConfigured) throw new Error("PROJECTION_AUTH_NOT_CONFIGURED")'), 'projection activation must require configured auth');
 assert(gatewayCode.includes('PROJECTION_ENABLE_READBACK_FAILED'), 'projection activation must verify readback');
+assert(gatewayCode.includes('function projectionE2EInspect(marker, expectedEnvironment)'), 'owner-only E2E readback helper missing');
+assert(gatewayCode.includes('function projectionE2ECleanup(marker, expectedEnvironment)'), 'owner-only E2E cleanup helper missing');
+assert(gatewayCode.includes('projectionManagementContext_(expectedEnvironment);'), 'E2E helpers must be bound to owner/environment management context');
+assert(gatewayCode.includes('PROJECTION_E2E_MARKER_INVALID'), 'E2E helper must restrict marker scope');
+assert(gatewayCode.includes('sheet.deleteRow(rowNumber)'), 'E2E cleanup must delete exact marker rows');
 
 const gasSync = await readFile('.github/scripts/gas-sync.mjs', 'utf8');
 assert(gasSync.includes("'provision_projection'"), 'CI projection provisioning operation missing');
@@ -93,4 +98,15 @@ assert(activationDispatch.operation === 'deploy', 'activation dispatch must use 
 assert(activationDispatch.deploy === true, 'activation dispatch must require deployment');
 assert(activationDispatch.activate_projection === true, 'activation dispatch flag must be explicit');
 
-console.log('AUTH_CONTRACT_TEST_PASS projectionManagement=PASS projectionActivation=PASS recovery=PASS');
+const liveE2E = await readFile('.github/scripts/projection-live-e2e.mjs', 'utf8');
+assert(liveE2E.includes("'GAS_SCRIPT_ID'"), 'projection live E2E must use the Apps Script management plane');
+assert(liveE2E.includes("'projectionE2EInspect'"), 'projection live E2E must use owner-only Sheet readback');
+assert(liveE2E.includes("'projectionE2ECleanup'"), 'projection live E2E must use owner-only Sheet cleanup');
+assert(!liveE2E.includes('sheets.googleapis.com'), 'projection live E2E must not depend on Google Sheets REST API');
+assert(liveE2E.includes('PROJECTION_E2E_CLEANUP_PASS'), 'projection live E2E must prove cleanup');
+
+const liveE2EWorkflow = await readFile('.github/workflows/projection-live-e2e.yml', 'utf8');
+assert(liveE2EWorkflow.includes('GAS_SCRIPT_ID: ${{ vars.GAS_SCRIPT_ID }}'), 'projection live E2E workflow must receive GAS_SCRIPT_ID');
+assert(!liveE2EWorkflow.includes('GOOGLE_SHEETS_PROJECTION_ID:'), 'projection live E2E workflow must not require Sheets REST configuration');
+
+console.log('AUTH_CONTRACT_TEST_PASS projectionManagement=PASS projectionActivation=PASS recovery=PASS projectionLiveE2E=PASS');

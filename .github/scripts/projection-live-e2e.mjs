@@ -10,15 +10,13 @@ if (dispatch.target !== 'beta' || dispatch.operation !== 'projection_live_e2e') 
 }
 
 const required = [
-  'CLOUDFLARE_ACCOUNT_ID', 'CLOUDFLARE_API_TOKEN',
-  'GOOGLE_SHEETS_PROJECTION_ID', 'GOOGLE_OAUTH_CLIENT_ID',
-  'GOOGLE_OAUTH_CLIENT_SECRET', 'GOOGLE_OAUTH_REFRESH_TOKEN'
+  'CLOUDFLARE_ACCOUNT_ID', 'CLOUDFLARE_API_TOKEN', 'GAS_SCRIPT_ID',
+  'GOOGLE_OAUTH_CLIENT_ID', 'GOOGLE_OAUTH_CLIENT_SECRET', 'GOOGLE_OAUTH_REFRESH_TOKEN'
 ];
 for (const name of required) if (!process.env[name]) throw new Error(`Missing ${name}`);
 
 const DB_ID = '37eb7d59-05c0-4ba2-8162-cb6a9fe5d492';
 const SHEET_TITLE = 'LỊCH SỬ NGHIỆP VỤ';
-const EVENT_ID_COLUMN = 10; // K, zero-based in Sheets API value arrays.
 const runId = String(process.env.GITHUB_RUN_ID || Date.now());
 const marker = `VHDCHY-E2E-PROJECTION-${runId}`;
 const nowIso = new Date().toISOString();
@@ -70,61 +68,70 @@ async function googleAccessToken() {
   return payload.access_token;
 }
 
-async function sheetsRequest(token, url, options = {}) {
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      authorization: `Bearer ${token}`,
-      'content-type': 'application/json',
-      ...(options.headers || {})
-    }
-  });
-  const text = await response.text();
-  let payload = {};
-  if (text) {
-    try { payload = JSON.parse(text); }
-    catch { throw new Error(`Sheets API returned non-JSON HTTP ${response.status}`); }
-  }
-  if (!response.ok) throw new Error(`Sheets API HTTP ${response.status}: ${JSON.stringify(payload?.error || {}).slice(0, 600)}`);
-  return payload;
-}
-
-async function readSheetRows(token) {
-  const range = encodeURIComponent(`'${SHEET_TITLE}'!A:M`);
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${process.env.GOOGLE_SHEETS_PROJECTION_ID}/values/${range}?majorDimension=ROWS`;
-  const payload = await sheetsRequest(token, url);
-  return Array.isArray(payload.values) ? payload.values : [];
-}
-
-function markerRows(rows) {
-  const matches = [];
-  rows.forEach((row, index) => {
-    if (String(row?.[EVENT_ID_COLUMN] || '') === marker) matches.push({ index, row });
-  });
-  return matches;
-}
-
-async function deleteMarkerRows(token) {
-  const rows = await readSheetRows(token);
-  const matches = markerRows(rows).filter(item => item.index > 0).sort((a, b) => b.index - a.index);
-  if (!matches.length) return 0;
-  const metaUrl = `https://sheets.googleapis.com/v4/spreadsheets/${process.env.GOOGLE_SHEETS_PROJECTION_ID}?fields=sheets.properties`;
-  const meta = await sheetsRequest(token, metaUrl);
-  const sheet = (meta.sheets || []).find(item => item?.properties?.title === SHEET_TITLE);
-  if (!sheet) throw new Error('Projection target sheet metadata not found during cleanup');
-  const requests = matches.map(item => ({
-    deleteDimension: {
-      range: {
-        sheetId: sheet.properties.sheetId,
-        dimension: 'ROWS',
-        startIndex: item.index,
-        endIndex: item.index + 1
+async function runScriptFunction(token, functionName, parameters = [], options = {}) {
+  const maxAttempts = Math.max(1, Math.min(40, Number(options.maxAttempts || 8)));
+  const delayMs = Math.max(500, Math.min(10000, Number(options.delayMs || 2500)));
+  let lastError = 'unknown';
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      const response = await fetch(`https://script.googleapis.com/v1/scripts/${encodeURIComponent(process.env.GAS_SCRIPT_ID)}:run`, {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${token}`,
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify({ function: functionName, parameters, devMode: false }),
+        cache: 'no-store'
+      });
+      const text = await response.text();
+      let operation;
+      try { operation = text ? JSON.parse(text) : {}; }
+      catch { throw new Error(`Apps Script execution returned non-JSON HTTP ${response.status}`); }
+      if (!response.ok) throw new Error(`Apps Script execution HTTP ${response.status}: ${text.slice(0, 700)}`);
+      if (operation?.error) {
+        const detail = operation.error?.details?.[0]?.errorMessage || operation.error?.message || 'Apps Script execution failed';
+        throw new Error(`${functionName} execution error: ${detail}`);
       }
+      if (!operation?.response || !Object.hasOwn(operation.response, 'result')) {
+        throw new Error(`${functionName} execution response did not contain result`);
+      }
+      return operation.response.result;
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : String(error);
+      if (attempt < maxAttempts) await sleep(delayMs);
     }
-  }));
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${process.env.GOOGLE_SHEETS_PROJECTION_ID}:batchUpdate`;
-  await sheetsRequest(token, url, { method: 'POST', body: JSON.stringify({ requests }) });
-  return matches.length;
+  }
+  throw new Error(`Apps Script execution ${functionName} failed after retries: ${lastError}`);
+}
+
+function assertLiveManagement(result) {
+  const ok =
+    result?.ok === true &&
+    result?.managementVersion === 'VHDCHY_PROJECTION_MANAGEMENT_V1' &&
+    String(result?.environment || '').toUpperCase() === 'BETA' &&
+    result?.bootstrap?.authorized === true &&
+    result?.bootstrap?.configMatch === true &&
+    result?.projection?.authConfigured === true &&
+    result?.projection?.enabled === true;
+  if (!ok) throw new Error(`Projection management is not LIVE: ${JSON.stringify(result).slice(0, 1200)}`);
+}
+
+async function inspectMarker(token, options = {}) {
+  return runScriptFunction(token, 'projectionE2EInspect', [marker, 'BETA'], options);
+}
+
+async function cleanupSheetMarker(token) {
+  return runScriptFunction(token, 'projectionE2ECleanup', [marker, 'BETA'], { maxAttempts: 8, delayMs: 2500 });
+}
+
+async function waitForManagementHelpers(token) {
+  const management = await runScriptFunction(token, 'projectionManagementHealth', ['BETA'], { maxAttempts: 16, delayMs: 3000 });
+  assertLiveManagement(management);
+  const inspect = await inspectMarker(token, { maxAttempts: 40, delayMs: 3000 });
+  if (inspect?.ok !== true || inspect?.marker !== marker || inspect?.sheet !== SHEET_TITLE) {
+    throw new Error(`Projection E2E management helper mismatch: ${JSON.stringify(inspect).slice(0, 1000)}`);
+  }
+  return inspect;
 }
 
 async function outboxRow() {
@@ -153,15 +160,17 @@ async function verifyTrigger() {
 }
 
 let googleToken = null;
+let markerInjected = false;
 let primaryError = null;
 try {
   await verifyTrigger();
   const preExisting = await d1Rows('SELECT event_id FROM domain_events WHERE event_id=?', [marker]);
-  if (preExisting.length) throw new Error('E2E marker unexpectedly already exists');
+  if (preExisting.length) throw new Error('E2E marker unexpectedly already exists in D1');
 
   googleToken = await googleAccessToken();
-  const beforeRows = markerRows(await readSheetRows(googleToken));
-  if (beforeRows.length) throw new Error('E2E marker unexpectedly exists in Sheet before test');
+  const before = await waitForManagementHelpers(googleToken);
+  if (Number(before.count || 0) !== 0) throw new Error('E2E marker unexpectedly exists in Sheet before test');
+  console.log('PROJECTION_E2E_MANAGEMENT_READY_PASS enabled=true sheetReadback=PASS');
 
   const payload = JSON.stringify({
     sheet: SHEET_TITLE,
@@ -180,30 +189,32 @@ try {
 
   await d1({ batch: [
     {
-      sql: `INSERT INTO domain_events(event_id,event_type,entity_type,entity_id,entity_version,payload_json,app_version,occurred_at) VALUES(?,?,?,?,?,?,?,?)`,
+      sql: 'INSERT INTO domain_events(event_id,event_type,entity_type,entity_id,entity_version,payload_json,app_version,occurred_at) VALUES(?,?,?,?,?,?,?,?)',
       params: [marker, 'E2E_PROJECTION_TEST', 'system_test', marker, 1, '{}', String(process.env.GITHUB_SHA || 'unknown'), nowIso]
     },
     {
-      sql: `INSERT INTO projection_outbox(event_id,projection_target,payload_json,status,attempts,created_at,updated_at) VALUES(?, 'GOOGLE_SHEETS', ?, 'PENDING', 0, ?, ?)`,
+      sql: "INSERT INTO projection_outbox(event_id,projection_target,payload_json,status,attempts,created_at,updated_at) VALUES(?, 'GOOGLE_SHEETS', ?, 'PENDING', 0, ?, ?)",
       params: [marker, payload, nowIso, nowIso]
     }
   ]});
+  markerInjected = true;
   console.log(`PROJECTION_E2E_MARKER_INJECTED id=${marker}`);
 
   const firstAck = await waitForAck();
-  const firstMatches = markerRows(await readSheetRows(googleToken));
-  if (firstMatches.length !== 1) throw new Error(`Expected one projected row after first ACK, found ${firstMatches.length}`);
-  if (String(firstMatches[0].row?.[9] || '') !== marker) throw new Error('Projected detail marker mismatch');
+  const firstInspect = await inspectMarker(googleToken);
+  if (Number(firstInspect?.count || 0) !== 1) throw new Error(`Expected one projected row after first ACK, found ${firstInspect?.count}`);
+  if (Number(firstInspect?.detailMatches || 0) !== 1) throw new Error('Projected detail marker mismatch');
   console.log(`PROJECTION_E2E_FIRST_ACK_PASS attempts=${firstAck.attempts}`);
 
   const requeueAt = new Date().toISOString();
   await d1({
-    sql: `UPDATE projection_outbox SET status='PENDING', next_attempt_at=NULL, last_error_code=NULL, updated_at=? WHERE event_id=? AND status='ACKED'`,
+    sql: "UPDATE projection_outbox SET status='PENDING', next_attempt_at=NULL, last_error_code=NULL, updated_at=? WHERE event_id=? AND status='ACKED'",
     params: [requeueAt, marker]
   });
   const secondAck = await waitForAck(requeueAt);
-  const secondMatches = markerRows(await readSheetRows(googleToken));
-  if (secondMatches.length !== 1) throw new Error(`Projection replay duplicated logical Sheet row: ${secondMatches.length}`);
+  const secondInspect = await inspectMarker(googleToken);
+  if (Number(secondInspect?.count || 0) !== 1) throw new Error(`Projection replay duplicated logical Sheet row: ${secondInspect?.count}`);
+  if (Number(secondInspect?.detailMatches || 0) !== 1) throw new Error('Projection replay detail marker mismatch');
   console.log(`PROJECTION_E2E_IDEMPOTENCY_PASS rows=1 attempts=${secondAck.attempts}`);
 } catch (error) {
   primaryError = error;
@@ -211,20 +222,27 @@ try {
   let cleanupError = null;
   try {
     if (!googleToken) googleToken = await googleAccessToken();
-    const deletedSheetRows = await deleteMarkerRows(googleToken);
+    const sheetCleanup = await cleanupSheetMarker(googleToken);
+    if (sheetCleanup?.ok !== true || Number(sheetCleanup?.remaining || 0) !== 0) {
+      throw new Error(`Sheet cleanup readback mismatch: ${JSON.stringify(sheetCleanup).slice(0, 800)}`);
+    }
 
-    await d1({ batch: [
-      { sql: 'DELETE FROM projection_outbox WHERE event_id=?', params: [marker] },
-      { sql: 'DROP TRIGGER IF EXISTS trg_domain_events_no_delete', params: [] },
-      { sql: 'DELETE FROM domain_events WHERE event_id=?', params: [marker] },
-      { sql: "CREATE TRIGGER IF NOT EXISTS trg_domain_events_no_delete BEFORE DELETE ON domain_events BEGIN SELECT RAISE(ABORT, 'domain_events are immutable'); END", params: [] }
-    ]});
+    if (markerInjected) {
+      await d1({ batch: [
+        { sql: 'DELETE FROM projection_outbox WHERE event_id=?', params: [marker] },
+        { sql: 'DROP TRIGGER IF EXISTS trg_domain_events_no_delete', params: [] },
+        { sql: 'DELETE FROM domain_events WHERE event_id=?', params: [marker] },
+        { sql: "CREATE TRIGGER IF NOT EXISTS trg_domain_events_no_delete BEFORE DELETE ON domain_events BEGIN SELECT RAISE(ABORT, 'domain_events are immutable'); END", params: [] }
+      ]});
+    }
 
     await verifyTrigger();
     const d1Left = await d1Rows('SELECT event_id FROM domain_events WHERE event_id=? UNION ALL SELECT event_id FROM projection_outbox WHERE event_id=?', [marker, marker]);
-    const sheetLeft = markerRows(await readSheetRows(googleToken));
-    if (d1Left.length || sheetLeft.length) throw new Error(`Cleanup incomplete d1=${d1Left.length} sheet=${sheetLeft.length}`);
-    console.log(`PROJECTION_E2E_CLEANUP_PASS sheetRowsDeleted=${deletedSheetRows} d1Markers=0 trigger=PASS`);
+    const sheetLeft = await inspectMarker(googleToken);
+    if (d1Left.length || Number(sheetLeft?.count || 0) !== 0) {
+      throw new Error(`Cleanup incomplete d1=${d1Left.length} sheet=${sheetLeft?.count}`);
+    }
+    console.log(`PROJECTION_E2E_CLEANUP_PASS sheetRowsDeleted=${Number(sheetCleanup?.deleted || 0)} d1Markers=0 trigger=PASS`);
   } catch (error) {
     cleanupError = error;
   }
@@ -236,4 +254,4 @@ try {
   }
 }
 
-console.log('PROJECTION_LIVE_E2E_PASS d1Outbox=PASS cron=PASS googleSheet=PASS replayDedup=PASS cleanup=PASS');
+console.log('PROJECTION_LIVE_E2E_PASS d1Outbox=PASS cron=PASS googleGatewaySheet=PASS replayDedup=PASS cleanup=PASS');
