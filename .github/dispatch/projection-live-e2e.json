@@ -1,0 +1,6 @@
+{
+  "enabled": true,
+  "target": "beta",
+  "operation": "projection_live_e2e",
+  "request_id": "projection-live-e2e-20260915"
+}
