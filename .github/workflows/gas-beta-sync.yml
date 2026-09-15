@@ -9,6 +9,7 @@ on:
       - '.github/scripts/gas-sync.mjs'
       - '.github/scripts/gas-management-probe.mjs'
       - '.github/scripts/gas-projection-auth-probe.mjs'
+      - '.github/scripts/gas-projection-activation.mjs'
       - '.github/workflows/gas-beta-sync.yml'
       - 'service/google-gateway/**'
 
@@ -54,8 +55,11 @@ jobs:
           if (!['sync', 'deploy', 'provision_projection'].includes(cmd.operation)) {
             throw new Error('Dispatch operation must be sync, deploy or provision_projection');
           }
+          if (cmd.activate_projection === true && (cmd.operation !== 'deploy' || cmd.deploy !== true)) {
+            throw new Error('Projection activation requires operation=deploy and deploy=true');
+          }
           if (!cmd.request_id || typeof cmd.request_id !== 'string') throw new Error('Dispatch request_id is required');
-          console.log(`Authorized autonomous request: ${cmd.request_id} / ${cmd.operation}`);
+          console.log(`Authorized autonomous request: ${cmd.request_id} / ${cmd.operation} / activate_projection=${cmd.activate_projection === true}`);
           NODE
 
       - name: Sync and verify Google Gateway HEAD
@@ -66,3 +70,6 @@ jobs:
 
       - name: Verify public projection token fail-closed gate
         run: node .github/scripts/gas-projection-auth-probe.mjs
+
+      - name: Activate and verify public projection data plane
+        run: node .github/scripts/gas-projection-activation.mjs
