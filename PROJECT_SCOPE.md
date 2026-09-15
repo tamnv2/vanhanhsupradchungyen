@@ -81,7 +81,7 @@ Final continuity acceptance uses the current V6 minute-level target: after warmu
 - Web and App never write D1/Sheets/Drive directly around the Service contract.
 
 Detailed architecture: `docs/TARGET_PRODUCT_ARCHITECTURE_V3.md`.
-Full phase/scope map: `docs/DELIVERY_PLAN_V5.md`.
+Full phase/scope map: `docs/DELIVERY_PLAN_V6.md`.
 Current execution model: `docs/EXECUTION_MODEL_V1.md`.
 Current progress authority: `docs/PROGRESS_TRACKING_V2.md`.
 Current volatile operational truth: `CURRENT_STATE.md`.
@@ -98,7 +98,7 @@ Current volatile operational truth: `CURRENT_STATE.md`.
 
 Execution follows `DECISIONS_V9.md` and `docs/EXECUTION_MODEL_V1.md`: one integrating acceptance vertical slice plus at most two independent client/preparation lanes. Blocked provider/physical gates remain visible but do not consume active WIP or pause independent READY work.
 
-This scope file intentionally does **not** copy the current percentage, phase score or provider liveness. Read project percentage only from `docs/PROGRESS_TRACKING_V2.md`, and read volatile operational/provider evidence only from `CURRENT_STATE.md`.
+This file intentionally does **not** copy the current percentage, phase score or provider liveness. Read project percentage only from `docs/PROGRESS_TRACKING_V2.md`, and read volatile operational/provider evidence only from `CURRENT_STATE.md`.
 
 ## Reset rule
 
