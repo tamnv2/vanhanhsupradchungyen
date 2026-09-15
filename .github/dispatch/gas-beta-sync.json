@@ -1,7 +1,7 @@
 {
   "enabled": true,
   "target": "beta",
-  "operation": "sync",
+  "operation": "provision_projection",
   "deploy": true,
-  "request_id": "projection-contract-v1-20260913-1815"
+  "request_id": "projection-provision-20260915-owner-grants-complete"
 }
