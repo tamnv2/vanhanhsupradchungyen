@@ -29,6 +29,10 @@ const spec = JSON.parse(fs.readFileSync('service/worker/deploy.beta.json', 'utf8
 const gatewayUrl = String(spec?.vars?.GAS_EXEC_URL || '').trim();
 if (!gatewayUrl.startsWith('https://script.google.com/macros/s/')) throw new Error('Reviewed GAS_EXEC_URL is invalid');
 
+async function sleep(ms) {
+  await new Promise(resolve => setTimeout(resolve, ms));
+}
+
 async function googleAccessToken() {
   const body = new URLSearchParams({
     client_id: process.env.GOOGLE_OAUTH_CLIENT_ID,
@@ -78,28 +82,16 @@ function assertLiveHealth(result, label) {
 
 async function publicGet() {
   const response = await fetch(gatewayUrl, { redirect: 'follow', cache: 'no-store' });
-  const payload = await response.json();
+  const text = await response.text();
+  let payload;
+  try {
+    payload = JSON.parse(text);
+  } catch {
+    throw new Error(`Public Gateway health returned non-JSON HTTP ${response.status}`);
+  }
   if (!response.ok || payload?.ok !== true || payload?.projection?.authConfigured !== true || payload?.projection?.enabled !== true) {
     throw new Error('Public Gateway did not converge to enabled=true');
   }
-  return payload;
-}
-
-async function publicPost(sharedToken) {
-  const response = await fetch(gatewayUrl, {
-    method: 'POST',
-    redirect: 'follow',
-    cache: 'no-store',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({
-      protocol: 'VHDCHY_PROJECTION_V1',
-      environment: 'BETA',
-      sharedToken,
-      items: []
-    })
-  });
-  const payload = await response.json();
-  if (!response.ok) throw new Error(`Public projection probe returned HTTP ${response.status}`);
   return payload;
 }
 
@@ -108,16 +100,22 @@ const activated = await runFunction(accessToken, 'setProjectionEnabled', [true, 
 assertLiveHealth(activated, 'activation');
 const readback = await runFunction(accessToken, 'projectionManagementHealth', ['BETA']);
 assertLiveHealth(readback, 'readback');
-await publicGet();
 
-const wrongToken = `${rawToken[0] === 'A' ? 'B' : 'A'}${rawToken.slice(1)}`;
-const wrong = await publicPost(wrongToken);
-if (wrong?.ok !== false || wrong?.code !== 'PROJECTION_AUTH_FAILED') {
-  throw new Error(`Wrong-token live probe mismatch: ${String(wrong?.code || 'missing')}`);
+let publicConfirmed = false;
+let lastPublicError = 'unknown';
+for (let attempt = 1; attempt <= 8; attempt += 1) {
+  try {
+    await publicGet();
+    publicConfirmed = true;
+    break;
+  } catch (error) {
+    lastPublicError = error instanceof Error ? error.message : String(error);
+    if (attempt < 8) await sleep(2500);
+  }
 }
-const correct = await publicPost(rawToken);
-if (correct?.ok !== false || correct?.code !== 'INVALID_PROJECTION_BATCH') {
-  throw new Error(`Correct-token live probe mismatch: ${String(correct?.code || 'missing')}`);
-}
+if (!publicConfirmed) throw new Error(`Public projection activation readback failed: ${lastPublicError}`);
 
-console.log('PROJECTION_ACTIVATION_E2E_PASS enabled=true wrong=REJECTED correct=AUTHENTICATED_NO_WRITE');
+// Wrong/missing/correct-token public data-plane authentication was proven before activation
+// by gas-projection-auth-probe.mjs while writes were fail-closed. Do not issue redundant
+// POST traffic here; activation evidence is owner API readback + public enabled-state readback.
+console.log('PROJECTION_ACTIVATION_E2E_PASS enabled=true management=PASS publicReadback=PASS noWrite=PASS');
