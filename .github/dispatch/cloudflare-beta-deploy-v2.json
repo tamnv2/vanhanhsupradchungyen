@@ -2,5 +2,5 @@
   "enabled": true,
   "target": "beta",
   "operation": "deploy_worker_multimodule_business_core_v3",
-  "reason": "Diagnose projection cron invocation after live E2E found PENDING outbox with zero attempts; preserve live delivery and unchanged cron schedule"
+  "reason": "Deploy BETA after successful projection live E2E and removal of temporary scheduler diagnostics; preserve cron schedule and production projection delivery"
 }

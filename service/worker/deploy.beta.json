@@ -50,7 +50,6 @@
     "APP_ENV": "BETA",
     "GAS_EXEC_URL": "https://script.google.com/macros/s/AKfycbzxRzxjeFyPpYQ39T3MJRL_sSKrhJhHXLY5LgGy16CnxuPEIFoJo8vr9XijrsxZttRtjQ/exec",
     "PROJECTION_DELIVERY_ENABLED": "true",
-    "PROJECTION_SCHEDULE_DIAGNOSTICS_ENABLED": "true",
     "LAN_RECONCILIATION_KEY_ID": "vhdchy-beta-lan-reconciliation-01",
     "LAN_RECONCILIATION_FINALITY_V1": "disabled"
   },

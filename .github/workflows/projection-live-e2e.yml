@@ -32,6 +32,8 @@ jobs:
     steps:
       - name: Checkout exact main source
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Validate isolated E2E dispatch
         id: gate
@@ -44,6 +46,46 @@ jobs:
           echo "enabled=$enabled" >> "$GITHUB_OUTPUT"
           if [ "$enabled" != "true" ]; then echo 'PROJECTION_LIVE_E2E_DISABLED_NOOP'; fi
 
+      - name: Resolve exact or source-equivalent live Worker build
+        if: steps.gate.outputs.enabled == 'true'
+        id: worker-build
+        shell: bash
+        run: |
+          set -euo pipefail
+          health="$(curl --fail --silent --show-error --retry 3 --retry-delay 2 --connect-timeout 10 https://beta.supra.cc.cd/health)"
+          live_build="$(printf '%s' "$health" | jq -r '.build // empty')"
+          if [[ ! "$live_build" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "PROJECTION_E2E_WORKER_BUILD_INVALID value=$live_build"
+            exit 1
+          fi
+
+          if [ "$live_build" = "$GITHUB_SHA" ]; then
+            echo "PROJECTION_E2E_WORKER_BUILD_EXACT build=$live_build"
+          else
+            if ! git cat-file -e "${live_build}^{commit}" 2>/dev/null; then
+              echo "PROJECTION_E2E_WORKER_BUILD_NOT_IN_HISTORY build=$live_build head=$GITHUB_SHA"
+              exit 1
+            fi
+
+            runtime_paths=(
+              service/worker
+              config/projections.beta.json
+              .github/scripts/cloudflare-worker-upload.mjs
+              .github/workflows/cloudflare-beta-deploy-v2.yml
+              .github/dispatch/cloudflare-beta-v2.json
+            )
+            if ! git diff --quiet "$live_build" "$GITHUB_SHA" -- "${runtime_paths[@]}"; then
+              echo "PROJECTION_E2E_WORKER_SOURCE_DRIFT live=$live_build head=$GITHUB_SHA"
+              git diff --name-only "$live_build" "$GITHUB_SHA" -- "${runtime_paths[@]}"
+              exit 1
+            fi
+            echo "PROJECTION_E2E_WORKER_SOURCE_EQUIVALENT live=$live_build head=$GITHUB_SHA"
+          fi
+
+          echo "worker_build_sha=$live_build" >> "$GITHUB_OUTPUT"
+
       - name: Run isolated D1 cron Google Sheet E2E and cleanup
         if: steps.gate.outputs.enabled == 'true'
-        run: node .github/scripts/projection-live-e2e.mjs
+        env:
+          E2E_WORKER_BUILD_SHA: ${{ steps.worker-build.outputs.worker_build_sha }}
+        run: GITHUB_SHA="$E2E_WORKER_BUILD_SHA" node .github/scripts/projection-live-e2e.mjs
