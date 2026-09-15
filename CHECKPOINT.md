@@ -1,10 +1,10 @@
 # CHECKPOINT — VHDCHY
 
-checkpoint_version: 61
+checkpoint_version: 62
 protocol: AI_AUTHORITY_RESUME_V2
 status: EXECUTING_PRODUCT_V9_BETA
 action_mode: VERTICAL_SLICE_WIP3
-reconciled_through_commit: 385c0f3db859b536536284ff2e90b6248a696139
+reconciled_through_commit: 18b708bedb99c7901978c582c2742fb0b987f950
 active_wip: LANE_A_ATTENDANCE / LANE_B_WEB / LANE_C_SESSION_PICK_PACK_RESOURCES
 paused_gates: PROVIDER_OTP_E2E / PHYSICAL_CORPORATE_LAN_REGRESSION / FINAL_PICK_PACK_VISUAL_EVIDENCE / PORTRAIT_OWNER_DECISION / STABLE_PROMOTION
 
@@ -79,7 +79,7 @@ None of these gates stop the current independent source WIP.
 
 1. Live-fetch `AI_ENTRYPOINT.md` from GitHub `main` and execute its bootstrap.
 2. Compare current main HEAD with this reconciliation point.
-3. Read any changed active authority/current-state/source paths after `385c0f3db859b536536284ff2e90b6248a696139` before mutation.
+3. Read any changed active authority/current-state/source paths after `18b708bedb99c7901978c582c2742fb0b987f950` before mutation.
 4. Rebuild V9 WIP from `NEXT_ACTIONS.md` and continue all safe READY nodes within the WIP limit.
 
 Memory/chat summaries are NON_AUTHORITY.
