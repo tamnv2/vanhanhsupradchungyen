@@ -1,6 +1,6 @@
 # PROJECT SCOPE — VHDCHY
 
-Status: ACTIVE / PRODUCT TARGET RECONCILED V7 2026-09-14
+Status: ACTIVE / PRODUCT TARGET RECONCILED V9 2026-09-15
 Baseline: `REPO-RESET-20260912-01`
 
 ## Scope
@@ -81,8 +81,10 @@ Final continuity acceptance uses the current V6 minute-level target: after warmu
 - Web and App never write D1/Sheets/Drive directly around the Service contract.
 
 Detailed architecture: `docs/TARGET_PRODUCT_ARCHITECTURE_V3.md`.
-Current full execution plan: `docs/DELIVERY_PLAN_V5.md`.
-Current progress model: `docs/PROGRESS_TRACKING_V1.md`.
+Full phase/scope map: `docs/DELIVERY_PLAN_V5.md`.
+Current execution model: `docs/EXECUTION_MODEL_V1.md`.
+Current progress authority: `docs/PROGRESS_TRACKING_V2.md`.
+Current volatile operational truth: `CURRENT_STATE.md`.
 
 ## Legacy/reference boundary
 
@@ -94,11 +96,9 @@ Current progress model: `docs/PROGRESS_TRACKING_V1.md`.
 
 ## Current execution mode
 
-Build shared domain core, Cloud Service, LAN Service, Online/LAN Web, Android/PDA App and Google integration in dependency-aware parallel lanes.
+Execution follows `DECISIONS_V9.md` and `docs/EXECUTION_MODEL_V1.md`: one integrating acceptance vertical slice plus at most two independent client/preparation lanes. Blocked provider/physical gates remain visible but do not consume active WIP or pause independent READY work.
 
-Unavailable final company-network hardware may delay physical regression only; it must not pause independent source/contracts/build/UI work.
-
-Current progress/position is recorded in `CURRENT_STATE.md`; current evidence-weighted baseline is **55.4% exact / displayed 55%** as of 2026-09-14. Phase 6 LAN Service is **60%** pending live target-host/public-trust/physical acceptance.
+This scope file intentionally does **not** copy the current percentage, phase score or provider liveness. Read project percentage only from `docs/PROGRESS_TRACKING_V2.md`, and read volatile operational/provider evidence only from `CURRENT_STATE.md`.
 
 ## Reset rule
 
