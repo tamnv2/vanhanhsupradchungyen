@@ -17,6 +17,8 @@ for (const name of required) if (!process.env[name]) throw new Error(`Missing ${
 
 const DB_ID = '37eb7d59-05c0-4ba2-8162-cb6a9fe5d492';
 const SHEET_TITLE = 'LỊCH SỬ NGHIỆP VỤ';
+const DIAGNOSTIC_KEY = 'projection_scheduler_probe';
+const PUBLIC_ORIGIN = 'https://beta.supra.cc.cd';
 const runId = String(process.env.GITHUB_RUN_ID || Date.now());
 const marker = `VHDCHY-E2E-PROJECTION-${runId}`;
 const nowIso = new Date().toISOString();
@@ -48,6 +50,28 @@ async function d1(body) {
 async function d1Rows(sql, params = []) {
   const result = await d1({ sql, params });
   return Array.isArray(result?.[0]?.results) ? result[0].results : [];
+}
+
+async function waitForWorkerBuild(maxMs = 180000) {
+  const expected = String(process.env.GITHUB_SHA || '');
+  if (!expected) return;
+  const deadline = Date.now() + maxMs;
+  let last = null;
+  while (Date.now() < deadline) {
+    try {
+      const response = await fetch(`${PUBLIC_ORIGIN}/health`, { cache: 'no-store', redirect: 'follow' });
+      const payload = await response.json();
+      last = { status: response.status, payload };
+      if (response.ok && payload?.ok === true && payload?.build === expected) {
+        console.log(`PROJECTION_E2E_WORKER_BUILD_PASS build=${expected}`);
+        return;
+      }
+    } catch (error) {
+      last = { error: String(error?.message || error) };
+    }
+    await sleep(3000);
+  }
+  throw new Error(`Worker did not converge to E2E source build ${expected}; last=${JSON.stringify(last).slice(0, 900)}`);
 }
 
 async function googleAccessToken() {
@@ -142,6 +166,14 @@ async function outboxRow() {
   return rows[0] || null;
 }
 
+async function scheduleDiagnostic() {
+  const rows = await d1Rows('SELECT value,updated_at FROM vhdchy_meta WHERE key=? LIMIT 1', [DIAGNOSTIC_KEY]);
+  if (!rows[0]) return null;
+  let parsed = null;
+  try { parsed = JSON.parse(String(rows[0].value || '{}')); } catch {}
+  return { ...rows[0], parsed };
+}
+
 async function waitForAck(previousUpdatedAt = null, maxMs = 360000) {
   const deadline = Date.now() + maxMs;
   let last = null;
@@ -151,7 +183,8 @@ async function waitForAck(previousUpdatedAt = null, maxMs = 360000) {
     if (last?.status === 'ACKED' && (!previousUpdatedAt || last.updated_at !== previousUpdatedAt)) return last;
     await sleep(10000);
   }
-  throw new Error(`Projection ACK timeout; last=${JSON.stringify(last)}`);
+  const diagnostic = await scheduleDiagnostic();
+  throw new Error(`Projection ACK timeout; last=${JSON.stringify(last)} scheduler=${JSON.stringify(diagnostic)}`);
 }
 
 async function verifyTrigger() {
@@ -163,7 +196,9 @@ let googleToken = null;
 let markerInjected = false;
 let primaryError = null;
 try {
+  await waitForWorkerBuild();
   await verifyTrigger();
+  await d1({ sql: 'DELETE FROM vhdchy_meta WHERE key=?', params: [DIAGNOSTIC_KEY] });
   const preExisting = await d1Rows('SELECT event_id FROM domain_events WHERE event_id=?', [marker]);
   if (preExisting.length) throw new Error('E2E marker unexpectedly already exists in D1');
 
@@ -227,22 +262,26 @@ try {
       throw new Error(`Sheet cleanup readback mismatch: ${JSON.stringify(sheetCleanup).slice(0, 800)}`);
     }
 
+    const cleanupBatch = [];
     if (markerInjected) {
-      await d1({ batch: [
+      cleanupBatch.push(
         { sql: 'DELETE FROM projection_outbox WHERE event_id=?', params: [marker] },
         { sql: 'DROP TRIGGER IF EXISTS trg_domain_events_no_delete', params: [] },
         { sql: 'DELETE FROM domain_events WHERE event_id=?', params: [marker] },
         { sql: "CREATE TRIGGER IF NOT EXISTS trg_domain_events_no_delete BEFORE DELETE ON domain_events BEGIN SELECT RAISE(ABORT, 'domain_events are immutable'); END", params: [] }
-      ]});
+      );
     }
+    cleanupBatch.push({ sql: 'DELETE FROM vhdchy_meta WHERE key=?', params: [DIAGNOSTIC_KEY] });
+    await d1({ batch: cleanupBatch });
 
     await verifyTrigger();
     const d1Left = await d1Rows('SELECT event_id FROM domain_events WHERE event_id=? UNION ALL SELECT event_id FROM projection_outbox WHERE event_id=?', [marker, marker]);
+    const diagnosticLeft = await scheduleDiagnostic();
     const sheetLeft = await inspectMarker(googleToken);
-    if (d1Left.length || Number(sheetLeft?.count || 0) !== 0) {
-      throw new Error(`Cleanup incomplete d1=${d1Left.length} sheet=${sheetLeft?.count}`);
+    if (d1Left.length || diagnosticLeft || Number(sheetLeft?.count || 0) !== 0) {
+      throw new Error(`Cleanup incomplete d1=${d1Left.length} diagnostic=${Boolean(diagnosticLeft)} sheet=${sheetLeft?.count}`);
     }
-    console.log(`PROJECTION_E2E_CLEANUP_PASS sheetRowsDeleted=${Number(sheetCleanup?.deleted || 0)} d1Markers=0 trigger=PASS`);
+    console.log(`PROJECTION_E2E_CLEANUP_PASS sheetRowsDeleted=${Number(sheetCleanup?.deleted || 0)} d1Markers=0 schedulerProbe=0 trigger=PASS`);
   } catch (error) {
     cleanupError = error;
   }
