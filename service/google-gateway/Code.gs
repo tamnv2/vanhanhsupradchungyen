@@ -159,9 +159,6 @@ function doPost(e) {
   if (!projection.authConfigured) {
     return json_({ ok: false, code: "PROJECTION_AUTH_NOT_CONFIGURED", environment: BOOTSTRAP.environment });
   }
-  if (!projection.enabled) {
-    return json_({ ok: false, code: "PROJECTION_NOT_LIVE", environment: BOOTSTRAP.environment });
-  }
 
   let body;
   try {
@@ -175,6 +172,9 @@ function doPost(e) {
   }
   if (!projectionTokenValid_(body.sharedToken)) {
     return json_({ ok: false, code: "PROJECTION_AUTH_FAILED", environment: BOOTSTRAP.environment });
+  }
+  if (!projection.enabled) {
+    return json_({ ok: false, code: "PROJECTION_NOT_LIVE", environment: BOOTSTRAP.environment });
   }
   if (!Array.isArray(body.items) || body.items.length < 1 || body.items.length > PROJECTION_MAX_ITEMS) {
     return json_({ ok: false, code: "INVALID_PROJECTION_BATCH", environment: BOOTSTRAP.environment });
