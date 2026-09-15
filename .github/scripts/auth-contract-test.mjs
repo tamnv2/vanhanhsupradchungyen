@@ -33,7 +33,6 @@ const hashA2 = await hashBearerToken(tokenA);
 assert(hashA1 && hashA1 === hashA2, 'token hash must be deterministic');
 assert(hashA1 !== await hashBearerToken(tokenB), 'different tokens must hash differently');
 
-// RFC 6238 SHA-1 test vector: secret "12345678901234567890", T=59, 8 digits => 94287082.
 const rfcSecret = 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ';
 assert(
   await verifyTotpCode(rfcSecret, '94287082', { digits: 8, period: 30, window: 0, nowMs: 59000 }),
@@ -44,8 +43,6 @@ assert(
   'invalid TOTP must fail'
 );
 
-// Google projection management plane stays owner-only. Provisioning is fail-closed;
-// activation is a separate reviewed operation and must not bypass auth/environment guards.
 const gatewayManifest = JSON.parse(await readFile('service/google-gateway/appsscript.json', 'utf8'));
 assert(gatewayManifest?.webapp?.access === 'ANYONE_ANONYMOUS', 'Google Gateway data-plane Web App access drifted');
 assert(gatewayManifest?.webapp?.executeAs === 'USER_DEPLOYING', 'Google Gateway Web App execution identity drifted');
@@ -71,14 +68,16 @@ assert(gasSync.includes('PROJECTION_AUTH_PROVISION_PASS authConfigured=true enab
 const managementProbe = await readFile('.github/scripts/gas-management-probe.mjs', 'utf8');
 assert(managementProbe.includes("function: 'projectionManagementHealth'"), 'management E2E probe must call projectionManagementHealth');
 assert(managementProbe.includes("parameters: ['BETA']"), 'management E2E probe must bind BETA environment');
-assert(managementProbe.includes('result?.projection?.enabled === false'), 'pre-activation management E2E probe must require projection disabled');
+assert(managementProbe.includes('activationRequested'), 'management probe must recognize explicit activation recovery mode');
+assert(managementProbe.includes("mode=${mode}"), 'management probe must expose bounded state mode evidence');
 assert(managementProbe.includes('PROJECTION_MANAGEMENT_E2E_PASS'), 'management E2E evidence marker missing');
 
 const activationProbe = await readFile('.github/scripts/gas-projection-activation.mjs', 'utf8');
 assert(activationProbe.includes("'setProjectionEnabled'"), 'activation CI must invoke owner-only activation function');
 assert(activationProbe.includes("[true, 'BETA']"), 'activation CI must bind exact BETA environment');
-assert(activationProbe.includes("wrong?.code !== 'PROJECTION_AUTH_FAILED'"), 'activation probe must reject wrong token');
-assert(activationProbe.includes("correct?.code !== 'INVALID_PROJECTION_BATCH'"), 'activation probe must authenticate correct token without a valid write batch');
+assert(activationProbe.includes("'projectionManagementHealth'"), 'activation CI must read back owner-only management state');
+assert(activationProbe.includes('payload?.projection?.enabled !== true'), 'activation CI must require public enabled-state readback');
+assert(activationProbe.includes('Do not issue redundant'), 'activation probe must avoid redundant public POST after pre-activation auth proof');
 assert(activationProbe.includes('PROJECTION_ACTIVATION_E2E_PASS'), 'activation evidence marker missing');
 
 const gasWorkflow = await readFile('.github/workflows/gas-beta-sync.yml', 'utf8');
@@ -94,4 +93,4 @@ assert(activationDispatch.operation === 'deploy', 'activation dispatch must use 
 assert(activationDispatch.deploy === true, 'activation dispatch must require deployment');
 assert(activationDispatch.activate_projection === true, 'activation dispatch flag must be explicit');
 
-console.log('AUTH_CONTRACT_TEST_PASS projectionManagement=PASS projectionActivation=PASS');
+console.log('AUTH_CONTRACT_TEST_PASS projectionManagement=PASS projectionActivation=PASS recovery=PASS');
