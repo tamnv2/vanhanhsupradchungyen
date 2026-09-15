@@ -11,10 +11,11 @@ public final class TransportBehaviorHarness {
     public static void main(String[] args) {
         endpointPolicyContract();
         sessionContract();
+        sessionPersistenceContract();
         retryContract();
         scannerContract();
         authenticatedRequestContract();
-        System.out.println("ANDROID_TRANSPORT_BEHAVIOR_PASS checks=" + checks + " https=PASS session=PASS retry=PASS scanner=PASS requestBinding=PASS");
+        System.out.println("ANDROID_TRANSPORT_BEHAVIOR_PASS checks=" + checks + " https=PASS session=PASS sessionRestore=PASS retry=PASS scanner=PASS requestBinding=PASS");
     }
 
     private static void endpointPolicyContract() {
@@ -57,6 +58,37 @@ public final class TransportBehaviorHarness {
         session.clear();
         check(!session.isUsable(2_500), "clear invalidates session");
         throwsCode(IllegalStateException.class, "SESSION_NOT_USABLE", () -> session.runtimeMode(2_500), "cleared runtime blocked");
+    }
+
+    private static void sessionPersistenceContract() {
+        String token = "p".repeat(48);
+        PdaSession source = new PdaSession();
+        source.establish(token, 5_000, ServiceEndpointPolicy.RuntimeMode.LAN_PRIMARY);
+
+        PdaSession.Snapshot snapshot = source.snapshot(4_000);
+        equal(5_000L, snapshot.expiresAtEpochMs(), "snapshot retains expiry");
+        equal(ServiceEndpointPolicy.RuntimeMode.LAN_PRIMARY, snapshot.runtimeMode(), "snapshot retains runtime mode");
+        check(!snapshot.toString().contains(token), "snapshot string redacts bearer token");
+        check(snapshot.toString().contains("[REDACTED]"), "snapshot string marks redaction");
+
+        PdaSession restored = new PdaSession();
+        check(restored.restore(snapshot, 4_999), "snapshot restores before expiry");
+        equal("Bearer " + token, restored.authorizationHeader(4_999), "restored bearer retained");
+        equal(ServiceEndpointPolicy.RuntimeMode.LAN_PRIMARY, restored.runtimeMode(4_999), "restore preserves original runtime mode");
+
+        PdaSession exactBoundary = new PdaSession();
+        exactBoundary.establish("x".repeat(32), 9_000, ServiceEndpointPolicy.RuntimeMode.CLOUD_DIRECT);
+        check(!exactBoundary.restore(snapshot, 5_000), "restore rejects exact expiry boundary");
+        check(!exactBoundary.isUsable(4_000), "failed restore clears prior in-memory session");
+
+        PdaSession nullSnapshot = new PdaSession();
+        nullSnapshot.establish("y".repeat(32), 9_000, ServiceEndpointPolicy.RuntimeMode.CLOUD_DIRECT);
+        check(!nullSnapshot.restore(null, 4_000), "null snapshot rejected");
+        check(!nullSnapshot.isUsable(4_000), "null restore clears prior in-memory session");
+
+        throwsCode(IllegalStateException.class, "SESSION_NOT_USABLE", () -> source.snapshot(5_000), "expired session cannot be snapshotted");
+        throwsCode(IllegalArgumentException.class, "SESSION_TOKEN_INVALID", () -> new PdaSession.Snapshot("short", 6_000, ServiceEndpointPolicy.RuntimeMode.CLOUD_DIRECT), "persisted short token rejected");
+        throwsCode(IllegalArgumentException.class, "SESSION_EVIDENCE_INVALID", () -> new PdaSession.Snapshot(token, 6_000, null), "persisted runtime required");
     }
 
     private static void retryContract() {
