@@ -2,8 +2,11 @@ import httpWorker from './index.js';
 import { processProjectionOutbox } from './projection-processor.js';
 
 export const PROJECTION_SCHEDULE_LIMIT = 25;
+export const PROJECTION_DELIVERY_ENABLED_VALUE = 'true';
 
 function projectionRuntimeConfig(env) {
+  const deliveryEnabled = String(env?.PROJECTION_DELIVERY_ENABLED || '').trim().toLowerCase() === PROJECTION_DELIVERY_ENABLED_VALUE;
+  if (!deliveryEnabled) return { ok: false, code: 'PROJECTION_DELIVERY_DISABLED' };
   if (!env?.DB) return { ok: false, code: 'PROJECTION_DB_UNAVAILABLE' };
   const gatewayUrl = String(env.GAS_EXEC_URL || '').trim();
   if (!gatewayUrl) return { ok: false, code: 'PROJECTION_GATEWAY_URL_NOT_CONFIGURED' };
@@ -22,7 +25,14 @@ function projectionRuntimeConfig(env) {
 export async function runProjectionSchedule(env, options = {}) {
   const config = projectionRuntimeConfig(env);
   if (!config.ok) {
-    return { ok: false, code: config.code, loaded: 0, claimed: 0, acked: 0, failed: 0 };
+    return {
+      ok: config.code === 'PROJECTION_DELIVERY_DISABLED',
+      code: config.code,
+      loaded: 0,
+      claimed: 0,
+      acked: 0,
+      failed: 0
+    };
   }
 
   const processor = options.processor || processProjectionOutbox;
@@ -38,7 +48,7 @@ export async function runProjectionSchedule(env, options = {}) {
 async function scheduled(_controller, env, ctx) {
   const task = runProjectionSchedule(env)
     .then(result => {
-      if (result?.code !== 'PROJECTION_IDLE' && result?.code !== 'PROJECTION_BATCH_ACKED') {
+      if (!['PROJECTION_IDLE', 'PROJECTION_BATCH_ACKED', 'PROJECTION_DELIVERY_DISABLED'].includes(result?.code)) {
         console.warn('PROJECTION_SCHEDULE_RESULT', JSON.stringify({
           ok: result?.ok === true,
           code: result?.code || 'UNKNOWN',
