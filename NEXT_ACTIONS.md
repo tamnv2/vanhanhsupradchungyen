@@ -8,66 +8,69 @@ Primary phase: **Phase 6 — LAN continuity/offline/reconcile**
 
 Default is `CONTINUE` with dependency-aware parallel execution. Evidence is required before PASS. A blocked lane does not stop unrelated ready work. `AI_TERMINATION_GUARD.md` forbids voluntary finalization while approved `READY` work remains.
 
-## A — FIRST PRIORITY: Cloudflare projection Cron Trigger delivery — ACTIVE INVESTIGATION
+## A — Projection Cron / Google Sheet live chain — CLOSED PASS
 
-The live projection E2E run `34924438129` proved the current failure occurs before the projection processor/GAS/Sheet path:
+Do not continue the former Cron root-cause investigation unless new evidence reopens it.
 
-- Worker build verification PASS;
-- Google management helper/readback PASS;
-- isolated D1 marker insert PASS;
-- outbox stayed `PENDING`, `attempts=0` for the full wait;
-- scheduler diagnostic stayed `null`;
-- cleanup PASS with no marker/probe residue and immutable trigger restored.
+Accepted evidence:
 
-Independent observer run `34924945395` then proved the Cloudflare Cron Trigger exists as `*/2 * * * *`, created `2026-09-15T02:32:41.788727Z`, modified `2026-09-15T02:49:45.112867Z`; the E2E ran much later (`03:17–03:24Z`) and still saw no scheduled-handler entry.
+- isolated live projection E2E `34927511443`: SUCCESS;
+- real canonical D1 marker/outbox -> ACK -> Google Sheet readback -> replay dedupe exactly one logical row -> full cleanup: PASS;
+- cleaned Worker deploy `34927869845`: SUCCESS;
+- live BETA build `a501e4b7ae551cf1cd86f15786f4ca994032b522`, `BUSINESS_CORE_V3`, authority D1, Google not degraded;
+- post-deploy observer `34927996370`: SUCCESS;
+- active Cloudflare version 14 serves 100% with handlers `fetch` + `scheduled`;
+- live Cron is exactly `*/2 * * * *`;
+- outbox/pending count is 0;
+- temporary scheduler-probe code/config has been removed.
 
-### Exact next work
+The historical D1 `projection_scheduler_probe` row was written by the prior diagnostic build and is not evidence the current build still writes diagnostics.
 
-1. Bootstrap from GitHub `main` and verify latest HEAD/checkpoint before mutation.
-2. Inspect the Cloudflare Worker module/entrypoint/provider configuration specifically for Scheduled Handler compatibility; do not rewrite processor/GAS logic without evidence.
-3. Verify whether the uploaded ES module Worker form and configured Cron Trigger target the exact live script/version expected by Cloudflare Scheduled Events.
-4. Use read-only provider evidence first. If a minimal isolated fix is justified, deploy guardedly without changing D1 identity, custom domain, workers.dev state or secret values.
-5. Re-run the isolated projection live E2E only after a concrete root-cause change or provider-state correction. Require:
-   - scheduler probe observed;
-   - outbox claim/attempt observed;
-   - ACKED state;
-   - real GAS/Sheet row readback;
-   - replay dedupe keeps exactly one logical row;
-   - complete D1/Sheet/probe cleanup.
-6. Only then remove temporary scheduler diagnostics/observer machinery that is no longer needed and run clean baseline + product foundations again.
+## B — Web Slice-1 — FIRST AUTHENTICATED EMPLOYEE CREATE MERGED
 
-Do not mark Google projection live PASS until this full chain passes.
+PR #19 is merged at main commit `db746a71ed80dafd288218f599ab3e990f87e439`.
 
-## B — Cloud Worker / Google projection source state — PASS WHERE PROVEN
+Evidence:
 
-- Cloud Slice-1 reviewed mutations are source/hosted-CI PASS; portrait replace remains fail-closed.
-- Projection materializer/retry/recovery/error isolation is source-tested.
-- Google Gateway helper deployment/activation readback run `34923668193`: PASS.
-- Worker deploy run `34924438089`: PASS.
-- Deploy uploader no longer PUTs Cron Trigger schedules when unchanged; log recorded `WORKER_CRON_SCHEDULES_UNCHANGED`.
-- Main clean baseline run `34924438117`: SUCCESS.
-- Build product foundations run `34924438250`: Web/Cloud/Android/LAN SUCCESS.
+- reconciled against latest main with only 3 intended Web files differing;
+- PR clean baseline `34928060646`: SUCCESS;
+- post-merge clean baseline `34928090928`: SUCCESS;
+- post-merge product foundations `34928090885`: Cloud/Web/Android/LAN SUCCESS.
 
-These facts do not override the failed live Cron invocation evidence.
+Continue Web work only where current state/version contracts support safe UX. Do not expose update/status/MNV/attendance mutations by inventing a read/version model.
 
-## C — Web Slice-1 — READY AFTER/ALONGSIDE ISOLATED CRON WORK
+## C — NEXT READY: Account/security V6 source/contract work
 
-PR #19 remains open intentionally:
+Provider-independent work may proceed now.
 
-- title: `Add authenticated Web employee-create interaction`;
-- head: `50d4be6bde5927eb8cc64ef3a851b7997c2886b0`;
-- clean baseline `34924120821`: SUCCESS.
+Exact next sequence:
 
-Before merge:
+1. Inspect current Cloud + LAN auth routes/services/tests against `DECISIONS_V6.md`.
+2. Map which V6 ROOT recovery requirements already exist in source and which are missing:
+   - email OTP is primary recovery;
+   - OTP validity 5 minutes;
+   - resend cooldown and failure-attempt limits;
+   - optional TOTP only after explicit enrollment;
+   - if enrolled, email OTP or TOTP may recover;
+   - no OTP plaintext in logs/audit; only safe challenge metadata/state.
+3. Implement the smallest contract-backed missing source slice that does **not** require secret/provider mutation.
+4. Add/extend automated tests for request/verify, expiry, cooldown, attempt limit, replay/consumption and audit redaction as applicable.
+5. Keep real email delivery/provider E2E separate until the required account/provider capability is available. Do not fake provider PASS and do not repeatedly retry equivalent blocked secret mutations.
 
-1. rebase/reconcile against current `main`;
-2. verify projection diagnostic changes do not conflict;
-3. rerun clean baseline and relevant Web/product CI;
-4. merge only with fresh evidence.
+## D — PARALLEL READY: Android/PDA mechanics
 
-Do not invent current-state/version read UX merely to expose update/status/MNV/attendance mutations; those remain fail-closed until a safe contract-backed UX exists.
+Continue mechanics independent of unavailable final visual references:
 
-## D — LAN/provider proof — PARTLY GATED
+1. inspect current endpoint selection/cache/discovery/manual recovery behavior;
+2. session/login persistence and expiry handling;
+3. scanner input/command handoff;
+4. retry/backoff/reconnect/resync under LAN/Wi-Fi loss;
+5. HTTPS/trust/fail-closed behavior;
+6. background/foreground recovery where source-testable.
+
+Current APK build is green, but that is not final visual/workflow acceptance. Do not fabricate Pick Pack 1291 visual details without authorized current-product reference assets.
+
+## E — LAN/provider proof — PARTLY GATED
 
 Retained source/HOSTED CI PASS:
 
@@ -78,20 +81,43 @@ Retained source/HOSTED CI PASS:
 - fail-closed readiness while canonical events remain unre-based;
 - integration run `34851773729` and clean baseline `34851772963`: SUCCESS.
 
-Physical company-network/PDA proof, intended Windows host acceptance, public-trust path and >=60-minute Internet-cut acceptance remain pending. Do not infer physical PASS from GitHub CI.
+Still pending and not inferable from CI:
 
-## E — Parallel lanes that remain READY where independent
+- intended company Windows host acceptance;
+- company-network/PDA/public-trust path;
+- live LAN->Cloud machine/provider linkage where Owner-controlled setup is required;
+- >=60-minute Internet-cut acceptance;
+- reconnect/host restart/network-change physical regression;
+- capacity/soak/UAT.
 
-1. **Account/security:** continue only provider-independent source/contract work. Previous secret/account mutation attempts hit tool capability/safety limits; do not repeatedly retry equivalent blocked mutations.
-2. **Android/PDA:** continue endpoint/session/scanner/retry/HTTPS/reconnect mechanics that are independent of unavailable final visual assets. Do not fabricate Pick Pack UI details.
-3. **Gateway/Google:** source-level bounded sender/error/retry/readback work may continue, but avoid changing already-proven logic just to explain the Cron no-invocation incident.
-4. **Repo/governance:** keep Issue #8, `CURRENT_STATE.md`, `NEXT_ACTIONS.md` and `CHECKPOINT.md` synchronized with evidence before another long-session handoff.
+## F — Gateway / integrations
+
+The projection path is now live-PASS. Continue only genuinely open integration coverage:
+
+- bounded provider failure/recovery;
+- receipts/idempotency/reconciliation for broader current flows;
+- Drive/media/provider paths still lacking accepted live evidence;
+- operator-visible status and safe retry behavior.
+
+Do not rewrite the working projection processor/GAS path without a new failing evidence chain.
+
+## G — Repo/governance
+
+Keep synchronized with evidence:
+
+- Issue #8;
+- `CURRENT_STATE.md`;
+- `NEXT_ACTIONS.md`;
+- `CHECKPOINT.md`.
+
+Progress remains **56.2% exact / 56% displayed** until a weighted phase threshold is defensibly changed under `docs/PROGRESS_TRACKING_V1.md`.
 
 ## Retained complete/current nodes
 
 - Cloud schema parity migration `0014_employee_code_entity_version.sql`: LIVE BETA PASS; do not replay.
 - LAN integration receipt/conflict/recovery source/HOSTED CI evidence remains PASS.
-- Projection E2E cleanup from failed runs is clean; do not re-clean absent markers blindly.
+- Projection E2E cleanup is clean; do not re-clean absent E2E markers blindly.
+- Read-only Cron observer now supports manual dispatch; use it for evidence instead of mutating runtime merely to observe state.
 
 ## Owner decision / release boundaries
 
@@ -100,4 +126,4 @@ Physical company-network/PDA proof, intended Windows host acceptance, public-tru
 
 ## Current execution line
 
-`Overall 56% displayed / 56.2% exact | Phase 6 65% | Projection source/deploy foundations PASS where evidenced | Live projection E2E FAIL: Cloudflare Cron never entered scheduled() | Exact next: root-cause Scheduled Event delivery, then rerun isolated E2E | Web PR #19 open+CI PASS but unmerged | Physical Windows/PDA/outage acceptance pending`
+`Overall 56% displayed / 56.2% exact | Phase 6 65% | Projection live BETA PASS end-to-end | Web employee-create merged + post-merge CI PASS | Next READY: V6 account/security source/contract work + Android mechanics in parallel | Physical Windows/PDA/outage acceptance pending`
