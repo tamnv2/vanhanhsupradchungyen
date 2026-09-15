@@ -11,6 +11,7 @@
     "authorization.js",
     "session.js",
     "permission-store.js",
+    "attendance-scan-context.js",
     "projection.js",
     "projection-sender.js",
     "projection-processor.js",
