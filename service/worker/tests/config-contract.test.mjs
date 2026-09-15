@@ -70,9 +70,11 @@ test('BETA machine credentials are sourced from secret store and gated features 
   const deploy = await readJson('service/worker/deploy.beta.json');
   assert.equal(deploy.vars.LAN_RECONCILIATION_KEY_ID, 'vhdchy-beta-lan-reconciliation-01');
   assert.equal(deploy.vars.LAN_RECONCILIATION_FINALITY_V1, 'disabled');
+  assert.equal(deploy.vars.PROJECTION_DELIVERY_ENABLED, 'false');
   assert.equal(deploy.inherit_bindings, undefined);
 
   assert.ok(Array.isArray(deploy.secret_env_bindings));
+  assert.equal(deploy.secret_env_bindings.length, 2);
   const reconciliationSecret = deploy.secret_env_bindings.find(item => item?.name === 'LAN_RECONCILIATION_SHARED_SECRET');
   assert.ok(reconciliationSecret, 'missing LAN_RECONCILIATION_SHARED_SECRET secret-store binding');
   assert.equal(reconciliationSecret.env, 'LAN_RECONCILIATION_SHARED_SECRET');
