@@ -212,7 +212,12 @@ export async function resolveAttendanceScanContext({
   };
 }
 
-export async function handleAttendanceScanContextRoute(request, env, requestId = crypto.randomUUID()) {
+export async function handleAttendanceScanContextRoute(
+  request,
+  env,
+  requestId = crypto.randomUUID(),
+  options = {}
+) {
   if (request.method !== 'POST') {
     return routeError('METHOD_NOT_ALLOWED', 'Attendance scan context requires POST.', 405, requestId);
   }
@@ -220,7 +225,8 @@ export async function handleAttendanceScanContextRoute(request, env, requestId =
     return routeError('RUNTIME_DEPENDENCY_UNAVAILABLE', 'Attendance scan context is unavailable.', 503, requestId);
   }
 
-  const auth = await authenticateRequest(request, env);
+  const authenticate = options.authenticateRequest || authenticateRequest;
+  const auth = await authenticate(request, env);
   if (!auth.ok) {
     return routeError(auth.code || 'AUTH_FAILED', 'Authentication failed.', 401, requestId);
   }
@@ -230,10 +236,11 @@ export async function handleAttendanceScanContextRoute(request, env, requestId =
 
   try {
     const context = await resolveAttendanceScanContext({
-      store: createD1AttendanceScanContextStore(env.DB),
+      store: options.store || createD1AttendanceScanContextStore(env.DB),
       db: env.DB,
       principal: auth.principal,
-      request: body.value
+      request: body.value,
+      authorize: options.authorize || authorizePrincipal
     });
     return response({ ok: true, runtime: 'CLOUD', context }, 200, requestId);
   } catch (error) {
