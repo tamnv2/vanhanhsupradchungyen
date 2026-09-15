@@ -8,6 +8,7 @@ on:
       - '.github/dispatch/gas-beta-sync.json'
       - '.github/scripts/gas-sync.mjs'
       - '.github/scripts/gas-management-probe.mjs'
+      - '.github/scripts/gas-projection-auth-probe.mjs'
       - '.github/workflows/gas-beta-sync.yml'
       - 'service/google-gateway/**'
 
@@ -62,3 +63,6 @@ jobs:
 
       - name: Verify owner-only Google management plane
         run: node .github/scripts/gas-management-probe.mjs
+
+      - name: Verify public projection token fail-closed gate
+        run: node .github/scripts/gas-projection-auth-probe.mjs
