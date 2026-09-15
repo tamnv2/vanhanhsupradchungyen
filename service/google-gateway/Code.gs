@@ -59,10 +59,7 @@ function bootstrapHealth_() {
     props.getProperty("VHDCHY_OWNER_EMAIL") === BOOTSTRAP.ownerEmail &&
     props.getProperty("VHDCHY_PROJECTION_SPREADSHEET_ID") === BOOTSTRAP.projectionSpreadsheetId;
 
-  return {
-    authorized,
-    configMatch
-  };
+  return { authorized, configMatch };
 }
 
 function projectionHealth_() {
@@ -82,23 +79,15 @@ function projectionManagementContext_(expectedEnvironment) {
   }
 
   const bootstrap = bootstrapHealth_();
-  if (!bootstrap.authorized || !bootstrap.configMatch) {
-    throw new Error("BOOTSTRAP_NOT_READY");
-  }
+  if (!bootstrap.authorized || !bootstrap.configMatch) throw new Error("BOOTSTRAP_NOT_READY");
 
   const activeEmail = Session.getActiveUser().getEmail() || Session.getEffectiveUser().getEmail();
   if (!activeEmail || activeEmail.toLowerCase() !== BOOTSTRAP.ownerEmail.toLowerCase()) {
     throw new Error("OWNER_ACCOUNT_MISMATCH");
   }
-
   return bootstrap;
 }
 
-/**
- * Management-plane operation for Apps Script API execution only.
- * Accepts a SHA-256 verifier, never the raw shared token, and always leaves
- * projection disabled. Activation is intentionally a separate future gate.
- */
 function provisionProjectionAuth(verifierSha256, expectedEnvironment) {
   const bootstrap = projectionManagementContext_(expectedEnvironment);
   if (typeof verifierSha256 !== "string" || !/^[a-f0-9]{64}$/.test(verifierSha256)) {
@@ -112,8 +101,31 @@ function provisionProjectionAuth(verifierSha256, expectedEnvironment) {
   }, false);
 
   const projection = projectionHealth_();
-  if (!projection.authConfigured || projection.enabled) {
-    throw new Error("PROJECTION_AUTH_PROVISION_READBACK_FAILED");
+  if (!projection.authConfigured || projection.enabled) throw new Error("PROJECTION_AUTH_PROVISION_READBACK_FAILED");
+
+  return {
+    ok: true,
+    managementVersion: PROJECTION_MANAGEMENT_VERSION,
+    environment: BOOTSTRAP.environment,
+    bootstrap,
+    projection
+  };
+}
+
+function setProjectionEnabled(enabled, expectedEnvironment) {
+  const bootstrap = projectionManagementContext_(expectedEnvironment);
+  if (typeof enabled !== "boolean") throw new Error("PROJECTION_ENABLE_VALUE_INVALID");
+
+  const before = projectionHealth_();
+  if (enabled && !before.authConfigured) throw new Error("PROJECTION_AUTH_NOT_CONFIGURED");
+
+  const props = PropertiesService.getScriptProperties();
+  props.setProperty("VHDCHY_PROJECTION_ENABLED", enabled ? "true" : "false");
+  props.setProperty(enabled ? "VHDCHY_PROJECTION_ENABLED_AT" : "VHDCHY_PROJECTION_DISABLED_AT", new Date().toISOString());
+
+  const projection = projectionHealth_();
+  if (projection.enabled !== enabled || (enabled && !projection.authConfigured)) {
+    throw new Error("PROJECTION_ENABLE_READBACK_FAILED");
   }
 
   return {
@@ -187,9 +199,7 @@ function doPost(e) {
 
   try {
     const workbook = SpreadsheetApp.openById(BOOTSTRAP.projectionSpreadsheetId);
-    const results = body.items.map(function(item) {
-      return upsertProjectionItem_(workbook, item);
-    });
+    const results = body.items.map(function(item) { return upsertProjectionItem_(workbook, item); });
     return json_({
       ok: results.every(function(result) { return result.ok === true; }),
       protocol: PROJECTION_PROTOCOL,
@@ -241,17 +251,13 @@ function upsertProjectionItem_(workbook, item) {
   const lastColumn = Math.max(1, sheet.getLastColumn());
   const headers = sheet.getRange(1, 1, 1, lastColumn).getDisplayValues()[0];
   const headerIndex = {};
-  headers.forEach(function(header, index) {
-    if (header) headerIndex[String(header)] = index;
-  });
+  headers.forEach(function(header, index) { if (header) headerIndex[String(header)] = index; });
   if (headerIndex[config.keyHeader] === undefined) {
     return { ok: false, code: "KEY_HEADER_NOT_FOUND", sheet: sheetName, keyHeader: config.keyHeader };
   }
 
   const unknown = Object.keys(values).filter(function(key) { return headerIndex[key] === undefined; });
-  if (unknown.length) {
-    return { ok: false, code: "UNKNOWN_COLUMNS", sheet: sheetName, columns: unknown.slice(0, 10) };
-  }
+  if (unknown.length) return { ok: false, code: "UNKNOWN_COLUMNS", sheet: sheetName, columns: unknown.slice(0, 10) };
   const keyValue = values[config.keyHeader];
   if (keyValue === null || keyValue === undefined || String(keyValue) === "") {
     return { ok: false, code: "KEY_VALUE_REQUIRED", sheet: sheetName, keyHeader: config.keyHeader };
@@ -270,9 +276,7 @@ function upsertProjectionItem_(workbook, item) {
   const row = targetRow
     ? sheet.getRange(targetRow, 1, 1, lastColumn).getValues()[0]
     : new Array(lastColumn).fill("");
-  Object.keys(values).forEach(function(key) {
-    row[headerIndex[key]] = values[key];
-  });
+  Object.keys(values).forEach(function(key) { row[headerIndex[key]] = values[key]; });
 
   if (targetRow) {
     sheet.getRange(targetRow, 1, 1, lastColumn).setValues([row]);
