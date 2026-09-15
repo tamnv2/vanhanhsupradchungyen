@@ -14,8 +14,9 @@ public final class TransportBehaviorHarness {
         sessionPersistenceContract();
         retryContract();
         scannerContract();
+        attendanceCommandPlannerContract();
         authenticatedRequestContract();
-        System.out.println("ANDROID_TRANSPORT_BEHAVIOR_PASS checks=" + checks + " https=PASS session=PASS sessionRestore=PASS retry=PASS scanner=PASS requestBinding=PASS");
+        System.out.println("ANDROID_TRANSPORT_BEHAVIOR_PASS checks=" + checks + " https=PASS session=PASS sessionRestore=PASS retry=PASS scanner=PASS attendancePlanner=PASS requestBinding=PASS");
     }
 
     private static void endpointPolicyContract() {
@@ -121,6 +122,113 @@ public final class TransportBehaviorHarness {
         throwsCode(IllegalArgumentException.class, "SCAN_INPUT_INVALID", () -> ScannerPayload.normalize("X".repeat(257)), "oversize scan rejected");
     }
 
+    private static void attendanceCommandPlannerContract() {
+        AttendanceOperationIdentity identity = new AttendanceOperationIdentity("REQ-ATT-001", "IDEMP-ATT-001", 91);
+        AttendanceScanContext noPresence = new AttendanceScanContext(
+            "EC-001", "MNV001", "EMP-001", "Nguyễn Văn A", null, null
+        );
+        AttendanceScanContext inPresence = new AttendanceScanContext(
+            "EC-001", "MNV001", "EMP-001", "Nguyễn Văn A", "MEDIA-001",
+            new AttendanceScanContext.Presence(AttendanceScanContext.Presence.State.IN, "2026-09-15", 8)
+        );
+        AttendanceScanContext outPresence = new AttendanceScanContext(
+            "EC-001", "MNV001", "EMP-001", "Nguyễn Văn A", "MEDIA-001",
+            new AttendanceScanContext.Presence(AttendanceScanContext.Presence.State.OUT, "2026-09-15", 9)
+        );
+
+        AttendanceCommandPlan firstIn = AttendanceCommandPlanner.plan(
+            noPresence,
+            AttendanceCommandPlan.Action.IN,
+            identity,
+            "2026-09-15",
+            "2026-09-15T07:41:30+07:00"
+        );
+        equal("ATTENDANCE_IN", firstIn.commandCode(), "first attendance command is IN");
+        equal("EMP-001", firstIn.entityId(), "technical employee identity comes from scan context");
+        equal(null, firstIn.expectedEntityVersion(), "first IN has no presence guard");
+        equal(AttendanceCommandPlan.API_PATH, firstIn.apiPath(), "command uses canonical mutation route");
+        equal(AttendanceCommandPlanner.SOURCE, firstIn.source(), "PDA source is explicit and stable");
+        check(firstIn.bodyJson().contains("\"employeeId\":\"EMP-001\""), "payload carries technical employee identity");
+        check(firstIn.bodyJson().contains("\"expectedEntityVersion\":null"), "first IN serializes null presence guard");
+        check(!firstIn.bodyJson().contains("MNV001"), "MNV is not mutation target authority");
+        check(!firstIn.bodyJson().contains("actorUserId"), "actor user cannot be supplied by client planner");
+        check(!firstIn.bodyJson().contains("Nguyễn Văn A"), "display name is not mutation authority");
+
+        AttendanceCommandPlan out = AttendanceCommandPlanner.plan(
+            inPresence,
+            AttendanceCommandPlan.Action.OUT,
+            identity,
+            "2026-09-15",
+            "2026-09-15T07:42:00+07:00"
+        );
+        equal("ATTENDANCE_OUT", out.commandCode(), "explicit OUT command retained");
+        equal(8L, out.expectedEntityVersion(), "OUT guards current IN presence version");
+        check(out.bodyJson().contains("\"expectedEntityVersion\":8"), "OUT serializes presence guard");
+
+        AttendanceCommandPlan repeatedIn = AttendanceCommandPlanner.plan(
+            inPresence,
+            AttendanceCommandPlan.Action.IN,
+            identity,
+            "2026-09-15",
+            "2026-09-15T07:42:30+07:00"
+        );
+        equal("ATTENDANCE_IN", repeatedIn.commandCode(), "IN remains valid while current presence is IN");
+        equal(8L, repeatedIn.expectedEntityVersion(), "repeated IN still guards current presence");
+
+        AttendanceCommandPlan afterOutIn = AttendanceCommandPlanner.plan(
+            outPresence,
+            AttendanceCommandPlan.Action.IN,
+            identity,
+            "2026-09-15",
+            "2026-09-15T07:43:00+07:00"
+        );
+        equal(9L, afterOutIn.expectedEntityVersion(), "IN after OUT guards current presence version");
+
+        throwsCode(IllegalArgumentException.class, "ATTENDANCE_OUT_REQUIRES_IN_PRESENCE", () -> AttendanceCommandPlanner.plan(
+            noPresence, AttendanceCommandPlan.Action.OUT, identity, "2026-09-15", "2026-09-15T07:43:30+07:00"
+        ), "OUT without prior presence rejected");
+        throwsCode(IllegalArgumentException.class, "ATTENDANCE_OUT_REQUIRES_IN_PRESENCE", () -> AttendanceCommandPlanner.plan(
+            outPresence, AttendanceCommandPlan.Action.OUT, identity, "2026-09-15", "2026-09-15T07:44:00+07:00"
+        ), "OUT from OUT rejected");
+        throwsCode(IllegalArgumentException.class, "ATTENDANCE_BUSINESS_DATE_INVALID", () -> AttendanceCommandPlanner.plan(
+            noPresence, AttendanceCommandPlan.Action.IN, identity, "15/09/2026", "2026-09-15T07:44:30+07:00"
+        ), "business date must be canonical ISO date");
+        throwsCode(IllegalArgumentException.class, "ATTENDANCE_OCCURRED_AT_INVALID", () -> AttendanceCommandPlanner.plan(
+            noPresence, AttendanceCommandPlan.Action.IN, identity, "2026-09-15", "not-a-time"
+        ), "occurredAt must be offset timestamp");
+        throwsCode(IllegalArgumentException.class, "ATTENDANCE_DEVICE_SEQUENCE_INVALID", () -> new AttendanceOperationIdentity("REQ", "IDEMP", 0), "device sequence must be positive across Cloud LAN parity");
+
+        AttendanceCommandPlan retryPlan = AttendanceCommandPlanner.plan(
+            inPresence,
+            AttendanceCommandPlan.Action.OUT,
+            identity,
+            "2026-09-15",
+            "2026-09-15T07:45:00+07:00"
+        );
+        AttendanceCommandPlan sameLogicalRetry = AttendanceCommandPlanner.plan(
+            inPresence,
+            AttendanceCommandPlan.Action.OUT,
+            identity,
+            "2026-09-15",
+            "2026-09-15T07:45:00+07:00"
+        );
+        equal(retryPlan.bodyJson(), sameLogicalRetry.bodyJson(), "same logical command serializes identically across retry");
+        equal(identity.requestId(), sameLogicalRetry.operationIdentity().requestId(), "request identity stable across retry");
+        equal(identity.idempotencyKey(), sameLogicalRetry.operationIdentity().idempotencyKey(), "idempotency identity stable across retry");
+        equal(identity.deviceSeq(), sameLogicalRetry.operationIdentity().deviceSeq(), "device sequence stable across retry");
+
+        ServiceEndpointPolicy endpoints = new ServiceEndpointPolicy("https://cloud.example.test", "https://lan.example.test");
+        PdaSession session = new PdaSession();
+        String token = "a".repeat(40);
+        session.establish(token, 20_000, ServiceEndpointPolicy.RuntimeMode.CLOUD_DIRECT);
+        PdaRequestPlan cloud = PdaRequestPlan.authenticated(endpoints, session, retryPlan.apiPath(), 10_000);
+        session.establish(token, 20_000, ServiceEndpointPolicy.RuntimeMode.LAN_PRIMARY);
+        PdaRequestPlan lan = PdaRequestPlan.authenticated(endpoints, session, retryPlan.apiPath(), 10_000);
+        equal("/api/v1/data/commands", cloud.uri().getPath(), "Cloud command route path stable");
+        equal(cloud.uri().getPath(), lan.uri().getPath(), "Cloud LAN route keeps same logical command path");
+        equal(retryPlan.bodyJson(), sameLogicalRetry.bodyJson(), "runtime route choice does not change command body");
+    }
+
     private static void authenticatedRequestContract() {
         ServiceEndpointPolicy endpoints = new ServiceEndpointPolicy(
             "https://cloud.example.test",
@@ -151,7 +259,7 @@ public final class TransportBehaviorHarness {
 
     private static void equal(Object expected, Object actual, String label) {
         checks++;
-        if (!expected.equals(actual)) {
+        if (expected == null ? actual != null : !expected.equals(actual)) {
             throw new AssertionError(label + ": expected=" + expected + " actual=" + actual);
         }
     }
