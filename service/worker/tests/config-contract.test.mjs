@@ -66,11 +66,11 @@ test('BETA Worker deployment manifest includes every local JavaScript dependency
   assert.deepEqual(deploy.cron_schedules, ['*/2 * * * *']);
 });
 
-test('BETA machine credentials are sourced from secret store and gated features stay fail-closed before E2E', async () => {
+test('BETA machine credentials stay secret-store backed and reviewed projection delivery is active', async () => {
   const deploy = await readJson('service/worker/deploy.beta.json');
   assert.equal(deploy.vars.LAN_RECONCILIATION_KEY_ID, 'vhdchy-beta-lan-reconciliation-01');
   assert.equal(deploy.vars.LAN_RECONCILIATION_FINALITY_V1, 'disabled');
-  assert.equal(deploy.vars.PROJECTION_DELIVERY_ENABLED, 'false');
+  assert.equal(deploy.vars.PROJECTION_DELIVERY_ENABLED, 'true');
   assert.equal(deploy.inherit_bindings, undefined);
 
   assert.ok(Array.isArray(deploy.secret_env_bindings));

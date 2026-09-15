@@ -2,5 +2,5 @@
   "enabled": true,
   "target": "beta",
   "operation": "deploy_worker_multimodule_business_core_v3",
-  "reason": "Owner completed required beta secret provisioning; deploy reviewed Worker with projection delivery still fail-closed"
+  "reason": "Google BETA projection activation E2E passed; enable reviewed Worker projection delivery gate"
 }

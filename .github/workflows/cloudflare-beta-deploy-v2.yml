@@ -54,7 +54,7 @@ jobs:
             .d1_binding.database_name == "vhdchy-data-beta" and
             .d1_binding.database_id == "37eb7d59-05c0-4ba2-8162-cb6a9fe5d492" and
             .vars.APP_ENV == "BETA" and
-            .vars.PROJECTION_DELIVERY_ENABLED == "false" and
+            .vars.PROJECTION_DELIVERY_ENABLED == "true" and
             .vars.LAN_RECONCILIATION_KEY_ID == "vhdchy-beta-lan-reconciliation-01" and
             .vars.LAN_RECONCILIATION_FINALITY_V1 == "disabled" and
             (.secret_env_bindings | length) == 2 and
@@ -123,7 +123,7 @@ jobs:
           const domains = JSON.parse(value('WORKER_CUSTOM_DOMAINS='));
           if (domains.length !== 1 || domains[0]?.hostname !== 'beta.supra.cc.cd') throw new Error('custom domain changed');
           if (!log.includes('WORKER_RUNTIME_BINDINGS_PASS')) throw new Error('runtime bindings did not pass postflight');
-          if (value('WORKER_PROJECTION_DELIVERY_ENABLED=') !== 'false') throw new Error('projection delivery gate is not fail-closed');
+          if (value('WORKER_PROJECTION_DELIVERY_ENABLED=') !== 'true') throw new Error('projection delivery gate did not activate');
           const schedules = JSON.parse(value('WORKER_CRON_SCHEDULES='));
           if (JSON.stringify(schedules) !== JSON.stringify(['*/2 * * * *'])) throw new Error('projection cron schedule mismatch');
           if (!log.includes('D1_RECONCILIATION_TABLES_PASS')) throw new Error('reconciliation tables did not pass postflight');
